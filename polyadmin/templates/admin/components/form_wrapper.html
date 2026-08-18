@@ -1,0 +1,43 @@
+{% from "admin/components/form.html" import render_form_input with context %}
+{% from "admin/components/inline.html" import render_inline_section with context %}
+{% from "admin/components/icons.html" import icon %}
+{# HTMX posts to itself and swaps its own outerHTML with the response,
+   so a validation error redisplays this form in place; a plain HTML
+   POST to `action` works identically without JS. #}
+<form id="resource-form" method="post" action="{{ form_action }}"
+      hx-post="{{ form_action }}" hx-target="#resource-form" hx-swap="outerHTML"
+      class="w-full max-w-xl rounded-lg border border-neutral-200/70 bg-white p-7 shadow-sm">
+  {% if non_field_errors %}
+  <div class="relative mb-4 rounded-lg border border-transparent bg-red-600 p-4 text-white">
+    <h5 class="mb-1 text-sm font-medium leading-none tracking-tight">Couldn't save {{ model_admin.get_verbose_name() }}</h5>
+    <div class="text-sm opacity-80">
+      {% for error in non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% for name in form_fields %}
+  {% set field = model_admin.get_field(name) %}
+  {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
+  {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+  {% endfor %}
+  {# `name="_continue"` rides along only when *this* button is the one
+     that submitted the form (per the HTML spec, an unclicked submit
+     button's name/value never makes it into the form data) -- the
+     handler reads its presence to redirect back to this same edit page
+     instead of the detail page, Django-admin style. #}
+  <div class="flex flex-col gap-2 sm:flex-row">
+    <button type="submit"
+            class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900">
+      {{ icon("check", "w-4 h-4") }} Save
+    </button>
+    <button type="submit" name="_continue" value="1"
+            class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
+      {{ icon("edit", "w-4 h-4") }} Save and continue editing
+    </button>
+    <a href="{{ base_path }}/{{ model_admin.get_slug() }}"
+       class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium tracking-wide text-neutral-600 transition-colors duration-100 hover:bg-neutral-100 hover:text-neutral-900">
+      Cancel
+    </a>
+  </div>
+</form>
+{% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}

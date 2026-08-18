@@ -1,0 +1,37 @@
+{# Container widget: several widgets in one card, one visible at a
+   time -- adapted from Flowbite's admin-dashboard "Statistics this
+   month" card. Mirrors the Go adapter's widgets/tabs.html.
+
+   Each panel is rendered through the same `{% include widget.template %}`
+   the dashboard uses for a top-level widget. The `{% with %}` scope is
+   what makes that safe to nest: it rebinds `widget_data` for the
+   included template only, so the outer widget's own data is still
+   intact for the next panel (and for a Tabs inside a Tabs).
+
+   Only panels after the first carry x-cloak: with Alpine still
+   loading -- or not running at all -- the first panel stays visible
+   and the rest stay hidden, so the card degrades to its default tab
+   rather than to everything-at-once or nothing.
+
+   `active` is compared against a plain loop index, never a label, so
+   nothing dynamic is interpolated into an Alpine expression; labels
+   only ever appear as ordinary (auto-escaped) HTML text. #}
+<div x-data="{ active: 0 }">
+  {% if widget_data.panels %}
+  <div class="mb-3 flex gap-1 border-b border-neutral-200" role="tablist">
+    {% for panel in widget_data.panels %}
+    <button type="button" role="tab" @click="active = {{ loop.index0 }}"
+            :aria-selected="active === {{ loop.index0 }}"
+            :class="active === {{ loop.index0 }} ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-800'"
+            class="-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300">{{ panel.label }}</button>
+    {% endfor %}
+  </div>
+  {% for panel in widget_data.panels %}
+  <div role="tabpanel" x-show="active === {{ loop.index0 }}"{% if not loop.first %} x-cloak{% endif %}>
+    {% with widget_data = panel.widget.get_data() %}{% include panel.widget.template %}{% endwith %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="text-sm text-neutral-400">No panels configured.</p>
+  {% endif %}
+</div>

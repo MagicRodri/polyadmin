@@ -1,0 +1,5 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ model_admin.get_verbose_name() }}{% endblock %}
+{% block content %}
+{% include "admin/components/list_content.html" %}
+{% endblock %}

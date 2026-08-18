@@ -1,0 +1,212 @@
+{# Inline related records (Django-admin StackedInline/TabularInline
+   style) -- see docs/inlines.md. One entry in the `inlines` context
+   list per ModelAdmin.inlines declaration; render_inline_section
+   dispatches on .mode (placeholder/readonly/edit) and .layout
+   (stacked/tabular). #}
+{% from "admin/components/form.html" import render_form_input with context %}
+{% from "admin/components/field.html" import render_field_value with context %}
+{% from "admin/components/icons.html" import icon %}
+
+{% macro render_inline_section(inline) %}
+<div id="inline-{{ inline.slug }}" class="mt-8">
+  <h3 class="mb-2 text-sm font-semibold text-neutral-900">{{ inline.label }}</h3>
+  {% if inline.mode == "placeholder" %}
+  <div class="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-500">
+    Save {{ model_admin.get_verbose_name() }} to add {{ inline.label|lower }}.
+  </div>
+  {% elif inline.mode == "readonly" %}
+    {% if inline.layout == "tabular" %}{{ render_inline_readonly_table(inline) }}
+    {% else %}{{ render_inline_readonly_stacked(inline) }}{% endif %}
+  {% else %}
+    {% if inline.layout == "tabular" %}{{ render_inline_editable_table(inline) }}
+    {% else %}{{ render_inline_editable_stacked(inline) }}{% endif %}
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# -- stacked, editable ---------------------------------------------- #}
+{% macro render_inline_editable_stacked(inline) %}
+{% for row in inline.rows %}
+<form class="mb-3 rounded-lg border border-neutral-200/70 bg-white p-4"
+      hx-post="{{ row.update_url }}" hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML">
+  {% for name in inline.field_names %}
+  {% set field = inline.child_admin.get_field(name) %}
+  {% set value = row.data.get(name) if row.data is not none else field.get_value(row.obj) %}
+  {{ render_form_input(field, value, row.errors.get(name), row.relation_options.get(name)) }}
+  {% endfor %}
+  <div class="flex gap-2">
+    {% if inline.can_change %}
+    <button type="submit"
+            class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-3 py-1.5 text-xs font-medium tracking-wide text-white hover:bg-neutral-900">
+      {{ icon("check", "w-3.5 h-3.5") }} Save
+    </button>
+    {% endif %}
+    {% if inline.can_delete %}
+    <button type="button" hx-delete="{{ row.delete_url }}" hx-target="#inline-{{ inline.slug }}"
+            hx-swap="outerHTML swap:0.2s" hx-confirm="Remove this {{ inline.label|lower }}?"
+            class="inline-flex items-center justify-center gap-1.5 rounded-md bg-red-50 px-3 py-1.5 text-xs font-medium tracking-wide text-red-600 hover:bg-red-100">
+      {{ icon("delete", "w-3.5 h-3.5") }} Remove
+    </button>
+    {% endif %}
+  </div>
+</form>
+{% endfor %}
+{% if inline.add_row %}
+<form class="rounded-lg border border-dashed border-neutral-300 bg-white p-4"
+      hx-post="{{ inline.add_row.create_url }}" hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML">
+  {% for name in inline.field_names %}
+  {% set field = inline.child_admin.get_field(name) %}
+  {% set value = inline.add_row.data.get(name) if inline.add_row.data is not none else none %}
+  {{ render_form_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name)) }}
+  {% endfor %}
+  <button type="submit"
+          class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-3 py-1.5 text-xs font-medium tracking-wide text-neutral-900 hover:bg-neutral-900 hover:text-white">
+    {{ icon("plus", "w-3.5 h-3.5") }} Add {{ inline.label[:-1] if inline.label.endswith("s") else inline.label }}
+  </button>
+</form>
+{% endif %}
+{% if not inline.rows and not inline.add_row %}
+<p class="text-sm text-neutral-500">No {{ inline.label|lower }}.</p>
+{% endif %}
+{% endmacro %}
+
+{# -- tabular, editable ------------------------------------------------
+   No <form> element -- HTML forbids <form> as a table row/cell
+   descendant. Save uses hx-post + hx-include="closest tr" (htmx's
+   documented extended-selector syntax) since there's no enclosing
+   <form> to submit. #}
+{% macro render_inline_table_cell_input(field, value, errors, relation) %}
+{% set field_classes = "flex h-9 w-full rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm focus:border-neutral-400 focus:outline-none" %}
+{% if field.field_type == "boolean" %}
+<input type="checkbox" name="{{ field.name }}" value="true" autocomplete="off" {% if value %}checked{% endif %}
+       class="h-4 w-4 rounded border-neutral-300 bg-neutral-100 text-neutral-900 focus:outline-none">
+{% elif field.field_type in ("foreignkey", "onetoone") %}
+<select name="{{ field.name }}" autocomplete="off" class="{{ field_classes }}">
+  <option value="">&mdash;</option>
+  {% for pk, label in (relation.options if relation else []) %}
+  <option value="{{ pk }}" {% if relation and pk == relation.selected_pk %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+{% elif field.field_type == "manytomany" %}
+<select multiple name="{{ field.name }}" autocomplete="off" size="{{ [(relation.options|length if relation else 1), 1] | max }}" class="{{ field_classes }} h-auto">
+  {% for pk, label in (relation.options if relation else []) %}
+  <option value="{{ pk }}" {% if relation and pk in relation.selected_pks %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+{% elif field.field_type == "enum" %}
+<select name="{{ field.name }}" autocomplete="off" class="{{ field_classes }}">
+  {% for choice in field.choices %}
+  <option value="{{ choice }}" {% if choice == value %}selected{% endif %}>{{ choice }}</option>
+  {% endfor %}
+</select>
+{% else %}
+<input type="text" name="{{ field.name }}" value="{{ value if value is not none else '' }}" autocomplete="off" class="{{ field_classes }}">
+{% endif %}
+{% for error in errors or [] %}
+<p class="mt-0.5 text-xs text-red-600">{{ error }}</p>
+{% endfor %}
+{% endmacro %}
+
+{% macro render_inline_editable_table(inline) %}
+<div class="overflow-x-auto rounded-lg border border-neutral-200/70 bg-white">
+<table class="min-w-full divide-y divide-neutral-200">
+  <thead class="bg-neutral-50"><tr>
+    {% for name in inline.field_names %}
+    <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">{{ inline.child_admin.get_field(name).label }}</th>
+    {% endfor %}
+    <th></th>
+  </tr></thead>
+  <tbody class="divide-y divide-neutral-200">
+    {% for row in inline.rows %}
+    <tr>
+      {% for name in inline.field_names %}
+      {% set field = inline.child_admin.get_field(name) %}
+      {% set value = row.data.get(name) if row.data is not none else field.get_value(row.obj) %}
+      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, row.errors.get(name), row.relation_options.get(name)) }}</td>
+      {% endfor %}
+      <td class="px-3 py-2 text-right whitespace-nowrap">
+        {% if inline.can_change %}
+        <button type="button" hx-post="{{ row.update_url }}" hx-include="closest tr"
+                hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML"
+                class="inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700">
+          {{ icon("check", "w-4 h-4") }}<span class="sr-only">Save</span>
+        </button>
+        {% endif %}
+        {% if inline.can_delete %}
+        <button type="button" hx-delete="{{ row.delete_url }}" hx-target="#inline-{{ inline.slug }}"
+                hx-swap="outerHTML swap:0.2s" hx-confirm="Remove this {{ inline.label|lower }}?"
+                class="inline-flex items-center justify-center rounded-md p-1.5 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700">
+          {{ icon("delete", "w-4 h-4") }}<span class="sr-only">Remove</span>
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% if inline.add_row %}
+    <tr>
+      {% for name in inline.field_names %}
+      {% set field = inline.child_admin.get_field(name) %}
+      {% set value = inline.add_row.data.get(name) if inline.add_row.data is not none else none %}
+      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name)) }}</td>
+      {% endfor %}
+      <td class="px-3 py-2 text-right">
+        <button type="button" hx-post="{{ inline.add_row.create_url }}" hx-include="closest tr"
+                hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML"
+                class="inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700">
+          {{ icon("plus", "w-4 h-4") }}<span class="sr-only">Add</span>
+        </button>
+      </td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>
+{% if not inline.rows and not inline.add_row %}
+<p class="px-4 py-6 text-sm text-neutral-500">No {{ inline.label|lower }}.</p>
+{% endif %}
+</div>
+{% endmacro %}
+
+{# -- read-only (detail page) ------------------------------------------ #}
+{% macro render_inline_readonly_stacked(inline) %}
+{% for row in inline.rows %}
+<div class="mb-3 rounded-lg border border-neutral-200/70 bg-white p-4">
+  <a href="{{ row.detail_url }}" class="text-sm font-medium text-blue-600 hover:underline">{{ row.pk }}</a>
+  <dl class="mt-2 divide-y divide-neutral-100">
+    {% for name in inline.detail_field_names %}
+    {% set field = inline.child_admin.get_field(name) %}
+    <div class="flex justify-between gap-4 py-1 text-sm">
+      <dt class="text-neutral-500">{{ field.label }}</dt>
+      <dd class="text-right">{{ render_field_value(field, field.get_value(row.obj)) }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% endfor %}
+{% if not inline.rows %}<p class="text-sm text-neutral-500">No {{ inline.label|lower }}.</p>{% endif %}
+{% endmacro %}
+
+{% macro render_inline_readonly_table(inline) %}
+<div class="overflow-x-auto rounded-lg border border-neutral-200/70 bg-white">
+<table class="min-w-full divide-y divide-neutral-200">
+  <thead class="bg-neutral-50"><tr>
+    {% for name in inline.detail_field_names %}
+    <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">{{ inline.child_admin.get_field(name).label }}</th>
+    {% endfor %}
+  </tr></thead>
+  <tbody class="divide-y divide-neutral-200">
+    {% for row in inline.rows %}
+    <tr>
+      {% for name in inline.detail_field_names %}
+      {% set field = inline.child_admin.get_field(name) %}
+      <td class="px-3 py-2 text-sm">
+        {% if loop.first %}<a href="{{ row.detail_url }}" class="text-blue-600 hover:underline">{{ render_field_value(field, field.get_value(row.obj)) }}</a>
+        {% else %}{{ render_field_value(field, field.get_value(row.obj)) }}{% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if not inline.rows %}<p class="px-4 py-6 text-sm text-neutral-500">No {{ inline.label|lower }}.</p>{% endif %}
+</div>
+{% endmacro %}

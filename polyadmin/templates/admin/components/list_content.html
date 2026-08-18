@@ -1,0 +1,50 @@
+{# The interactive region of a list page: filters + table + pagination.
+   Rendered both inside the full page (resource/list.html) and directly
+   as an HTMX fragment (Renderer.render_list_fragment) -- same markup
+   either way, so search/filter/sort/pagination never disagree between
+   a fresh load and a partial swap. #}
+{% from "admin/components/icons.html" import icon %}
+<div id="resource-list">
+{% if permissions.can_create or permissions.can_export %}
+<div class="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+  {% if permissions.can_export %}
+  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/export/csv{{ export_query }}"
+     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
+    {{ icon("download", "w-4 h-4") }} Export CSV
+  </a>
+  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/export/xlsx{{ export_query }}"
+     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
+    {{ icon("download", "w-4 h-4") }} Export XLSX
+  </a>
+  {% endif %}
+  {% if permissions.can_create %}
+  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create"
+     class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900">
+    {{ icon("plus", "w-4 h-4") }} New {{ model_admin.get_verbose_name() }}
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% if filter_controls %}
+{# Django-admin layout: filter panel to the right of the results on
+   larger screens, stacked above them on mobile. `search`/`table`/
+   `filter`/`pager` are CSS grid-template-areas -- grid-area only takes
+   effect once the container becomes `display: grid` at `lg:`, so this
+   is a no-op (plain block stacking) below that breakpoint. The filter
+   panel starts level with the table (not the search bar above it),
+   so the top-right cell is left empty (`.`). #}
+<div class="space-y-4 lg:grid lg:items-start lg:gap-x-6 lg:gap-y-4 lg:space-y-0"
+     style="grid-template-columns: minmax(0, 1fr) 16rem; grid-template-areas: 'search .' 'table filter' 'pager filter';">
+  <div style="grid-area: search;">{% include "admin/components/search.html" %}</div>
+  <div style="grid-area: filter;">{% include "admin/components/filters.html" %}</div>
+  <div style="grid-area: table;">{% include "admin/components/table.html" %}</div>
+  <div style="grid-area: pager;">{% include "admin/components/pagination.html" %}</div>
+</div>
+{% else %}
+<div class="space-y-4">
+  {% include "admin/components/search.html" %}
+  {% include "admin/components/table.html" %}
+  {% include "admin/components/pagination.html" %}
+</div>
+{% endif %}
+</div>

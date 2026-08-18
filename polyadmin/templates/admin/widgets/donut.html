@@ -1,0 +1,57 @@
+{# Donut/pie breakdown widget, adapted from Flowbite's admin-dashboard
+   "Traffic by device" card into a PinesUI-styled, dependency-free SVG
+   ring (same "no charting-library" stance as widgets/chart.html) -- a
+   handful of stacked <circle> arcs plus a legend.
+
+   Hovering either a slice or its legend row highlights both and swaps
+   the ring's center label to that slice's share. `active` is compared
+   against a plain loop index, never a label, so nothing dynamic ever
+   has to be interpolated into the Alpine expression itself -- labels
+   only ever appear as ordinary (auto-escaped) HTML text. #}
+<div x-data="{ active: null }" class="flex flex-col items-center gap-6 sm:flex-row">
+  <div class="relative h-36 w-36 shrink-0">
+    <svg viewBox="0 0 36 36" class="h-36 w-36">
+      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" stroke-width="3" class="text-neutral-100"></circle>
+      {% for slice in widget_data.slices %}
+      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-dasharray="{{ slice.percent }} {{ 100 - slice.percent }}"
+              stroke-dashoffset="{{ slice.dash_offset }}"
+              class="text-{{ slice.color }} transition-opacity duration-150"
+              :class="active !== null && active !== {{ loop.index0 }} ? 'opacity-30' : ''"
+              @mouseenter="active = {{ loop.index0 }}" @mouseleave="active = null"></circle>
+      {% endfor %}
+    </svg>
+    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+      <template x-if="active === null">
+        <div>
+          <p class="text-lg font-semibold text-neutral-900">{{ widget_data.total }}</p>
+          <p class="text-[11px] text-neutral-500">Total</p>
+        </div>
+      </template>
+      {% for slice in widget_data.slices %}
+      <template x-if="active === {{ loop.index0 }}">
+        <div>
+          <p class="text-lg font-semibold text-neutral-900">{{ slice.percent }}%</p>
+          <p class="text-[11px] text-neutral-500">{{ slice.label }}</p>
+        </div>
+      </template>
+      {% endfor %}
+    </div>
+  </div>
+  <ul class="w-full space-y-1 text-sm">
+    {% for slice in widget_data.slices %}
+    <li class="-mx-2 flex items-center justify-between gap-2 rounded-md px-2 py-1 transition-colors"
+        :class="active === {{ loop.index0 }} ? 'bg-neutral-50' : ''"
+        @mouseenter="active = {{ loop.index0 }}" @mouseleave="active = null">
+      <span class="flex items-center gap-2 text-neutral-700">
+        <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{{ slice.color }}"></span>
+        {{ slice.label }}
+      </span>
+      <span class="text-neutral-500">{{ slice.value }} <span class="text-neutral-400">&middot; {{ slice.percent }}%</span></span>
+    </li>
+    {% endfor %}
+    {% if not widget_data.slices %}
+    <li class="text-sm text-neutral-400">No data.</li>
+    {% endif %}
+  </ul>
+</div>

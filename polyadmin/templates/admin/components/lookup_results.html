@@ -1,0 +1,18 @@
+{# HTML fragment returned by GET /{slug}/lookup?q=...,
+   swapped into the relation command's results panel
+   (components/form.html). `selectItem` is defined on the ancestor
+   command widget's Alpine x-data -- Alpine's mutation observer binds
+   @click on these items once htmx swaps them in, same as any other
+   dynamically-inserted content. pk/label flow through data-* attributes
+   rather than an interpolated JS expression, so a label containing
+   quotes or backslashes can never break the handler. #}
+{% for pk, label in options %}
+<div data-pk="{{ pk }}" data-label="{{ label }}"
+     @click="selectItem($el.dataset.pk, $el.dataset.label)"
+     class="relative flex cursor-pointer select-none items-center rounded px-3 py-1.5 text-neutral-700 hover:bg-neutral-100">
+  {{ label }}
+</div>
+{% endfor %}
+{% if not options %}
+<div class="px-3 py-1.5 text-neutral-400">No matches.</div>
+{% endif %}

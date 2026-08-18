@@ -1,0 +1,28 @@
+{# Django-admin-style filter sidebar: each filter is a heading, each
+   choice a link (not a <select> option) carrying the search/ordering/
+   other-filters along and swapping just #resource-list, same pattern
+   as the sort/pagination links. `filter_controls` (with precomputed
+   per-choice URLs) comes from TemplateContext.list_context so this
+   template stays free of query-string building. #}
+{% if filter_controls %}
+<div class="rounded-lg border border-neutral-200/70 bg-white p-4">
+  <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Filter</h2>
+  {% for control in filter_controls %}
+  <div class="mt-4 first:mt-3">
+    <h3 class="text-xs font-semibold text-neutral-900">By {{ control.label }}</h3>
+    <ul class="mt-1 space-y-0.5 text-sm">
+      {% for choice in control.choices %}
+      <li>
+        <a href="{{ choice.url }}"
+           hx-get="{{ choice.url }}" hx-target="#resource-list" hx-select="#resource-list"
+           hx-swap="outerHTML" hx-push-url="true"
+           class="{% if choice.selected %}font-medium text-neutral-900{% else %}text-neutral-600 hover:text-neutral-900{% endif %}">
+          {{ choice.label }}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

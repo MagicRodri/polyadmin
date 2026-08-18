@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_title }}{% endblock %} &middot; {{ site_title }}</title>
+  {# Phase 2 uses CDN builds so the admin renders with no frontend build
+     step. A compiled frontend/build bundle replaces these
+     once the static-asset pipeline (Phase 3+) lands. Markup below
+     follows PinesUI (devdojo.com/pines) conventions -- Tailwind +
+     Alpine, neutral-* palette, no separate JS component library. #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <style>[x-cloak] { display: none !important; }</style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full text-neutral-900" x-data="{ sidebarOpen: false }">
+  {% include "admin/components/toasts.html" %}
+  {% include "admin/components/action_confirm_modal.html" %}
+  <div class="flex h-full">
+    <div x-cloak x-show="sidebarOpen" x-transition.opacity.duration.300ms="" @click="sidebarOpen = false"
+         class="fixed inset-0 z-30 bg-black/10 md:hidden"></div>
+
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+           class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col
+                  border-r border-neutral-200/70 bg-white transition-transform duration-300 ease-in-out
+                  md:static md:!transform-none">
+      <div class="flex items-center justify-between px-4 py-4">
+        <a href="{{ base_path }}" class="flex min-w-0 items-center gap-2">
+          {% if site_logo_url %}
+          <img src="{{ site_logo_url }}" alt="" class="h-7 w-7 shrink-0 rounded object-contain">
+          {% endif %}
+          <span class="truncate text-lg font-semibold text-neutral-900">{{ site_title }}</span>
+        </a>
+        <button type="button"
+                class="inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-200 md:hidden"
+                @click="sidebarOpen = false">
+          {% from "admin/components/icons.html" import icon %}
+          {{ icon("close", "w-5 h-5") }}
+          <span class="sr-only">Close menu</span>
+        </button>
+      </div>
+      <nav class="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+        <a href="{{ base_path }}"
+           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if not model_admin %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
+          {{ icon("home", "w-5 h-5 shrink-0") }}
+          <span class="truncate">Dashboard</span>
+        </a>
+        {% for entry in nav_items %}
+          {% if entry.type == "link" %}
+          <a href="{{ entry.url }}"
+             class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if entry.active %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
+            {{ icon(entry.icon, "w-5 h-5 shrink-0") }}
+            <span class="truncate">{{ entry.label }}</span>
+          </a>
+          {% else %}
+          <div x-data="{ open: {{ entry.active | tojson }} }">
+            <button type="button" @click="open = !open"
+                    class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900">
+              {{ icon(entry.icon, "w-5 h-5 shrink-0") }}
+              <span class="flex-1 truncate">{{ entry.label }}</span>
+              <span :class="open ? 'rotate-180' : ''" class="shrink-0 transition-transform duration-200">
+                {{ icon("chevron-down", "w-4 h-4") }}
+              </span>
+            </button>
+            <div x-show="open" x-transition class="ml-4 mt-1 space-y-1 border-l border-neutral-200/70 pl-3">
+              {% for link in entry.links %}
+              <a href="{{ link.url }}"
+                 class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if link.active %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
+                {{ icon(link.icon, "w-5 h-5 shrink-0") }}
+                <span class="truncate">{{ link.label }}</span>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header class="flex items-center gap-3 border-b border-neutral-200/70 bg-white px-4 py-3">
+        <button type="button"
+                class="-ml-1 inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-200 md:hidden"
+                @click="sidebarOpen = true">
+          {{ icon("menu", "w-6 h-6") }}
+          <span class="sr-only">Open menu</span>
+        </button>
+        <div class="min-w-0">
+          {% if breadcrumbs %}
+          {% from "admin/components/breadcrumbs.html" import render_breadcrumbs %}
+          {{ render_breadcrumbs(breadcrumbs, base_path) }}
+          {% endif %}
+        </div>
+      </header>
+      <main class="min-w-0 flex-1 overflow-x-hidden p-4">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

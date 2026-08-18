@@ -1,0 +1,87 @@
+{# Toast notifications, adapted from PinesUI's Toast component
+   (devdojo.com/pines/docs/toast). Pines' own implementation includes
+   an elaborate peek-stack/hover-expand animation tuned for many
+   concurrent toasts; this framework only ever shows the handful of
+   short-lived flash messages left by a redirect, so that
+   choreography is trimmed to a plain vertical stack -- everything else
+   (per-type icon/color, slide transition, auto-dismiss, dismiss
+   button, the global `toast()` trigger function) is kept.
+
+   Flash messages come in as plain data (`messages`, a list of
+   {level, text} dicts) rather than a JS call, so they're relayed into
+   `toast()` via a hidden data-* element read by a tiny script below --
+   the same safe pattern components/form.html's combobox uses, so a
+   message containing quotes can never break out of an interpolated JS
+   string. #}
+{% if messages %}
+<div id="flash-messages" class="hidden" aria-hidden="true">
+  {% for message in messages %}
+  <span data-level="{{ message.level }}" data-text="{{ message.text }}"></span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<template x-teleport="body">
+  <ul x-data="{ toasts: [] }"
+      @toast-show.window="toasts.push({
+        id: 'toast-' + Math.random().toString(16).slice(2),
+        message: $event.detail.message,
+        description: $event.detail.description,
+        type: $event.detail.type,
+      })"
+      class="fixed inset-x-4 top-4 z-[99] flex flex-col gap-2 sm:inset-x-auto sm:right-4 sm:w-80"
+      x-cloak>
+    <template x-for="toast in toasts" :key="toast.id">
+      <li x-data="{ show: false }"
+          x-init="setTimeout(() => show = true, 10);
+                  setTimeout(() => { show = false; setTimeout(() => toasts.splice(toasts.indexOf(toast), 1), 200) }, 4000)"
+          x-show="show"
+          x-transition:enter="transition ease-out duration-300"
+          x-transition:enter-start="opacity-0 -translate-y-2"
+          x-transition:enter-end="opacity-100 translate-y-0"
+          x-transition:leave="transition ease-in duration-200"
+          x-transition:leave-start="opacity-100"
+          x-transition:leave-end="opacity-0"
+          class="relative flex w-full items-start gap-2 rounded-md border border-neutral-100 bg-white p-4 shadow-[0_5px_15px_-3px_rgb(0_0_0_/_0.08)]">
+        <span class="mt-0.5 shrink-0"
+              :class="{ 'text-green-500': toast.type=='success', 'text-orange-400': toast.type=='warning', 'text-red-500': toast.type=='danger' }">
+          <svg x-show="toast.type=='success'" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7744 9.63269C17.1238 9.20501 17.0604 8.57503 16.6327 8.22559C16.2051 7.87615 15.5751 7.93957 15.2256 8.36725L10.6321 13.9892L8.65936 12.2524C8.24484 11.8874 7.61295 11.9276 7.248 12.3421C6.88304 12.7566 6.92322 13.3885 7.33774 13.7535L9.31046 15.4903C10.1612 16.2393 11.4637 16.1324 12.1808 15.2547L16.7744 9.63269Z" fill="currentColor"/></svg>
+          <svg x-show="toast.type=='warning'" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.44829 4.46472C10.5836 2.51208 13.4105 2.51168 14.5464 4.46401L21.5988 16.5855C22.7423 18.5509 21.3145 21 19.05 21L4.94967 21C2.68547 21 1.25762 18.5516 2.4004 16.5862L9.44829 4.46472ZM11.9995 8C12.5518 8 12.9995 8.44772 12.9995 9V13C12.9995 13.5523 12.5518 14 11.9995 14C11.4473 14 10.9995 13.5523 10.9995 13V9C10.9995 8.44772 11.4473 8 11.9995 8ZM12.0009 15.99C11.4486 15.9892 11.0003 16.4363 10.9995 16.9886L10.9995 16.9986C10.9987 17.5509 11.4458 17.9992 11.9981 18C12.5504 18.0008 12.9987 17.5537 12.9995 17.0014L12.9995 16.9914C13.0003 16.4391 12.5532 15.9908 12.0009 15.99Z" fill="currentColor"/></svg>
+          <svg x-show="toast.type=='danger'" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9996 7C12.5519 7 12.9996 7.44772 12.9996 8V12C12.9996 12.5523 12.5519 13 11.9996 13C11.4474 13 10.9996 12.5523 10.9996 12V8C10.9996 7.44772 11.4474 7 11.9996 7ZM12.001 14.99C11.4488 14.9892 11.0004 15.4363 10.9997 15.9886L10.9996 15.9986C10.9989 16.5509 11.446 16.9992 11.9982 17C12.5505 17.0008 12.9989 16.5537 12.9996 16.0014L12.9996 15.9914C13.0004 15.4391 12.5533 14.9908 12.001 14.99Z" fill="currentColor"/></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-[13px] font-medium leading-none text-neutral-800" x-text="toast.message"></p>
+          <p x-show="toast.description" class="mt-1.5 text-xs leading-none opacity-70" x-text="toast.description"></p>
+        </div>
+        <button type="button" @click="show = false"
+                class="shrink-0 rounded-full p-1 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-500">
+          <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+      </li>
+    </template>
+  </ul>
+</template>
+
+<script>
+  window.toast = window.toast || function (message, options) {
+    options = options || {};
+    window.dispatchEvent(new CustomEvent("toast-show", {
+      detail: { type: options.type || "default", message: message, description: options.description || "" },
+    }));
+  };
+  // Deferred to DOMContentLoaded: Alpine loads via `defer` (base.html),
+  // so it only walks the DOM -- and attaches the teleported toast
+  // container's @toast-show.window listener -- once the document has
+  // finished parsing. This script is a plain inline <script>, which
+  // (unlike `defer`d ones) runs immediately at its position in the
+  // document; dispatching straight away fired the event before that
+  // listener existed, so the toast silently never appeared. Deferred
+  // scripts always finish before DOMContentLoaded fires, so waiting
+  // for it guarantees Alpine has already initialized.
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("#flash-messages [data-text]").forEach(function (el) {
+      var type = { error: "danger", warning: "warning", success: "success" }[el.dataset.level] || "default";
+      window.toast(el.dataset.text, { type: type });
+    });
+  });
+</script>

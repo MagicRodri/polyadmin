@@ -1,0 +1,90 @@
+{# Confirmation modal, adapted from PinesUI's Modal component
+   (devdojo.com/pines/docs/modal), covering both places a "confirm
+   before doing something irreversible" prompt shows up: Actions --
+   the list view's bulk-select form and each detail-page
+   record-action form -- and the list view's per-row Delete button
+   (components/table.html's `hx-delete`/`hx-confirm`). One teleported
+   instance backs both: it opens on a window-level `action-confirm-request`
+   event carrying `{message, onConfirm}`, where `onConfirm` is a plain
+   JS callback -- form submission and htmx's own confirm hook need
+   different follow-through (`form.submit()` vs `issueRequest(true)`),
+   so the modal itself stays agnostic to which one it's dealing with.
+
+   The confirmation text never gets serialized into a JS/HTML string:
+   for Actions it rides in on the submitting form as `data-confirm` (or,
+   for the bulk form, the selected <option>'s `data-confirm`), already
+   HTML-attribute-escaped by Jinja2; for hx-confirm it comes from
+   htmx's own `htmx:confirm` event detail, which htmx itself already
+   read out of the `hx-confirm` HTML attribute. Either way it's read
+   back out as a live JS value and handed straight to the modal through
+   a CustomEvent, never re-embedded into markup. Same pattern as
+   components/toasts.html's flash-message relay. #}
+<template x-teleport="body">
+  <div x-data="{ open: false, message: '', onConfirm: null }"
+       @action-confirm-request.window="onConfirm = $event.detail.onConfirm; message = $event.detail.message; open = true"
+       @keydown.escape.window="open = false"
+       x-show="open" x-cloak
+       class="fixed inset-0 z-[99]">
+    <div x-show="open"
+         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         @click="open = false" class="absolute inset-0 bg-black/40"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div x-show="open"
+           x-trap.inert.noscroll="open"
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           class="relative w-full max-w-sm rounded-lg bg-white px-6 py-5 shadow-[0_5px_15px_-3px_rgb(0_0_0_/_0.1)]">
+        <h3 class="text-base font-semibold text-neutral-900">Confirm</h3>
+        <p class="mt-2 text-sm text-neutral-600" x-text="message"></p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" @click="open = false; onConfirm = null"
+                  class="inline-flex h-9 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
+            Cancel
+          </button>
+          <button type="button"
+                  @click="open = false; if (onConfirm) { onConfirm(); onConfirm = null; }"
+                  class="inline-flex h-9 items-center justify-center rounded-md bg-neutral-950 px-3 text-sm font-medium text-white hover:bg-neutral-900">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  // Wired into a form's onsubmit as:
+  //   onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)"
+  // `message` falsy (no confirmation required for this action) lets the
+  // submit through untouched.
+  window.adminConfirmSubmit = window.adminConfirmSubmit || function (event, form, message) {
+    if (!message) return true;
+    event.preventDefault();
+    window.dispatchEvent(new CustomEvent("action-confirm-request", {
+      detail: { message: message, onConfirm: function () { form.submit(); } },
+    }));
+    return false;
+  };
+
+  // Replaces htmx's native window.confirm() (triggered by hx-confirm,
+  // e.g. the list view's row-level Delete button) with this same
+  // modal. htmx fires "htmx:confirm" before every hx-* request and, if
+  // preventDefault() is called, waits for evt.detail.issueRequest(true)
+  // instead of proceeding immediately -- this is htmx's documented hook
+  // for swapping in a custom confirmation dialog.
+  document.body.addEventListener("htmx:confirm", function (evt) {
+    if (!evt.detail.question) return;
+    evt.preventDefault();
+    window.dispatchEvent(new CustomEvent("action-confirm-request", {
+      detail: {
+        message: evt.detail.question,
+        onConfirm: function () { evt.detail.issueRequest(true); },
+      },
+    }));
+  });
+</script>

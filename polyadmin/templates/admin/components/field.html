@@ -1,0 +1,37 @@
+{# Context-aware read-only rendering of a field value.
+   Default renderer, overridable by replacing this template.
+
+   `with context` so the macro can see `admin`, `base_path`, and
+   `relation_permissions` from whichever page imports it, without every
+   call site having to pass them through explicitly. #}
+{% macro render_related_link(relation, related_obj) %}
+{%- set target_admin = admin.get_model_admin(relation.target) if admin else none -%}
+{%- set label = target_admin.get_field(relation.display_field).get_value(related_obj) if target_admin else related_obj -%}
+{%- if target_admin and relation_permissions.get(relation.target) -%}
+<a class="text-blue-600 hover:underline" href="{{ base_path }}/{{ relation.target }}/{{ target_admin.get_pk(related_obj) }}">{{ label }}</a>
+{%- else -%}
+{{ label }}
+{%- endif -%}
+{% endmacro %}
+
+{% macro render_field_value(field, value) -%}
+{%- if value is none -%}
+<span class="text-neutral-400">&mdash;</span>
+{%- elif field.field_type == "boolean" -%}
+{% if value %}<span class="text-green-700">Yes</span>{% else %}<span class="text-neutral-400">No</span>{% endif %}
+{%- elif field.field_type == "password" -%}
+<span class="text-neutral-400">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+{%- elif field.field_type in ("foreignkey", "onetoone") -%}
+{{ render_related_link(field.relation, value) }}
+{%- elif field.field_type == "manytomany" -%}
+{%- if not value -%}
+<span class="text-neutral-400">&mdash;</span>
+{%- else -%}
+{%- for related_obj in value -%}
+{{ render_related_link(field.relation, related_obj) }}{% if not loop.last %}, {% endif %}
+{%- endfor -%}
+{%- endif -%}
+{%- else -%}
+{{ value }}
+{%- endif -%}
+{%- endmacro %}
