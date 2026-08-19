@@ -121,6 +121,61 @@ def test_list_view_hides_action_bar_when_no_actions_declared():
     assert 'id="bulk-actions-form"' not in response.text
 
 
+def test_action_bar_submits_on_select_with_no_apply_step():
+    client, user_admin = make_client()
+    user_admin.create({"email": "a@example.com"})
+    response = client.get("/admin/users")
+    text = response.text
+    assert 'name="action_choice"' not in text
+    assert ">Apply<" not in text
+    assert 'role="listbox"' in text and 'role="option"' in text
+    assert 'data-url="/admin/users/actions/deactivate"' in text
+
+
+def test_detail_and_form_pages_share_the_same_page_shell():
+    """Both record pages use ui("page"): a width-capped column centered
+    on both axes, with the action bar pinned to the bottom so a long
+    record scrolls underneath it instead of burying its own buttons."""
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+
+    detail = client.get(f"/admin/users/{a.id}").text
+    edit = client.get(f"/admin/users/{a.id}/edit").text
+    for page in (detail, edit):
+        assert "max-w-xl" in page, "expected the page to cap its width"
+        assert "mx-auto my-auto" in page, "expected the content centered on both axes"
+        assert "sticky bottom-0" in page, "expected the action bar pinned to the bottom"
+
+
+def test_record_page_actions_sit_in_the_sticky_bar_not_the_scrolling_body():
+    """The buttons must be outside the scrolling column -- if they drift
+    back into it they scroll away on a long record, which is the whole
+    thing the sticky bar exists to prevent."""
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+
+    page = client.get(f"/admin/users/{a.id}/edit").text
+    bar_at = page.find("sticky bottom-0")
+    save_at = page.find("Save and continue editing")
+    assert bar_at != -1 and save_at > bar_at, (
+        "expected the Save buttons to render inside the sticky action bar"
+    )
+    # Outside #resource-form, so they need the form attribute to submit it.
+    assert 'form="resource-form"' in page
+
+
+def test_detail_page_buttons_come_after_the_record_not_before_it():
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+
+    page = client.get(f"/admin/users/{a.id}").text
+    dl_at = page.find("<dl")
+    edit_link_at = page.find("/edit\"")
+    assert dl_at != -1 and edit_link_at != -1 and edit_link_at > dl_at, (
+        f"expected the record (<dl>, at {dl_at}) to precede the Edit button (at {edit_link_at})"
+    )
+
+
 def test_detail_view_shows_record_action_button():
     client, user_admin = make_client()
     a = user_admin.create({"email": "a@example.com"})
@@ -128,3 +183,75 @@ def test_detail_view_shows_record_action_button():
     assert response.status_code == 200
     assert "/admin/users/actions/deactivate" in response.text
     assert "Deactivate" in response.text
+
+
+def test_form_error_swap_targets_the_wrapper_not_the_inner_form():
+    """A validation error re-renders the whole form wrapper, so the swap
+    has to replace the wrapper. It used to target the inner <form> with
+    outerHTML, which nested a fresh wrapper inside the old one on every
+    failed save -- duplicating the inline sections and the action bar."""
+    client, _ = make_client()
+
+    page = client.get("/admin/users/create").text
+    assert 'hx-target="#resource-form-wrapper"' in page, (
+        "swap must target the wrapper, since the error response is the whole wrapper"
+    )
+
+    error = client.post(
+        "/admin/users/create", data={"email": ""}, headers={"HX-Request": "true"}
+    ).text
+    # The response must be exactly one wrapper -- the element the swap
+    # replaces -- so re-rendering it can never nest.
+    assert error.count('id="resource-form-wrapper"') == 1
+    assert error.lstrip().startswith('<div id="resource-form-wrapper"')
+    assert error.count("Save and continue editing") == 1
+
+
+def test_delete_button_only_appears_while_editing():
+    """Delete belongs to the edit form only: there is nothing to delete
+    while creating, and the detail page deliberately no longer offers
+    it, so looking at a record can't put a destructive action one click
+    away."""
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+    delete_href = f"/admin/users/{a.id}/delete"
+
+    assert delete_href in client.get(f"/admin/users/{a.id}/edit").text, (
+        "expected the edit form to offer Delete"
+    )
+    assert delete_href not in client.get(f"/admin/users/{a.id}").text, (
+        "expected the detail page not to offer Delete"
+    )
+    assert "/delete" not in client.get("/admin/users/create").text, (
+        "expected the create form not to offer Delete -- there is no record yet"
+    )
+
+
+def test_delete_is_separated_from_the_save_buttons():
+    """Delete sits alone on the left, Save/Cancel on the right, so the
+    destructive action is never adjacent to the one people click by
+    reflex."""
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+
+    page = client.get(f"/admin/users/{a.id}/edit").text
+    delete_at = page.find("/delete")
+    group_at = page.find("sm:ml-auto")
+    save_at = page.find("Save and continue editing")
+    assert -1 not in (delete_at, group_at, save_at)
+    assert delete_at < group_at < save_at, (
+        f"expected Delete ({delete_at}) before the right-hand group ({group_at}) "
+        f"wrapping Save ({save_at})"
+    )
+
+
+def test_delete_button_hidden_when_authorizer_denies_it():
+    class DenyDeleteAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "users.delete"
+
+    client, user_admin = make_client(authorizer=DenyDeleteAuthorizer())
+    a = user_admin.create({"email": "a@example.com"})
+
+    page = client.get(f"/admin/users/{a.id}/edit").text
+    assert "/delete" not in page, "expected Delete to be omitted when the authorizer denies it"

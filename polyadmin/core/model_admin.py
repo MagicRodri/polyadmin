@@ -55,6 +55,16 @@ class ModelAdmin:
     can_delete: ClassVar[bool] = True
     can_export: ClassVar[bool] = True
 
+    # Shows a drag handle on this ModelAdmin's list view. Defaults to
+    # False (opt-in), unlike can_*/*_template above: dragging never
+    # persists anywhere -- it only reorders the <tr> elements already
+    # on the page, and reverts on the next reload, sort, search, or
+    # page change re-rendering the table from the server's own order.
+    # It exists for admins who want to eyeball/triage a list by hand
+    # without the framework taking a position on how (or whether) that
+    # order is stored. Mirrors go-polyadmin's BaseModelAdmin.EnableReordering.
+    enable_reordering: ClassVar[bool] = False
+
     list_template: ClassVar[str | None] = None
     detail_template: ClassVar[str | None] = None
     form_template: ClassVar[str | None] = None

@@ -1,0 +1,58 @@
+{% from "admin/components/icons.html" import icon %}
+{# Bulk-actions listbox, rendered separately from ui/table.html so
+   components/list_content.html can put it beside the search bar
+   instead of stacked above the table -- row checkboxes still reference
+   the form it renders via the HTML `form=` attribute (see
+   ui/table.html), so the form itself never has to wrap the table.
+   Mirrors go-polyadmin/templates/admin/components/ui/table.html's
+   "ui/bulk-actions" define block.
+
+   Picking an action from the listbox submits immediately -- there is
+   no separate "Apply" step -- by writing the chosen action's route
+   onto the form's own `action` and calling requestSubmit() (not
+   .submit(), which would skip the onsubmit handler that runs the
+   confirm-or-not decision below).
+
+   The route and confirmation text both ride in as data-url/
+   data-confirm on the clicked item, read back out through $el.dataset
+   rather than interpolated into the @click expression -- same
+   reasoning as action_confirm_modal.html's doc comment: neither value
+   should have to survive being embedded in a JS string.
+
+   Included (not a macro) from components/list_content.html, sharing
+   its ambient context (actions, base_path, model_admin). #}
+{% if actions %}
+<form id="bulk-actions-form" method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/"
+      onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
+  <div class="relative inline-flex" x-data="{ open: false, label: 'Action…' }"
+       @keydown.escape="open = false" @click.outside="open = false">
+    <button type="button" x-ref="trigger" @click="open = !open"
+            :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
+            class="{{ ui('button', 'outline', 'size-sm') }}">
+      <span x-text="label"></span>
+      {{ icon("chevron-down", "w-3.5 h-3.5") }}
+    </button>
+    <div x-show="open" x-cloak role="listbox"
+         x-anchor.bottom-start.offset.6="$refs.trigger"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="{{ ui('combobox', 'content') }} w-48">
+      {% for action in actions %}
+      <div role="option" tabindex="0"
+           data-url="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
+           {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
+           @click="label = $el.textContent.trim(); open = false;
+                   let form = $el.closest('form');
+                   form.action = $el.dataset.url;
+                   form.dataset.confirm = $el.dataset.confirm || '';
+                   form.requestSubmit()"
+           class="{{ ui('combobox', 'item') }}">{{ action.label }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</form>
+{% endif %}

@@ -1,7 +1,9 @@
 """Relation-aware helpers for the FastAPI adapter."""
+
 from __future__ import annotations
 
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
@@ -10,7 +12,9 @@ from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 
 
-def _relation_fields(model_admin: ModelAdmin, names: list[str]) -> Iterator[tuple[str, Field, Relation]]:
+def _relation_fields(
+    model_admin: ModelAdmin, names: list[str]
+) -> Iterator[tuple[str, Field, Relation]]:
     for name in names:
         field = model_admin.get_field(name)
         relation = getattr(field, "relation", None)
@@ -45,21 +49,25 @@ def compute_relation_permissions(
     return result
 
 
-def compute_relation_options(admin: Admin, model_admin: ModelAdmin, obj: Any = None) -> dict[str, dict[str, Any]]:
+def compute_relation_options(
+    admin: Admin, model_admin: ModelAdmin, obj: Any = None
+) -> dict[str, dict[str, Any]]:
     """Selectable options for each relation field in `model_admin.form_fields`.
 
     For a field listed in `model_admin.autocomplete_fields`, this skips
     loading the target's queryset entirely and only resolves the
     current selection's own label -- the rest of the options are
     fetched on demand from the /lookup route as the user
-    types, via components/form.html's combobox. Every other relation
+    types, via components/ui/field.html's combobox. Every other relation
     field keeps populating a same-page <select> from the target's full
     unfiltered queryset, gated only by its static `can_view` -- coarser
     than `compute_relation_permissions`, fine for a same-page selector.
     """
     autocomplete_names = set(model_admin.autocomplete_fields)
     result: dict[str, dict[str, Any]] = {}
-    for name, field, relation in _relation_fields(model_admin, list(model_admin.form_fields)):
+    for name, field, relation in _relation_fields(
+        model_admin, list(model_admin.form_fields)
+    ):
         try:
             target_admin = admin.get_model_admin(relation.target)
         except KeyError:
@@ -69,9 +77,14 @@ def compute_relation_options(admin: Admin, model_admin: ModelAdmin, obj: Any = N
         display_field = target_admin.get_field(relation.display_field)
         current = field.get_value(obj) if obj is not None else None
 
-        if name in autocomplete_names and field.field_type in ("foreignkey", "onetoone"):
+        if name in autocomplete_names and field.field_type in (
+            "foreignkey",
+            "onetoone",
+        ):
             selected_pk = target_admin.get_pk(current) if current is not None else None
-            selected_label = display_field.get_value(current) if current is not None else None
+            selected_label = (
+                display_field.get_value(current) if current is not None else None
+            )
             result[name] = {
                 "options": [],
                 "selected_pk": selected_pk,
@@ -88,8 +101,18 @@ def compute_relation_options(admin: Admin, model_admin: ModelAdmin, obj: Any = N
         ]
         if field.field_type == "manytomany":
             selected_pks = [target_admin.get_pk(related) for related in (current or [])]
-            result[name] = {"options": options, "selected_pk": None, "selected_pks": selected_pks, "autocomplete": False}
+            result[name] = {
+                "options": options,
+                "selected_pk": None,
+                "selected_pks": selected_pks,
+                "autocomplete": False,
+            }
         else:
             selected_pk = target_admin.get_pk(current) if current is not None else None
-            result[name] = {"options": options, "selected_pk": selected_pk, "selected_pks": [], "autocomplete": False}
+            result[name] = {
+                "options": options,
+                "selected_pk": selected_pk,
+                "selected_pks": [],
+                "autocomplete": False,
+            }
     return result

@@ -179,17 +179,30 @@ active filter, then ordering, then pagination — in that order, every
 time, so a query string fully determines what's on screen (and what
 an export produces, see [`exports.md`](exports.md)).
 
+`enable_reordering`/`EnableReordering` (default `False`/`false`, unlike
+the `can_*`/`Disable*` flags above) puts a drag handle on the list
+view's rows via a small vanilla sortable library (SortableJS,
+`theme.html`). Unlike everything else on this page, dragging never
+persists anywhere — it only reorders the `<tr>` elements already on the
+current page, and reverts on the next reload, sort, search, or page
+change re-rendering the table from the server's real order. It's for
+triaging a list by hand, not for maintaining a stored position; an
+application wanting persisted ordering needs its own position field and
+its own way of writing to it (there's no framework hook for this, since
+it can't presume your schema).
+
 ## Relations
 
 A `ForeignKeyField`/`FieldTypeForeignKey` (or `OneToOneField`) needs a
 `Relation`: which target `ModelAdmin` slug it points at and which of
 the target's fields to use as the display label. By default it
-renders as a `<select>` populated from the target's full queryset on
-the form, and as a link (if the viewer can see the target resource,
-otherwise plain text) on the list/detail views.
+renders as a shadcn Select (`ui/select.html`) populated from the
+target's full queryset on the form, and as a link (if the viewer can
+see the target resource, otherwise plain text) on the list/detail
+views.
 
 Add the field's name to `autocomplete_fields`/`AutocompleteFieldNames`
-to switch the form input to a searchable PinesUI Command-style
+to switch the form input to a searchable shadcn/ui Combobox-style
 combobox instead, backed by `GET /{slug}/lookup?q=...` — the target's
 full queryset is never loaded into the page, only whatever the search
 matches (up to 20 results) plus the current selection. Use this for
@@ -230,8 +243,10 @@ core.NewAction("deactivate", func(ctx context.Context, ma core.ModelAdmin, objec
 
 An action handler is always called with a list of objects — one for a
 detail-page record action, as many as were checked for a bulk action —
-so it never needs to know which UI entry point invoked it. `confirm=`/
-`WithActionConfirm(...)` shows a PinesUI modal before the request goes
+so it never needs to know which UI entry point invoked it. On the list
+view, picking one from the bulk-actions listbox runs it immediately —
+there's no separate "Apply" step. `confirm=`/
+`WithActionConfirm(...)` shows a shadcn/ui Dialog before the request goes
 out; `permission=`/`WithActionPermission(...)` checks an extra
 `{slug}.{permission}` permission (see
 [`permissions.md`](permissions.md)) beyond the resource's own `.view`.

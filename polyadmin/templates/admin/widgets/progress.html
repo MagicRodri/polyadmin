@@ -1,7 +1,7 @@
-<div class="mb-1 flex justify-between text-sm text-neutral-600">
+<div class="mb-1 flex justify-between text-sm text-muted-foreground">
   <span>{{ widget_data.value }} / {{ widget_data.target }}</span>
   <span>{{ widget_data.percent }}%</span>
 </div>
-<div class="h-2 w-full rounded-full bg-neutral-100">
-  <div class="h-2 rounded-full bg-neutral-900" style="width: {{ widget_data.percent }}%"></div>
+<div class="{{ ui('widget', 'bar-track') }}">
+  <div class="{{ ui('widget', 'bar-fill') }}" style="width: {{ widget_data.percent }}%"></div>
 </div>

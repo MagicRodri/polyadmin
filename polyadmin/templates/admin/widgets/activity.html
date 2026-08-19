@@ -1,8 +1,8 @@
-<ul class="space-y-2 text-sm text-neutral-700">
+<ul class="space-y-2 text-sm text-foreground">
   {% for entry in widget_data.entries %}
   <li>{{ entry }}</li>
   {% endfor %}
 </ul>
 {% if not widget_data.entries %}
-<p class="text-sm text-neutral-400">No recent activity.</p>
+<p class="text-sm text-muted-foreground">No recent activity.</p>
 {% endif %}

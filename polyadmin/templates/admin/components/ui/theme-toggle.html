@@ -1,0 +1,37 @@
+{# Light/dark toggle + the Tooltip port that labels it.
+
+   Mirrors go-polyadmin/templates/admin/components/ui/theme-toggle.html.
+
+   The button reads and writes $store.theme, registered in
+   admin/theme.html -- the store owns both the `dark` class on <html>
+   and the localStorage write, so this component is pure presentation
+   and any application template can drop a second copy in without the
+   two falling out of sync.
+
+   Tooltip: shadcn's is Radix's, which portals the content and tracks
+   the trigger with Floating UI. Neither is needed for a label pinned
+   under a fixed-size icon button, so this is the CSS-only form --
+   Tailwind's `peer-hover:`/`peer-focus-visible:` on a sibling, which
+   means it also works with Alpine still loading and costs no JS at all.
+   `pointer-events-none` keeps it from eating the hover it depends on. #}
+{% from "admin/components/icons.html" import icon %}
+{% macro theme_toggle() %}
+<span class="relative inline-flex">
+  <button type="button" @click="$store.theme.toggle()"
+          class="peer {{ ui('button', 'ghost-muted', 'size-icon-sm') }}"
+          :aria-pressed="$store.theme.dark ? 'true' : 'false'"
+          aria-label="Toggle dark mode">
+    {# No x-cloak: with Alpine still loading, x-show has not run yet and
+       both icons would show at once. Instead the sun is the
+       server-rendered default (hidden once Alpine decides) and the moon
+       starts hidden -- so the pre-Alpine frame shows exactly one icon
+       either way. #}
+    <span x-show="!$store.theme.dark">{{ icon("sun", "w-4 h-4") }}</span>
+    <span x-show="$store.theme.dark" style="display: none">{{ icon("moon", "w-4 h-4") }}</span>
+  </button>
+  <span role="tooltip"
+        class="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 -translate-x-1/2 whitespace-nowrap opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100 {{ ui('tooltip', 'content') }}">
+    <span x-text="$store.theme.dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
+  </span>
+</span>
+{% endmacro %}

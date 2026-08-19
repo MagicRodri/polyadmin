@@ -4,39 +4,52 @@
 {% from "admin/components/icons.html" import icon %}
 {% block title %}{{ model_admin.get_verbose_name() }}{% endblock %}
 {% block content %}
-<div class="mb-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-  {% if permissions.can_update %}
-  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/edit"
-     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
-    {{ icon("edit", "w-4 h-4") }} Edit
-  </a>
-  {% endif %}
-  {% if permissions.can_delete %}
-  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/delete"
-     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-red-600 bg-white px-4 py-2 text-sm font-medium tracking-wide text-red-600 transition-colors duration-100 hover:bg-red-600 hover:text-white">
-    {{ icon("delete", "w-4 h-4") }} Delete
-  </a>
-  {% endif %}
-  {% for action in actions %}
-  <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
-        {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
-        onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
-    <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">
-    <button type="submit"
-            class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
-      {{ action.label }}
-    </button>
-  </form>
-  {% endfor %}
-</div>
-<dl class="divide-y divide-neutral-200 rounded-lg border border-neutral-200/70 bg-white">
-  {% for name in detail_fields %}
-  {% set field = model_admin.get_field(name) %}
-  <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
-    <dt class="text-sm font-medium text-neutral-500">{{ field.label }}</dt>
-    <dd class="text-sm text-neutral-900 sm:col-span-2">{{ render_field_value(field, field.get_value(object)) }}</dd>
+{# Layout comes from ui("page"), shared with form_wrapper.html, so
+   viewing and editing the same record don't jump width or alignment:
+   the record sits in a vertically centered max-w-xl column and scrolls
+   under an action bar pinned to the bottom of the viewport.
+
+   Edit/Delete/record actions sit below the record, not above it -- the
+   record itself is what a viewer came here to read, not a button bar
+   first -- and now stay reachable on a long record without scrolling to
+   the end. Mirrors go-polyadmin/templates/admin/detail.html. #}
+<div class="{{ ui('page') }}">
+  <div class="{{ ui('page', 'body') }}">
+    <dl class="{{ ui('card') }} divide-y divide-border">
+      {% for name in detail_fields %}
+      {% set field = model_admin.get_field(name) %}
+      <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
+        <dt class="text-sm font-medium text-muted-foreground">{{ field.label }}</dt>
+        <dd class="text-sm text-foreground sm:col-span-2">{{ render_field_value(field, field.get_value(object)) }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+    {% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}
   </div>
-  {% endfor %}
-</dl>
-{% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}
+  {# No Delete here -- it lives on the edit form, so destroying a record
+     is something you opt into by entering edit mode rather than a click
+     away from merely looking at one. #}
+  <div class="{{ ui('page', 'actions') }}">
+    <div class="{{ ui('page', 'actions-inner') }}">
+      <div class="{{ ui('page', 'actions-primary') }}">
+        {% if permissions.can_update %}
+        <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/edit"
+           class="{{ ui('button', 'outline') }}">
+          {{ icon("edit", "w-4 h-4") }} Edit
+        </a>
+        {% endif %}
+        {% for action in actions %}
+        <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
+              {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
+              onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
+          <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">
+          <button type="submit" class="{{ ui('button', 'outline') }}">
+            {{ action.label }}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

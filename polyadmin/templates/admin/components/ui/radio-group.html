@@ -1,0 +1,30 @@
+{# RadioGroup, ported from shadcn/ui (Radix RadioGroup).
+
+   Mirrors go-polyadmin/templates/admin/components/ui/radio-group.html.
+
+   Radix reimplements radio semantics on divs plus a roving tabindex;
+   native <input type="radio"> already has all of that -- one tab stop
+   per group, arrow keys to move within it, and it posts with a plain
+   form submit -- so this port keeps the native control and takes only
+   shadcn's layout and coloring (accent-primary for the dot). Zero JS.
+
+   `choices` is a list of dicts: {"value": ..., "label": ...,
+   "help": ...(optional)}. #}
+{% macro radio_group(name, label, choices=(), selected=none) %}
+<fieldset class="mb-4">
+  <legend class="{{ ui('label') }}">{{ label }}</legend>
+  <div class="mt-2 space-y-2" role="radiogroup">
+    {% for choice in choices %}
+    <div class="flex items-start gap-2.5">
+      <input type="radio" id="radio-{{ name }}-{{ choice.value }}" name="{{ name }}" value="{{ choice.value }}"
+             {% if choice.value == selected %}checked{% endif %}
+             class="mt-0.5 {{ ui('radio') }}">
+      <span class="min-w-0">
+        <label for="radio-{{ name }}-{{ choice.value }}" class="{{ ui('label') }}">{{ choice.label }}</label>
+        {% if choice.get("help") %}<p class="{{ ui('field', 'description') }}">{{ choice.help }}</p>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</fieldset>
+{% endmacro %}

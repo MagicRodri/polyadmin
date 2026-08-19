@@ -30,6 +30,7 @@ from polyadmin.core.template_context import (
     form_context,
     list_context,
 )
+from polyadmin.ui import ui
 
 # build_inline_context is imported lazily inside the methods that need
 # it (not at module level) -- polyadmin.fastapi.inlines lives under
@@ -51,6 +52,11 @@ class Renderer:
             trim_blocks=True,
             lstrip_blocks=True,
         )
+        # `ui` resolves shadcn-derived class strings (polyadmin/ui.py).
+        # A global rather than a per-template import so every template --
+        # including application overrides and custom page/widget
+        # templates -- can style with the same vocabulary for free.
+        self.env.globals["ui"] = ui
 
     def render(self, template_name: str, context: dict[str, Any]) -> str:
         return self.env.get_template(template_name).render(**context)
@@ -69,6 +75,7 @@ class Renderer:
         relation_permissions: dict[str, bool] | None = None,
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
+        principal: Any = None,
     ) -> str:
         context = list_context(
             admin,
@@ -79,6 +86,7 @@ class Renderer:
             relation_permissions=relation_permissions,
             base_path=base_path,
             messages=messages,
+            principal=principal,
         )
         return self.render_candidates(model_admin.get_template_candidates("list"), context)
 
@@ -92,6 +100,7 @@ class Renderer:
         permissions: dict[str, bool] | None = None,
         relation_permissions: dict[str, bool] | None = None,
         base_path: str = "/admin",
+        principal: Any = None,
     ) -> str:
         context = list_context(
             admin,
@@ -101,6 +110,7 @@ class Renderer:
             permissions=permissions,
             relation_permissions=relation_permissions,
             base_path=base_path,
+            principal=principal,
         )
         return self.render("admin/components/list_content.html", context)
 
@@ -126,6 +136,7 @@ class Renderer:
             relation_permissions=relation_permissions,
             base_path=base_path,
             messages=messages,
+            principal=principal,
         )
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
         return self.render_candidates(model_admin.get_template_candidates("detail"), context)
@@ -144,6 +155,7 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
     ) -> str:
+        from polyadmin.fastapi.auth import compute_permissions
         from polyadmin.fastapi.inlines import build_inline_context
 
         context = form_context(
@@ -154,8 +166,10 @@ class Renderer:
             errors=errors,
             non_field_errors=non_field_errors,
             relation_options=relation_options,
+            permissions=compute_permissions(admin, principal, model_admin),
             base_path=base_path,
             messages=messages,
+            principal=principal,
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
@@ -174,6 +188,7 @@ class Renderer:
         relation_options: dict[str, list[tuple[Any, Any]]] | None = None,
         base_path: str = "/admin",
     ) -> str:
+        from polyadmin.fastapi.auth import compute_permissions
         from polyadmin.fastapi.inlines import build_inline_context
 
         context = form_context(
@@ -184,7 +199,9 @@ class Renderer:
             errors=errors,
             non_field_errors=non_field_errors,
             relation_options=relation_options,
+            permissions=compute_permissions(admin, principal, model_admin),
             base_path=base_path,
+            principal=principal,
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
@@ -221,8 +238,9 @@ class Renderer:
         *,
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
+        principal: Any = None,
     ) -> str:
-        context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages)
+        context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages, principal=principal)
         return self.render("admin/dashboard.html", context)
 
     def render_lookup(self, options: list[tuple[Any, Any]]) -> str:
@@ -236,6 +254,7 @@ class Renderer:
         *,
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
+        principal: Any = None,
     ) -> str:
-        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages)
+        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)

@@ -1,50 +1,69 @@
-{# The interactive region of a list page: filters + table + pagination.
+{# The interactive region of a list page: toolbar + table + footer.
    Rendered both inside the full page (resource/list.html) and directly
    as an HTMX fragment (Renderer.render_list_fragment) -- same markup
    either way, so search/filter/sort/pagination never disagree between
-   a fresh load and a partial swap. #}
+   a fresh load and a partial swap.
+
+   Laid out after shadcn/ui's Tasks example: one full-width column,
+   no side panel. The toolbar is a single row -- search and the faceted
+   filter dropdowns left, the page's own actions right -- then the
+   table, then DataTablePagination. The filters that used to live in a
+   Django-admin-style right-hand panel are now those faceted dropdowns
+   (components/filters.html), which is what frees the full width for
+   the table.
+
+   Button placement follows the example: everything that *narrows* the
+   table is on the left, everything that *acts on* it is on the right,
+   so the two never interleave as filters come and go. Bulk actions are
+   the one addition -- they appear in the left cluster only once rows
+   are selected, since that's a verb about the current selection rather
+   than a page-level action. Mirrors go-polyadmin's list.html. #}
 {% from "admin/components/icons.html" import icon %}
-<div id="resource-list">
-{% if permissions.can_create or permissions.can_export %}
-<div class="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-  {% if permissions.can_export %}
-  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/export/csv{{ export_query }}"
-     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
-    {{ icon("download", "w-4 h-4") }} Export CSV
-  </a>
-  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/export/xlsx{{ export_query }}"
-     class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
-    {{ icon("download", "w-4 h-4") }} Export XLSX
-  </a>
-  {% endif %}
-  {% if permissions.can_create %}
-  <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create"
-     class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900">
-    {{ icon("plus", "w-4 h-4") }} New {{ model_admin.get_verbose_name() }}
-  </a>
-  {% endif %}
-</div>
-{% endif %}
-{% if filter_controls %}
-{# Django-admin layout: filter panel to the right of the results on
-   larger screens, stacked above them on mobile. `search`/`table`/
-   `filter`/`pager` are CSS grid-template-areas -- grid-area only takes
-   effect once the container becomes `display: grid` at `lg:`, so this
-   is a no-op (plain block stacking) below that breakpoint. The filter
-   panel starts level with the table (not the search bar above it),
-   so the top-right cell is left empty (`.`). #}
-<div class="space-y-4 lg:grid lg:items-start lg:gap-x-6 lg:gap-y-4 lg:space-y-0"
-     style="grid-template-columns: minmax(0, 1fr) 16rem; grid-template-areas: 'search .' 'table filter' 'pager filter';">
-  <div style="grid-area: search;">{% include "admin/components/search.html" %}</div>
-  <div style="grid-area: filter;">{% include "admin/components/filters.html" %}</div>
-  <div style="grid-area: table;">{% include "admin/components/table.html" %}</div>
-  <div style="grid-area: pager;">{% include "admin/components/pagination.html" %}</div>
-</div>
-{% else %}
-<div class="space-y-4">
-  {% include "admin/components/search.html" %}
-  {% include "admin/components/table.html" %}
-  {% include "admin/components/pagination.html" %}
-</div>
-{% endif %}
+{% from "admin/components/ui/dropdown-menu.html" import dropdown_menu %}
+<div id="resource-list" class="space-y-4">
+
+  <div class="{{ ui('toolbar') }}">
+    <div class="{{ ui('toolbar', 'filters') }}">
+      {% include "admin/components/search.html" %}
+      {% include "admin/components/filters.html" %}
+      {% if has_active_filters %}
+      {# Reset, exactly as the example has it: appears only once
+         something is actually applied, and clears search + every
+         filter at once (but not sort or page size -- those are how
+         you're reading the table, not what you're narrowing it to). #}
+      <a href="{{ reset_url }}"
+         hx-get="{{ reset_url }}" hx-target="#resource-list" hx-select="#resource-list"
+         hx-swap="outerHTML" hx-push-url="true"
+         class="{{ ui('button', 'ghost-muted', 'size-xs') }} h-8 px-2 lg:px-3">
+        Reset {{ icon("close", "size-4") }}
+      </a>
+      {% endif %}
+      {% include "admin/components/ui/bulk-actions.html" %}
+    </div>
+
+    <div class="{{ ui('toolbar', 'actions') }}">
+      {% if permissions.can_export %}
+      {# One DropdownMenu instead of a button per format: the row of
+         export buttons grew with every format added. #}
+      {{ dropdown_menu(
+           "Export",
+           icon_name="download",
+           text="Export",
+           items=[
+             {"label": "CSV", "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/csv" ~ export_query},
+             {"label": "XLSX", "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/xlsx" ~ export_query},
+           ],
+         ) }}
+      {% endif %}
+      {% if permissions.can_create %}
+      <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create"
+         class="{{ ui('button') }} {{ ui('button', 'size-sm') }}">
+        {{ icon("plus", "size-4") }} New {{ model_admin.get_verbose_name() }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% include "admin/components/ui/table.html" %}
+  {% include "admin/components/ui/pagination.html" %}
 </div>

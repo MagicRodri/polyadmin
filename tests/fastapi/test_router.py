@@ -35,10 +35,12 @@ def test_list_view_paginates():
         user_admin.create({"email": f"user{i}@example.com"})
     response = client.get("/admin/users?page=2&page_size=10")
     assert response.status_code == 200
-    assert "2 / 2" in response.text
-    assert "Showing" in response.text
-    assert ">11</span>" in response.text
-    assert ">15</span> results" in response.text
+    # DataTablePagination (shadcn Tasks example) replaced the
+    # "Showing 11 to 15 of 15" line with a page indicator, a row count,
+    # and a rows-per-page control.
+    assert "Page 2 of 2" in response.text
+    assert "15 row(s)" in response.text
+    assert "Rows per page" in response.text
 
 
 def test_create_get_renders_empty_form():

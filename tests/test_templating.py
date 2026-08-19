@@ -39,9 +39,11 @@ def test_render_list_pagination_links():
 
     html = Renderer().render_list(admin, user_admin, page)
 
-    assert "2 / 2" in html
-    assert "page=1" in html  # previous link
+    assert "Page 2 of 2" in html
+    # page=1 is the implied default, so the first/previous jumps are the
+    # bare list URL rather than an explicit page=1.
     assert "page=3" not in html  # no next link on the last page
+    assert "Rows per page" in html
 
 
 def test_render_detail_shows_field_values():

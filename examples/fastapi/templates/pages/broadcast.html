@@ -1,26 +1,52 @@
 {% extends "admin/base.html" %}
+{# A custom admin page, and the demo of the shadcn components that the
+   generated CRUD screens have no use for: RadioGroup, Switch, and
+   Slider. A ModelAdmin form is built from field types, so it reaches
+   for a <select> and a checkbox; a hand-written page like this is
+   exactly where the richer controls earn their place. See
+   plan/shadcnui-usage.md §8 and docs/routing.md.
+
+   Everything here styles itself through the `ui` global, so this page
+   follows the active theme (and dark mode) with no color literals of
+   its own. #}
+{% from "admin/components/ui/radio-group.html" import radio_group %}
+{% from "admin/components/ui/switch.html" import switch %}
+{% from "admin/components/ui/slider.html" import slider %}
 {% block title %}Broadcast Message{% endblock %}
 {% block content %}
-<form method="post" action="{{ base_path }}/tools/broadcast"
-      class="w-full max-w-xl rounded-lg border border-neutral-200/70 bg-white p-7 shadow-sm">
-  <h2 class="mb-1 text-lg font-semibold text-neutral-900">Broadcast a message</h2>
-  <p class="mb-4 text-sm text-neutral-500">
+<form method="post" action="{{ base_path }}/tools/broadcast" class="{{ ui('panel', 'form') }} max-w-xl">
+  <h2 class="mb-1 text-lg font-semibold text-foreground">Broadcast a message</h2>
+  <p class="mb-4 {{ ui('text', 'muted') }}">
     Sends a one-off notice to every active user -- a stand-in for a
     department-facing wizard that isn't resource CRUD.
   </p>
   {% if error %}
-  <div class="relative mb-4 rounded-lg border border-transparent bg-red-600 p-4 text-white">
-    <p class="text-sm opacity-80">{{ error }}</p>
+  <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4">
+    <p class="{{ ui('alert', 'description') }}">{{ error }}</p>
   </div>
   {% endif %}
-  <label class="mb-4 block">
-    <span class="mb-1.5 block text-sm font-medium text-neutral-700">Message</span>
-    <textarea name="message" rows="4" required
-              class="block w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-neutral-400 focus:outline-none focus:ring-0"></textarea>
-  </label>
-  <button type="submit"
-          class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900">
-    Send broadcast
-  </button>
+  <div class="{{ ui('field') }}">
+    <label for="message" class="{{ ui('field', 'label') }}">Message</label>
+    <div class="{{ ui('field', 'control') }}">
+      <textarea id="message" name="message" rows="4" required class="{{ ui('textarea') }}"></textarea>
+    </div>
+  </div>
+
+  {{ radio_group(
+       "urgency", "Urgency",
+       choices=[
+         {"value": "normal", "label": "Normal", "help": "Queued with everything else."},
+         {"value": "high", "label": "High", "help": "Jumps the queue and pings on-call."},
+       ],
+       selected="normal",
+     ) }}
+
+  {{ switch("also_email", "Also send by email",
+            checked=False,
+            help="In-app only when off.") }}
+
+  {{ slider("rate", "Throttle", min=10, max=500, step=10, value=100, suffix="/min") }}
+
+  <button type="submit" class="{{ ui('button') }}">Send broadcast</button>
 </form>
 {% endblock %}

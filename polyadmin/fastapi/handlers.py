@@ -84,6 +84,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 permissions=permissions,
                 relation_permissions=relation_permissions,
                 base_path=base_path,
+                principal=principal,
             )
         else:
             messages = pop_flash(request)
@@ -96,6 +97,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 relation_permissions=relation_permissions,
                 base_path=base_path,
                 messages=messages,
+                principal=principal,
             )
         response = HTMLResponse(html)
         if not is_htmx_request(request):
@@ -258,13 +260,13 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     slug = model_admin.get_slug()
 
     async def delete_get(request: Request, pk: str) -> HTMLResponse:
-        _, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
-        html = renderer.render_delete(admin, model_admin, obj, base_path=base_path)
+        html = renderer.render_delete(admin, model_admin, obj, base_path=base_path, principal=principal)
         return HTMLResponse(html)
 
     async def delete_post(request: Request, pk: str):

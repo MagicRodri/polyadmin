@@ -18,12 +18,12 @@
    only ever appear as ordinary (auto-escaped) HTML text. #}
 <div x-data="{ active: 0 }">
   {% if widget_data.panels %}
-  <div class="mb-3 flex gap-1 border-b border-neutral-200" role="tablist">
+  <div class="{{ ui('tabs', 'underline-list') }}" role="tablist">
     {% for panel in widget_data.panels %}
     <button type="button" role="tab" @click="active = {{ loop.index0 }}"
             :aria-selected="active === {{ loop.index0 }}"
-            :class="active === {{ loop.index0 }} ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-800'"
-            class="-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300">{{ panel.label }}</button>
+            :class="active === {{ loop.index0 }} ? '{{ ui('tabs', 'underline-trigger-on') }}' : '{{ ui('tabs', 'underline-trigger-off') }}'"
+            class="{{ ui('tabs', 'underline-trigger') }}">{{ panel.label }}</button>
     {% endfor %}
   </div>
   {% for panel in widget_data.panels %}
@@ -32,6 +32,6 @@
   </div>
   {% endfor %}
   {% else %}
-  <p class="text-sm text-neutral-400">No panels configured.</p>
+  <p class="text-sm text-muted-foreground">No panels configured.</p>
   {% endif %}
 </div>

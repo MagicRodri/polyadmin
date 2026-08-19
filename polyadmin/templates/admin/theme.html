@@ -1,0 +1,223 @@
+{# Design tokens + frontend runtime. Mirrors
+     go-polyadmin/templates/admin/theme.html.
+
+     This is the "take the tokens, leave the React" half of
+     plan/shadcnui-usage.md: the CSS variables below are shadcn/ui's
+     stock Zinc theme, and every class string in polyadmin/ui.py resolves
+     to them (bg-background, text-muted-foreground, border-input, ...)
+     rather than to a literal Tailwind palette. Restyling the whole
+     admin -- or flipping it to dark -- is therefore a change to these
+     variables and nothing else.
+
+     Script order in here is load-order-critical, top to bottom:
+
+       1. the dark-class script must run *synchronously before paint*,
+          otherwise a dark-mode reload flashes the light palette for a
+          frame (this is the same reason next-themes injects an inline
+          script);
+       2. the Tailwind CDN script must load *before* `tailwind.config`
+          is assigned -- backwards from what you'd guess. The CDN
+          script is what defines the global `tailwind` object in the
+          first place; setting `tailwind.config = {...}` before it
+          exists throws a silent `ReferenceError` (swallowed by the
+          browser, no visible failure) and Tailwind falls back to its
+          stock palette. Every custom color -- `bg-background`,
+          `text-foreground`, the `chart-*` tokens -- then resolves to
+          nothing, which is exactly what happened here: confirmed with
+          a real headless-Chrome run where `tailwind.config` came out
+          as `{}` and not one token-based utility (`.bg-background`,
+          `.text-chart-1`, ...) existed in the generated stylesheet.
+          This is also Tailwind's own documented order
+          (https://tailwindcss.com/docs/installation/play-cdn#customizing-tailwind);
+       3. Alpine *plugins* must load before Alpine core, per Alpine's
+          docs -- core initializes on load and only sees directives
+          registered by then. `x-trap` (action_confirm_modal.html) and
+          `x-collapse`/`x-anchor` (the ui/ components) come from these
+          three plugins.
+
+     Everything is CDN-loaded: there is no frontend build step in
+     either language implementation. #}
+<script>
+  // (1) Pre-paint theme resolution -- see the note above.
+  (function () {
+    try {
+      var stored = localStorage.getItem("polyadmin-theme");
+      var dark = stored
+        ? stored === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", dark);
+    } catch (e) {
+      /* localStorage unavailable (private mode, file://) -- stay light. */
+    }
+  })();
+</script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // (2) Tailwind Play CDN configuration -- the CDN script above must
+  // load first, since it's what defines the `tailwind` global this
+  // assigns onto (see the note above). `<alpha-value>` is what lets the
+  // opacity modifiers the shadcn class lists rely on -- bg-primary/90,
+  // bg-muted/50, border-destructive/50 -- resolve against a CSS
+  // variable holding a bare HSL triplet.
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: [
+            "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI",
+            "Roboto", "Helvetica Neue", "Arial", "sans-serif",
+          ],
+        },
+        borderRadius: {
+          lg: "var(--radius)",
+          md: "calc(var(--radius) - 2px)",
+          sm: "calc(var(--radius) - 4px)",
+        },
+        colors: {
+          border: "hsl(var(--border) / <alpha-value>)",
+          input: "hsl(var(--input) / <alpha-value>)",
+          ring: "hsl(var(--ring) / <alpha-value>)",
+          background: "hsl(var(--background) / <alpha-value>)",
+          foreground: "hsl(var(--foreground) / <alpha-value>)",
+          primary: {
+            DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+            foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+          },
+          secondary: {
+            DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+            foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+          },
+          destructive: {
+            DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+            foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+          },
+          muted: {
+            DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+            foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+          },
+          accent: {
+            DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+            foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+          },
+          popover: {
+            DEFAULT: "hsl(var(--popover) / <alpha-value>)",
+            foreground: "hsl(var(--popover-foreground) / <alpha-value>)",
+          },
+          card: {
+            DEFAULT: "hsl(var(--card) / <alpha-value>)",
+            foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+          },
+          chart: {
+            1: "hsl(var(--chart-1) / <alpha-value>)",
+            2: "hsl(var(--chart-2) / <alpha-value>)",
+            3: "hsl(var(--chart-3) / <alpha-value>)",
+            4: "hsl(var(--chart-4) / <alpha-value>)",
+            5: "hsl(var(--chart-5) / <alpha-value>)",
+            6: "hsl(var(--chart-6) / <alpha-value>)",
+          },
+        },
+      },
+    },
+  };
+</script>
+
+{# (3) Alpine plugins, then Alpine core, then HTMX. SortableJS (defer,
+   so it's guaranteed ready before any x-init that calls
+   Sortable.create -- see ui/table.html's reorderable drag handle) is
+   the framework's one non-Alpine dependency: drag-and-drop has no
+   small CSS-only equivalent the way every other component here gets
+   by with Alpine alone. Mirrors go-polyadmin/templates/admin/theme.html. #}
+<script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://unpkg.com/@alpinejs/anchor@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+<style>
+  /* shadcn/ui's stock "Zinc" palette, as bare HSL triplets. */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 44%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --chart-6: 262 60% 62%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 5.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 5.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 190 70% 45%;
+  }
+
+  [x-cloak] { display: none !important; }
+
+  /* Alpine's x-collapse animates height; without this the accordion
+     content jumps its scrollbar in during the transition. */
+  [x-collapse] { overflow: hidden; }
+</style>
+
+<script>
+  // The theme store backing the header's toggle (ui/theme-toggle).
+  // Registered on alpine:init so it exists before any component that
+  // reads $store.theme is initialized.
+  document.addEventListener("alpine:init", function () {
+    Alpine.store("theme", {
+      dark: document.documentElement.classList.contains("dark"),
+      toggle() {
+        this.dark = !this.dark;
+        document.documentElement.classList.toggle("dark", this.dark);
+        try {
+          localStorage.setItem("polyadmin-theme", this.dark ? "dark" : "light");
+        } catch (e) {
+          /* Preference just doesn't persist; the toggle still works. */
+        }
+      },
+    });
+  });
+</script>

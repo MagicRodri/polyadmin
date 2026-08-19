@@ -1,0 +1,37 @@
+{# Switch, ported from shadcn/ui (Radix Switch).
+
+   Mirrors go-polyadmin/templates/admin/components/ui/switch.html.
+
+   Radix renders a <button role="switch"> and keeps a hidden input in
+   sync so the control still posts with a normal form submit; this does
+   the same, with Alpine owning the `on` state. Without JS the hidden
+   input still carries the server-rendered value, so a form containing a
+   switch degrades to "whatever it was" rather than silently posting
+   nothing.
+
+   Generated form fields use a plain styled checkbox instead (see
+   components/ui/field.html) -- a boolean column has no "unset" state to
+   distinguish, and the native control needs no JS at all. This
+   component is for custom admin pages (docs/routing.md), where an
+   explicit on/off affordance often reads better. #}
+{% macro switch(name, label, checked=false, help=none) %}
+<div class="mb-4 flex items-start justify-between gap-4"
+     x-data="{ on: {{ 'true' if checked else 'false' }} }">
+  <span class="min-w-0">
+    <label for="switch-{{ name }}" class="{{ ui('label') }}">{{ label }}</label>
+    {% if help %}<p class="{{ ui('field', 'description') }}">{{ help }}</p>{% endif %}
+  </span>
+  {# The hidden input is the thing that actually posts. Alpine writes
+     "true"/"false" into it so the server sees a value either way,
+     matching how the checkbox branch of the form renderer is read. #}
+  <input type="hidden" name="{{ name }}" :value="on ? 'true' : 'false'"
+         value="{{ 'true' if checked else 'false' }}">
+  <button type="button" id="switch-{{ name }}" role="switch" @click="on = !on"
+          :aria-checked="on ? 'true' : 'false'"
+          :class="on ? '{{ ui('switch', 'on') }}' : '{{ ui('switch', 'off') }}'"
+          class="{{ ui('switch') }}">
+    <span :class="on ? '{{ ui('switch', 'thumb-on') }}' : '{{ ui('switch', 'thumb-off') }}'"
+          class="{{ ui('switch', 'thumb') }}"></span>
+  </button>
+</div>
+{% endmacro %}

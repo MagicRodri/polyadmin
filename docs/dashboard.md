@@ -64,7 +64,8 @@ it wraps and repeats.
 `Stat`, `Timeline` and `Tabs` are adapted from Flowbite's
 admin-dashboard layout (its "Sales this week", "Latest Activity" and
 "Statistics this month" cards respectively), restyled to the same
-PinesUI/neutral palette as the rest of the framework.
+shadcn/ui tokens as the rest of the framework, so a custom widget
+inherits the active theme (and dark mode) for free.
 
 `Stat`'s delta is the *signed* percentage change, so `-4.2` means
 "down 4.2%". The widget draws up in green and down in red, matching

@@ -136,9 +136,51 @@ render.
 
 ## Styling
 
-Both implementations follow [PinesUI](https://devdojo.com/pines)
-conventions: Tailwind's `neutral-*` palette, Alpine.js for
-interactivity (`x-data`, `x-show`, `x-transition`, `x-teleport` for
-the toast/modal/combobox components), no separate JS component
-library. Tailwind, Alpine, and HTMX are CDN-loaded in `base.html` —
-there's no frontend build step to run in either language.
+The design system is [shadcn/ui](https://ui.shadcn.com), hand-ported to
+Alpine.js — see [`components.md`](components.md) for the full component
+list and the porting rationale, and `plan/shadcnui-usage.md` for the
+plan it follows. In short:
+
+- **Colors are tokens, never literals.** `bg-background`,
+  `text-muted-foreground`, `border-input` and friends resolve through
+  CSS variables declared in `admin/theme.html`. No template names a
+  Tailwind shade like `neutral-500`, which is what makes the admin
+  themeable and gives it dark mode for free.
+- **Class lists come from `ui(...)`**, the server-side stand-in for
+  shadcn's `class-variance-authority`: `{{ ui("button", "outline", "size-sm") }}`
+  composes a base with a variant and a size, while `{{ ui("table", "th") }}`
+  resolves a sub-component's own list. The registry lives in
+  [`polyadmin/ui.py`]() and is mirrored key-for-key by
+  `go-polyadmin/fiber/ui.go`.
+- **Radix is replaced by Alpine, not shipped.** Focus trapping is
+  `x-trap`, portals are `x-teleport`, popover positioning is `x-anchor`,
+  collapse is `x-collapse`. There is no React and no Radix runtime.
+- **Controls that gain nothing from a listbox stay native** — checkbox,
+  radio, range, `<input type="date">`, and `<select multiple>`
+  (manytomany) are styled to match shadcn rather than replaced by a
+  Radix-style widget. A single-value `<select>` (enum fields, a plain
+  foreignkey/onetoone) is the one exception: it's now `ui/select.html`,
+  a real trigger+listbox port with a hidden input carrying the posted
+  value, matching the bulk-actions listbox and the relation combobox's
+  own reasoning. The other genuinely Alpine-driven ports are the
+  relation combobox, the date picker's calendar popover, the dialog,
+  the dropdown menu, the sheet, the toasts, and the switch.
+- **A few components predate the port** (the toast queue, the confirm
+  dialog) and came from [PinesUI](https://devdojo.com/pines); they were
+  restyled onto the same tokens rather than rewritten.
+
+Tailwind, Alpine (plus its focus/collapse/anchor plugins), and HTMX are
+all CDN-loaded from `admin/theme.html` — there is still no frontend
+build step to run in either language.
+
+### Dark mode
+
+`admin/theme.html` resolves the theme in a synchronous inline script
+before first paint (so a dark reload doesn't flash light), toggling a
+`dark` class on `<html>`, and exposes an `Alpine.store('theme')` that
+the header's toggle button drives. The preference persists in
+`localStorage` under `polyadmin-theme`; with nothing stored it follows
+`prefers-color-scheme`.
+
+To restyle the whole admin, override `admin/theme.html` and change the
+CSS variables — nothing else needs to know.

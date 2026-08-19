@@ -16,18 +16,18 @@
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
   {% for widget in widgets %}
   {% set widget_data = widget.get_data() %}
-  <div class="rounded-lg border border-neutral-200/60 bg-white p-4 shadow-sm sm:p-6 {% if widget.size == 'lg' %}sm:col-span-2 xl:col-span-3{% endif %}">
-    <div class="mb-3 flex items-center gap-3">
-      <span class="inline-flex shrink-0 items-center justify-center rounded-lg bg-neutral-100 p-2 text-neutral-900">
+  <div class="{{ ui('widget') }} {% if widget.size == 'lg' %}{{ ui('widget', 'span-lg') }}{% endif %}">
+    <div class="{{ ui('widget', 'header') }}">
+      <span class="{{ ui('widget', 'icon') }}">
         {{ icon(widget_icons.get(widget.template, "metric"), "w-5 h-5") }}
       </span>
-      <h2 class="text-sm font-medium text-neutral-500">{{ widget.title }}</h2>
+      <h2 class="{{ ui('widget', 'title') }}">{{ widget.title }}</h2>
     </div>
     {% include widget.template %}
   </div>
   {% endfor %}
   {% if not widgets %}
-  <p class="text-sm text-neutral-500">No widgets configured.</p>
+  <p class="{{ ui('text', 'muted') }}">No widgets configured.</p>
   {% endif %}
 </div>
 {% endblock %}

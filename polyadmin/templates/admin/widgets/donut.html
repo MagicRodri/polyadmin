@@ -11,7 +11,7 @@
 <div x-data="{ active: null }" class="flex flex-col items-center gap-6 sm:flex-row">
   <div class="relative h-36 w-36 shrink-0">
     <svg viewBox="0 0 36 36" class="h-36 w-36">
-      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" stroke-width="3" class="text-neutral-100"></circle>
+      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" stroke-width="3" class="text-muted"></circle>
       {% for slice in widget_data.slices %}
       <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" stroke-width="3"
               stroke-dasharray="{{ slice.percent }} {{ 100 - slice.percent }}"
@@ -24,15 +24,15 @@
     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
       <template x-if="active === null">
         <div>
-          <p class="text-lg font-semibold text-neutral-900">{{ widget_data.total }}</p>
-          <p class="text-[11px] text-neutral-500">Total</p>
+          <p class="text-lg font-semibold text-foreground">{{ widget_data.total }}</p>
+          <p class="text-[11px] text-muted-foreground">Total</p>
         </div>
       </template>
       {% for slice in widget_data.slices %}
       <template x-if="active === {{ loop.index0 }}">
         <div>
-          <p class="text-lg font-semibold text-neutral-900">{{ slice.percent }}%</p>
-          <p class="text-[11px] text-neutral-500">{{ slice.label }}</p>
+          <p class="text-lg font-semibold text-foreground">{{ slice.percent }}%</p>
+          <p class="text-[11px] text-muted-foreground">{{ slice.label }}</p>
         </div>
       </template>
       {% endfor %}
@@ -41,17 +41,17 @@
   <ul class="w-full space-y-1 text-sm">
     {% for slice in widget_data.slices %}
     <li class="-mx-2 flex items-center justify-between gap-2 rounded-md px-2 py-1 transition-colors"
-        :class="active === {{ loop.index0 }} ? 'bg-neutral-50' : ''"
+        :class="active === {{ loop.index0 }} ? 'bg-muted/50' : ''"
         @mouseenter="active = {{ loop.index0 }}" @mouseleave="active = null">
-      <span class="flex items-center gap-2 text-neutral-700">
+      <span class="flex items-center gap-2 text-foreground">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{{ slice.color }}"></span>
         {{ slice.label }}
       </span>
-      <span class="text-neutral-500">{{ slice.value }} <span class="text-neutral-400">&middot; {{ slice.percent }}%</span></span>
+      <span class="text-muted-foreground">{{ slice.value }} <span class="text-muted-foreground">&middot; {{ slice.percent }}%</span></span>
     </li>
     {% endfor %}
     {% if not widget_data.slices %}
-    <li class="text-sm text-neutral-400">No data.</li>
+    <li class="text-sm text-muted-foreground">No data.</li>
     {% endif %}
   </ul>
 </div>

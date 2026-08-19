@@ -1,0 +1,77 @@
+{# DataTablePagination, ported from shadcn/ui's Tasks example: the
+   selection count on the left, then rows-per-page, the page indicator,
+   and the four jump buttons on the right. Mirrors
+   go-polyadmin/templates/admin/components/ui/pagination.html.
+
+   Unlike the old prev/next pair this always renders, even for a single
+   page -- the row count and the rows-per-page control are useful when
+   there's nothing to page through, and a footer that vanishes makes the
+   table appear to jump as you filter.
+
+   Every URL is precomputed by TemplateContext.list_context
+   (page_urls, page_size_options), so this template assembles no query
+   strings. Each is a real href as well as an hx-get, so paging still
+   works with JS off.
+
+   Included (not a macro) from components/list_content.html, sharing its
+   ambient context. #}
+{% from "admin/components/icons.html" import icon %}
+{% set swap = 'hx-target="#resource-list" hx-select="#resource-list" hx-swap="outerHTML" hx-push-url="true"' %}
+<nav class="{{ ui('pagination') }}">
+  {# The example shows "N of M row(s) selected". Selection is client
+     side, so the count is filled in by Alpine from the row checkboxes;
+     with no actions declared there are no checkboxes and it degrades to
+     a plain total. #}
+  <p class="{{ ui('pagination', 'selection') }}"
+     {% if actions %}
+     x-data="{ n: 0 }"
+     x-init="$el.closest('#resource-list').addEventListener('change', () => {
+               n = $el.closest('#resource-list').querySelectorAll('.row-checkbox:checked').length })"
+     {% endif %}>
+    {% if actions %}<span x-text="n">0</span> of {% endif %}{{ page.total_count }} row(s){{ " selected" if actions else "" }}
+  </p>
+
+  <div class="{{ ui('pagination', 'controls') }}">
+    <div class="{{ ui('pagination', 'rows-per-page') }}">
+      <span class="hidden sm:inline">Rows per page</span>
+      <div class="relative" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
+        <button type="button" x-ref="sizeTrigger" @click="open = !open"
+                :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
+                class="{{ ui('button', 'outline', 'size-xs') }} h-8 w-[70px] justify-between">
+          {{ page.page_size }}{{ icon("chevrons-up-down", "size-3.5 shrink-0 opacity-50") }}
+        </button>
+        <div x-show="open" x-cloak role="menu"
+             x-anchor.top-start.offset.6="$refs.sizeTrigger"
+             class="{{ ui('dropdown', 'content') }} min-w-[70px]">
+          {% for option in page_size_options %}
+          <a href="{{ option.url }}" role="menuitem" {{ swap | safe }} @click="open = false"
+             class="{{ ui('dropdown', 'item') }} {{ 'font-medium text-foreground' if option.selected else '' }}">
+            {{ option.size }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="{{ ui('pagination', 'page-indicator') }}">
+      Page {{ page.number }} of {{ page.num_pages or 1 }}
+    </div>
+
+    <div class="{{ ui('pagination', 'jumps') }}">
+      {% for jump in [
+        {"url": page_urls.first,    "enabled": page.has_previous, "icon": "chevron-double-left",  "label": "First page",    "edge": true},
+        {"url": page_urls.previous, "enabled": page.has_previous, "icon": "chevron-left",         "label": "Previous page", "edge": false},
+        {"url": page_urls.next,     "enabled": page.has_next,     "icon": "chevron-right",        "label": "Next page",     "edge": false},
+        {"url": page_urls.last,     "enabled": page.has_next,     "icon": "chevron-double-right", "label": "Last page",     "edge": true},
+      ] %}
+      <a title="{{ jump.label }}" aria-disabled="{{ 'false' if jump.enabled else 'true' }}"
+         {% if jump.enabled %}href="{{ jump.url }}" hx-get="{{ jump.url }}" {{ swap | safe }}{% else %}tabindex="-1"{% endif %}
+         class="{{ ui('button', 'outline', 'size-xs') }}
+                {{ ui('pagination', 'jump-edge') if jump.edge else ui('pagination', 'jump') }}
+                {{ '' if jump.enabled else ui('pagination', 'disabled') }}">
+        {{ icon(jump.icon, "size-4") }}<span class="sr-only">{{ jump.label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</nav>

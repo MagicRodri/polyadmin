@@ -340,7 +340,7 @@ wheels = [
 [[package]]
 name = "polyadmin"
 version = "0.1.0"
-source = { editable = "../../python" }
+source = { editable = "../../" }
 dependencies = [
     { name = "jinja2" },
 ]
@@ -388,7 +388,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110" },
-    { name = "polyadmin", extras = ["export-xlsx"], editable = "../../python" },
+    { name = "polyadmin", extras = ["export-xlsx"], editable = "../../" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]

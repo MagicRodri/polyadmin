@@ -143,7 +143,9 @@ def test_dashboard_stat_renders_delta_direction():
     response = client.get("/admin")
     assert "$45,385" in response.text
     assert "12.5%" in response.text
-    assert "text-red-600" in response.text
+    # A negative delta reads in the destructive token (not a literal
+    # red), so it follows whichever theme is active -- see polyadmin/ui.py.
+    assert "text-destructive" in response.text
 
 
 def test_dashboard_renders_timeline():

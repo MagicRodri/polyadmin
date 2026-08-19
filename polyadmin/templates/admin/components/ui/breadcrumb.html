@@ -1,0 +1,35 @@
+{# Breadcrumb, ported from shadcn/ui (which is markup-only -- no Radix
+   primitive behind it, so this is a straight class-for-class port onto
+   the theme tokens). Mirrors
+   go-polyadmin/templates/admin/components/ui/breadcrumb.html.
+
+   A home-icon crumb (always links to the dashboard) followed by the
+   page's own trail, chevron-separated, with the current page as a
+   plain (non-link) item carrying aria-current. Doubles as the page's
+   header now that base.html has no separate <h1> -- the active crumb is
+   weighted like a title so it still reads as one. #}
+{% from "admin/components/icons.html" import icon %}
+{% macro render_breadcrumbs(breadcrumbs, base_path) %}
+<nav aria-label="Breadcrumb">
+  <ol class="{{ ui('breadcrumb') }}">
+    <li class="flex items-center">
+      <a href="{{ base_path }}" class="{{ ui('breadcrumb', 'link') }} p-0.5">
+        {{ icon("home", "w-4 h-4") }}
+        <span class="sr-only">Dashboard</span>
+      </a>
+    </li>
+    {% for crumb in breadcrumbs %}
+    <li class="{{ ui('breadcrumb', 'item') }}">
+      <span class="{{ ui('breadcrumb', 'separator') }}">{{ icon("chevron-right", "w-3.5 h-3.5") }}</span>
+      {% if crumb.url %}
+      <a href="{{ crumb.url }}" class="{{ ui('breadcrumb', 'link') }}">{{ crumb.label }}</a>
+      {% elif crumb.active %}
+      <span class="{{ ui('breadcrumb', 'page') }}" aria-current="page">{{ crumb.label }}</span>
+      {% else %}
+      <span class="{{ ui('breadcrumb', 'plain') }}">{{ crumb.label }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endmacro %}

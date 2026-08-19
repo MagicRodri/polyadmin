@@ -1,59 +1,68 @@
-{# Context-aware form input for a field.
-   Default renderer, overridable by replacing this template. Field
-   classes follow PinesUI's text-input/textarea/select conventions
-   (devdojo.com/pines/docs/text-input) -- neutral-* border/ring, no
-   separate JS component; PinesUI's own <select> is a bespoke Alpine
-   widget that doesn't map onto a plain form POST, so relation/enum
-   selects here stay native <select> elements styled to match.
+{# Context-aware form input for a field. Default renderer, overridable
+   by replacing this template. Mirrors
+   go-polyadmin/templates/admin/components/ui/field.html.
 
-   `with context` so the autocomplete combobox branch can read
-   `base_path` to build its /lookup URL without every call site having
-   to pass it through explicitly (same reasoning as
-   components/field.html's render_related_link). #}
+   This is the Form/FormItem port from shadcn/ui (plan/shadcnui-usage.md
+   Phase D): every branch below renders the same
+   label + control + description + error unit, with the wrapper classes
+   coming from ui('field', ...) so a custom field added later lines up
+   with the generated ones for free.
+
+   Controls that must survive a plain (JS-free) form POST stay native
+   elements styled to match shadcn -- <select>, checkbox, and
+   <input type="date"> -- rather than the Radix-backed listbox,
+   checkbox, and day-picker shadcn uses. See polyadmin/ui.py for the
+   per-component reasoning. The two genuinely Alpine-driven ports here
+   are the relation combobox and the date picker's calendar popover.
+
+   `with context` so the combobox branch can read `base_path` to build
+   its /lookup URL without every call site having to pass it through
+   explicitly (same reasoning as components/field.html's
+   render_related_link). #}
 {% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/calendar.html" import date_picker %}
+{% from "admin/components/ui/select.html" import select %}
 {% macro render_form_input(field, value, errors, relation=none) %}
 {% set input_types = {
   "integer": "number",
   "decimal": "number",
   "email": "email",
   "url": "url",
-  "date": "date",
   "datetime": "datetime-local",
   "password": "password",
 } %}
-{% set field_classes = "mt-1 flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-500 focus:border-neutral-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" %}
-<div class="mb-4">
-  <label for="field-{{ field.name }}" class="block text-sm font-medium text-neutral-700">
-    {{ field.label }}{% if field.required %} *{% endif %}
+<div class="{{ ui('field') }}">
+  <label for="field-{{ field.name }}" class="{{ ui('field', 'label') }}">
+    {{ field.label }}{% if field.required %}<span class="{{ ui('field', 'required') }}" aria-hidden="true">*</span>{% endif %}
   </label>
+  <div class="{{ ui('field', 'control') }}">
   {% if field.field_type == "text" %}
   <textarea id="field-{{ field.name }}" name="{{ field.name }}" placeholder="{{ field.placeholder }}" autocomplete="off"
             {% if field.required %}required{% endif %}
             {% if field.readonly %}readonly{% endif %}
             {% if field.disabled %}disabled{% endif %}
-            class="{{ field_classes }} h-auto min-h-[80px]">{{ value or "" }}</textarea>
+            class="{{ ui('textarea') }}">{{ value or "" }}</textarea>
   {% elif field.field_type == "boolean" %}
   <input type="checkbox" id="field-{{ field.name }}" name="{{ field.name }}" value="true" autocomplete="off"
          {% if value %}checked{% endif %}
          {% if field.disabled %}disabled{% endif %}
-         class="mt-1 h-4 w-4 rounded border-neutral-300 bg-neutral-100 text-neutral-900 focus:outline-none">
+         class="{{ ui('checkbox') }}">
+  {% elif field.field_type == "date" %}
+  {# DatePicker: a native date input (which already posts YYYY-MM-DD
+     with no JS and gets the platform picker on mobile) plus the shadcn
+     Calendar port in a popover beside it. See components/ui/calendar.html. #}
+  {{ date_picker(field.name, value if value is not none else "", field.required, field.disabled) }}
   {% elif field.field_type == "enum" %}
-  <select id="field-{{ field.name }}" name="{{ field.name }}" autocomplete="off"
-          {% if field.disabled %}disabled{% endif %}
-          class="{{ field_classes }}">
-    {% for choice in field.choices %}
-    <option value="{{ choice }}" {% if choice == value %}selected{% endif %}>{{ choice }}</option>
-    {% endfor %}
-  </select>
+  {% set enum_options = namespace(pairs=[]) %}
+  {% for choice in field.choices %}{% set enum_options.pairs = enum_options.pairs + [(choice, choice)] %}{% endfor %}
+  {{ select(field.name, enum_options.pairs, selected=value, placeholder="Select…", disabled=field.disabled) }}
   {% elif field.field_type in ("foreignkey", "onetoone") and relation and relation.autocomplete %}
-  {# Lookup-driven searchable command, adapted from PinesUI's
-     Command component (devdojo.com/pines/docs/command) -- Pines only
-     documents a full-screen modal palette over a client-side item
-     array; this keeps its visual language (bordered panel, search
-     icon, item hover/active highlighting, arrow-key navigation) but
-     swaps the client-side filter for our server-side /lookup search,
-     since the whole point of autocomplete_fields is never loading the
-     target's full dataset into the page.
+  {# Combobox, ported from shadcn/ui (Radix Popover + cmdk). cmdk
+     filters a client-side item array; the whole point of
+     autocomplete_fields is never loading the target's full dataset into
+     the page, so the filtering stays server-side on the /lookup route
+     and htmx owns the round-trip while Alpine owns only open/close and
+     arrow-key navigation of whatever came back.
 
      The pk/label of a *searched* result flow through that result's
      data-pk/data-label attributes (read via `$el.dataset` in
@@ -67,7 +76,7 @@
      blank the field on every page load). Both routes go through
      ordinary HTML-attribute escaping, so a label containing quotes
      never has to survive being embedded in a JS expression. #}
-  <div class="relative"
+  <div class="{{ ui('combobox') }}"
        x-data="{
          open: false, query: '', activeEl: null,
          selectItem(pk, label) { this.$refs.hiddenInput.value = pk; this.query = label; this.open = false; this.activeEl = null; },
@@ -76,9 +85,9 @@
            if (!items.length) return;
            let idx = items.indexOf(this.activeEl);
            idx = (idx + delta + items.length) % items.length;
-           items.forEach(el => el.classList.remove('bg-neutral-100'));
+           items.forEach(el => el.classList.remove('{{ ui('combobox', 'item-active') }}'));
            this.activeEl = items[idx];
-           this.activeEl.classList.add('bg-neutral-100');
+           this.activeEl.classList.add('{{ ui('combobox', 'item-active') }}');
            this.activeEl.scrollIntoView({ block: 'nearest' });
          },
          selectActive() { if (this.activeEl) this.activeEl.click(); }
@@ -87,8 +96,8 @@
        @click.outside="open = false">
     <input x-ref="hiddenInput" type="hidden" name="{{ field.name }}"
            value="{{ relation.selected_pk if relation.selected_pk is not none else '' }}">
-    <div class="flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 focus-within:border-neutral-400 focus-within:outline-none">
-      {{ icon("search", "w-4 h-4 shrink-0 text-neutral-400") }}
+    <div class="{{ ui('combobox', 'trigger') }}">
+      {{ icon("search", ui('combobox', 'icon')) }}
       <input x-ref="textInput" type="text" autocomplete="off" placeholder="Search&hellip;"
              value="{{ relation.selected_label if relation.selected_label is not none else '' }}"
              x-model="query" @focus="open = true"
@@ -98,26 +107,20 @@
              hx-get="{{ base_path }}/{{ relation.lookup_target }}/lookup"
              hx-trigger="keyup changed delay:300ms, focus"
              hx-target="#combobox-results-{{ field.name }}" hx-swap="innerHTML"
-             class="h-10 w-full border-0 bg-transparent p-0 text-sm outline-none focus:ring-0 placeholder:text-neutral-400">
+             class="{{ ui('input', 'bare') }}">
     </div>
     <div x-ref="results" id="combobox-results-{{ field.name }}"
-         class="absolute z-10 mt-1 max-h-[280px] w-full overflow-y-auto rounded-md border border-neutral-200 bg-white py-1 text-sm shadow-md"
+         class="{{ ui('combobox', 'content') }}"
          x-show="open" x-cloak></div>
   </div>
   {% elif field.field_type in ("foreignkey", "onetoone") %}
-  <select id="field-{{ field.name }}" name="{{ field.name }}" autocomplete="off"
-          {% if field.disabled %}disabled{% endif %}
-          class="{{ field_classes }}">
-    <option value="">&mdash;</option>
-    {% for pk, label in (relation.options if relation else []) %}
-    <option value="{{ pk }}" {% if relation and pk == relation.selected_pk %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  {{ select(field.name, relation.options if relation else [],
+            selected=(relation.selected_pk if relation else none), placeholder="—", disabled=field.disabled) }}
   {% elif field.field_type == "manytomany" %}
   <select multiple id="field-{{ field.name }}" name="{{ field.name }}" autocomplete="off"
           {% if field.disabled %}disabled{% endif %}
           size="{{ [(relation.options|length if relation else 1), 1] | max }}"
-          class="{{ field_classes }} h-auto">
+          class="{{ ui('select', 'size-auto') }}">
     {% for pk, label in (relation.options if relation else []) %}
     <option value="{{ pk }}" {% if relation and pk in relation.selected_pks %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
@@ -128,13 +131,14 @@
          {% if field.required %}required{% endif %}
          {% if field.readonly %}readonly{% endif %}
          {% if field.disabled %}disabled{% endif %}
-         class="{{ field_classes }}">
+         class="{{ ui('input') }}">
   {% endif %}
+  </div>
   {% if field.help_text %}
-  <p class="mt-1 text-xs text-neutral-500">{{ field.help_text }}</p>
+  <p class="{{ ui('field', 'description') }}">{{ field.help_text }}</p>
   {% endif %}
   {% for error in errors or [] %}
-  <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+  <p class="{{ ui('field', 'message') }}">{{ error }}</p>
   {% endfor %}
 </div>
 {% endmacro %}

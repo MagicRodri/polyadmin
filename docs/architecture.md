@@ -85,9 +85,16 @@ across both suites, not by sharing code.
 ## Frontend
 
 Both languages render server-side HTML styled with
-[PinesUI](https://devdojo.com/pines) conventions (Tailwind's neutral
-palette, Alpine.js for interactivity, no separate JS component
-framework) and use HTMX for partial-page updates (list search/filter/
-sort/pagination, and form validation redisplay). Tailwind, Alpine, and
-HTMX are all CDN-loaded — neither implementation has a frontend build
-step.
+[shadcn/ui](https://ui.shadcn.com), hand-ported to Alpine.js + Tailwind:
+its CSS-variable token system and component markup, with Radix's
+behavior reimplemented in Alpine and no React anywhere. Colors resolve
+through those variables rather than a literal palette, which is what
+makes the admin themeable and dark-mode-capable. HTMX handles
+partial-page updates (list search/filter/sort/pagination, and form
+validation redisplay). Tailwind, Alpine (plus its focus/collapse/anchor
+plugins), and HTMX are all CDN-loaded — neither implementation has a
+frontend build step.
+
+See [`components.md`](components.md) for the component reference and the
+porting rationale, and [`templates.md`](templates.md#styling) for how to
+retheme.

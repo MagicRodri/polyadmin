@@ -1,100 +1,86 @@
+{% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/theme-toggle.html" import theme_toggle %}
+{% from "admin/components/ui/calendar.html" import calendar_script %}
 <!doctype html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_title }}{% endblock %} &middot; {{ site_title }}</title>
-  {# Phase 2 uses CDN builds so the admin renders with no frontend build
-     step. A compiled frontend/build bundle replaces these
-     once the static-asset pipeline (Phase 3+) lands. Markup below
-     follows PinesUI (devdojo.com/pines) conventions -- Tailwind +
-     Alpine, neutral-* palette, no separate JS component library. #}
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-  <style>[x-cloak] { display: none !important; }</style>
+  {# Design tokens, Tailwind config, Alpine + plugins, HTMX, and the
+     theme store -- all of it, in the one load order that works. See
+     admin/theme.html. #}
+  {% include "admin/theme.html" %}
+  {{ calendar_script() }}
   {% block extra_head %}{% endblock %}
 </head>
-<body class="h-full text-neutral-900" x-data="{ sidebarOpen: false }">
+{# bg-background/text-foreground rather than a literal palette: these
+   resolve through the CSS variables in theme.html, so the whole admin
+   follows the active theme (and dark mode) without a single template
+   knowing which one is active. #}
+{# SidebarProvider, from shadcn/ui's sidebar-07 block. Its three pieces
+   of state live here on <body> so every descendant can read them:
+
+     collapsed  -- desktop icon-rail mode. Seeded from the sidebar_state
+                   cookie (the same name shadcn's own provider uses) so
+                   the choice survives a reload, and written back on
+                   every toggle.
+     sidebarOpen -- the mobile sheet, which is a separate axis: a phone
+                   has no icon rail, it has an overlay.
+
+   The block's Cmd/Ctrl+B shortcut is wired on <body> too, since it has
+   to work wherever focus happens to be. #}
+<body class="h-full bg-background text-foreground antialiased"
+      x-data="{
+        sidebarOpen: false,
+        collapsed: (document.cookie.match(/(?:^|; )sidebar_state=([^;]*)/) || [])[1] === 'collapsed',
+        toggle() {
+          this.collapsed = !this.collapsed;
+          document.cookie = 'sidebar_state=' + (this.collapsed ? 'collapsed' : 'expanded') +
+                            '; path=/; max-age=' + 60 * 60 * 24 * 7;
+        }
+      }"
+      @keydown.window.meta.b.prevent="toggle()"
+      @keydown.window.ctrl.b.prevent="toggle()">
   {% include "admin/components/toasts.html" %}
   {% include "admin/components/action_confirm_modal.html" %}
   <div class="flex h-full">
-    <div x-cloak x-show="sidebarOpen" x-transition.opacity.duration.300ms="" @click="sidebarOpen = false"
-         class="fixed inset-0 z-30 bg-black/10 md:hidden"></div>
+    {# Sheet, ported from shadcn/ui (Radix Dialog with a slide
+       transition): below md the sidebar *is* a sheet -- overlay plus
+       off-canvas panel -- and at md and up it becomes the static,
+       collapsible column. One element does both jobs, so there's no
+       duplicate nav markup to keep in sync. #}
+    <div x-cloak x-show="sidebarOpen" x-transition.opacity.duration.300ms=""
+         @click="sidebarOpen = false" class="{{ ui('sheet', 'overlay') }} md:hidden"></div>
 
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-           class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col
-                  border-r border-neutral-200/70 bg-white transition-transform duration-300 ease-in-out
-                  md:static md:!transform-none">
-      <div class="flex items-center justify-between px-4 py-4">
-        <a href="{{ base_path }}" class="flex min-w-0 items-center gap-2">
-          {% if site_logo_url %}
-          <img src="{{ site_logo_url }}" alt="" class="h-7 w-7 shrink-0 rounded object-contain">
-          {% endif %}
-          <span class="truncate text-lg font-semibold text-neutral-900">{{ site_title }}</span>
-        </a>
-        <button type="button"
-                class="inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-200 md:hidden"
-                @click="sidebarOpen = false">
-          {% from "admin/components/icons.html" import icon %}
-          {{ icon("close", "w-5 h-5") }}
-          <span class="sr-only">Close menu</span>
-        </button>
-      </div>
-      <nav class="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
-        <a href="{{ base_path }}"
-           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if not model_admin %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
-          {{ icon("home", "w-5 h-5 shrink-0") }}
-          <span class="truncate">Dashboard</span>
-        </a>
-        {% for entry in nav_items %}
-          {% if entry.type == "link" %}
-          <a href="{{ entry.url }}"
-             class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if entry.active %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
-            {{ icon(entry.icon, "w-5 h-5 shrink-0") }}
-            <span class="truncate">{{ entry.label }}</span>
-          </a>
-          {% else %}
-          <div x-data="{ open: {{ entry.active | tojson }} }">
-            <button type="button" @click="open = !open"
-                    class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900">
-              {{ icon(entry.icon, "w-5 h-5 shrink-0") }}
-              <span class="flex-1 truncate">{{ entry.label }}</span>
-              <span :class="open ? 'rotate-180' : ''" class="shrink-0 transition-transform duration-200">
-                {{ icon("chevron-down", "w-4 h-4") }}
-              </span>
-            </button>
-            <div x-show="open" x-transition class="ml-4 mt-1 space-y-1 border-l border-neutral-200/70 pl-3">
-              {% for link in entry.links %}
-              <a href="{{ link.url }}"
-                 class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if link.active %}bg-neutral-100 text-neutral-900{% else %}text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900{% endif %}">
-                {{ icon(link.icon, "w-5 h-5 shrink-0") }}
-                <span class="truncate">{{ link.label }}</span>
-              </a>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-        {% endfor %}
-      </nav>
-    </aside>
+    {% include "admin/components/ui/sidebar.html" %}
 
-    <div class="flex min-w-0 flex-1 flex-col">
-      <header class="flex items-center gap-3 border-b border-neutral-200/70 bg-white px-4 py-3">
-        <button type="button"
-                class="-ml-1 inline-flex items-center justify-center rounded-md p-1.5 text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-200 md:hidden"
-                @click="sidebarOpen = true">
-          {{ icon("menu", "w-6 h-6") }}
-          <span class="sr-only">Open menu</span>
+    {# SidebarInset. #}
+    <div class="{{ ui('sidebar', 'inset') }}">
+      {# The block's header: trigger, a short vertical rule, then the
+         breadcrumbs. h-16 fixed, so it doesn't jump as content changes. #}
+      <header class="{{ ui('sidebar', 'topbar') }}">
+        <button type="button" @click="window.innerWidth < 768 ? sidebarOpen = true : toggle()"
+                class="-ml-1 {{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
+          {{ icon("sidebar", "w-4 h-4") }}
+          <span class="sr-only">Toggle sidebar</span>
         </button>
-        <div class="min-w-0">
+        <div class="{{ ui('separator', 'vertical') }} mr-2 !h-4"></div>
+        <div class="min-w-0 flex-1">
           {% if breadcrumbs %}
-          {% from "admin/components/breadcrumbs.html" import render_breadcrumbs %}
+          {% from "admin/components/ui/breadcrumb.html" import render_breadcrumbs %}
           {{ render_breadcrumbs(breadcrumbs, base_path) }}
           {% endif %}
         </div>
+        {{ theme_toggle() }}
       </header>
-      <main class="min-w-0 flex-1 overflow-x-hidden p-4">
+      {# overflow-y-auto is explicit rather than inherited from the
+         overflow-x-hidden shorthand's side effect (a visible axis
+         paired with a clipped one computes to auto): record pages
+         resolve min-h-full against this element and pin their action
+         bar to it with position:sticky, so it has to be the scroll
+         container on purpose, not by accident. #}
+      <main class="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4">
         {% block content %}{% endblock %}
       </main>
     </div>

@@ -1,0 +1,167 @@
+{% from "admin/components/field.html" import render_field_value with context %}
+{% from "admin/components/icons.html" import icon %}
+{# Table, ported from shadcn/ui: a bordered card wrapping a
+   `w-full caption-bottom text-sm` table, muted uppercase headers, and
+   rows that highlight on hover. Class strings come from ui('table', ...)
+   so the dashboard's Table widget and tabular inlines match this one.
+   Mirrors go-polyadmin/templates/admin/components/ui/table.html.
+
+   Included (not a macro) from components/list_content.html, sharing
+   its ambient context (rows, list_display, model_admin, ordering,
+   actions, permissions, base_path, reorderable) -- same reasoning as
+   components/ui/sidebar.html.
+
+   Row actions are one dropdown-menu button (dots-vertical) instead of
+   a row of icon buttons -- shadcn/ui's own dashboard-01 data table
+   does the same once a row has more than one or two actions. Built
+   inline here rather than through a shared dropdown-menu partial:
+   Delete needs hx-delete/hx-confirm on an item, a shape a data-only
+   item list doesn't express, matching the framework's existing
+   precedent of bespoke overlay markup at a specific call site (dialog,
+   toast, tabs) rather than forcing every variant through one partial.
+
+   Reorderable drag-and-drop is visual only: SortableJS (theme.html)
+   reorders the actual <tr> elements in place with no onEnd handler and
+   nothing hydrated from a data attribute, so there's no state to keep
+   in sync -- the next sort, search, page, or plain reload re-renders
+   the table from the server's real order and the drag is simply gone.
+   That statelessness is also why x-init lives directly on <tbody> with
+   no x-data: htmx's outerHTML swap (search/sort/pagination) replaces
+   this whole component, and Alpine re-runs x-init on every element it
+   discovers, so the drag keeps working after a swap for free. #}
+<div class="{{ ui('table', 'wrapper') }}">
+  <div class="{{ ui('table', 'scroll') }}">
+  <table class="{{ ui('table') }}">
+    <thead class="{{ ui('table', 'head') }}">
+      <tr>
+        {% if reorderable %}<th scope="col" class="w-8"></th>{% endif %}
+        {% if actions %}
+        <th scope="col" class="w-10 px-4 py-2.5">
+          <input type="checkbox" title="Select all"
+                 onclick="document.querySelectorAll('.row-checkbox').forEach(function(cb){cb.checked = this.checked}, this)"
+                 class="{{ ui('checkbox') }}">
+        </th>
+        {% endif %}
+        {# DataTableColumnHeader, from shadcn/ui's Tasks example: the
+           header is a dropdown trigger offering Asc/Desc explicitly,
+           rather than a link that cycles direction on each click -- with
+           a cycling link you can't tell what a click will do until you
+           try it. The trigger's icon shows the current direction, or
+           the neutral up/down glyph when the column isn't sorted. Both
+           choices are real hrefs (URLs precomputed in list_context), so
+           sorting still works with JS off. #}
+        {% for name in list_display %}
+        {% set sorted_by = sort_controls[name] %}
+        <th scope="col" class="{{ ui('table', 'th') }}"
+            {% if sorted_by.direction == "asc" %}aria-sort="ascending"{% elif sorted_by.direction == "desc" %}aria-sort="descending"{% endif %}>
+          <div class="relative inline-flex" x-data="{ open: false }"
+               @keydown.escape="open = false" @click.outside="open = false">
+            <button type="button" x-ref="sort{{ loop.index }}" @click="open = !open"
+                    :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
+                    class="-ml-3 h-8 gap-1 {{ ui('button', 'ghost-muted', 'size-xs') }} data-[state=open]:bg-accent">
+              {{ model_admin.get_field(name).label }}
+              {%- if sorted_by.direction == "asc" %}{{ icon("arrow-up", "size-3.5") }}
+              {%- elif sorted_by.direction == "desc" %}{{ icon("arrow-down", "size-3.5") }}
+              {%- else %}{{ icon("chevrons-up-down", "size-3.5 opacity-50") }}{% endif %}
+            </button>
+            <div x-show="open" x-cloak role="menu"
+                 x-anchor.bottom-start.offset.6="$refs.sort{{ loop.index }}"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 class="{{ ui('dropdown', 'content') }} min-w-32">
+              <a href="{{ sorted_by.asc_url }}" role="menuitem" @click="open = false"
+                 hx-get="{{ sorted_by.asc_url }}" hx-target="#resource-list" hx-select="#resource-list"
+                 hx-swap="outerHTML" hx-push-url="true"
+                 class="{{ ui('dropdown', 'item') }} {{ 'font-medium text-foreground' if sorted_by.direction == 'asc' else '' }}">
+                {{ icon("arrow-up", "size-4 shrink-0 text-muted-foreground") }}<span class="truncate">Asc</span>
+              </a>
+              <a href="{{ sorted_by.desc_url }}" role="menuitem" @click="open = false"
+                 hx-get="{{ sorted_by.desc_url }}" hx-target="#resource-list" hx-select="#resource-list"
+                 hx-swap="outerHTML" hx-push-url="true"
+                 class="{{ ui('dropdown', 'item') }} {{ 'font-medium text-foreground' if sorted_by.direction == 'desc' else '' }}">
+                {{ icon("arrow-down", "size-4 shrink-0 text-muted-foreground") }}<span class="truncate">Desc</span>
+              </a>
+            </div>
+          </div>
+        </th>
+        {% endfor %}
+        <th scope="col" class="w-8"></th>
+      </tr>
+    </thead>
+    <tbody class="{{ ui('table', 'body') }}"
+           {% if reorderable %}x-init="window.Sortable && Sortable.create($el, { handle: '.drag-handle', animation: 150 })"{% endif %}>
+      {% for row in rows %}
+      <tr id="row-{{ row.pk }}" class="{{ ui('table', 'row') }}">
+        {% if reorderable %}
+        <td class="px-2 py-2.5">
+          <button type="button" tabindex="-1" title="Drag to reorder (not saved)"
+                  class="drag-handle cursor-grab {{ ui('button', 'ghost-muted', 'size-icon-xs') }}">
+            {{ icon("menu", "w-3.5 h-3.5") }}<span class="sr-only">Drag to reorder</span>
+          </button>
+        </td>
+        {% endif %}
+        {% if actions %}
+        <td class="px-4 py-2.5">
+          <input type="checkbox" name="pks" value="{{ row.pk }}" form="bulk-actions-form" title="Select row"
+                 class="row-checkbox {{ ui('checkbox') }}">
+        </td>
+        {% endif %}
+        {% for name in list_display %}
+        <td class="{{ ui('table', 'cell') }}">
+          {{ render_field_value(model_admin.get_field(name), row.cells[name]) }}
+        </td>
+        {% endfor %}
+        <td class="{{ ui('table', 'cell') }} text-right">
+          {% if permissions.can_view or permissions.can_update or permissions.can_delete %}
+          <div class="relative inline-flex" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
+            <button type="button" x-ref="trigger" @click="open = !open"
+                    :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu" aria-label="Open menu"
+                    :class="open ? 'bg-accent text-accent-foreground' : ''"
+                    class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
+              {{ icon("dots-vertical", "w-4 h-4") }}
+            </button>
+            <div x-show="open" x-cloak role="menu"
+                 x-anchor.bottom-end.offset.6="$refs.trigger"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="{{ ui('dropdown', 'content') }} w-32">
+              {% if permissions.can_view %}
+              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
+                {{ icon("view", "w-4 h-4 shrink-0") }}<span class="truncate">View</span>
+              </a>
+              {% endif %}
+              {% if permissions.can_update %}
+              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/edit" role="menuitem" class="{{ ui('dropdown', 'item') }}">
+                {{ icon("edit", "w-4 h-4 shrink-0") }}<span class="truncate">Edit</span>
+              </a>
+              {% endif %}
+              {% if permissions.can_delete %}
+              <button
+                type="button"
+                role="menuitem"
+                @click="open = false"
+                class="{{ ui('dropdown', 'item') }} text-destructive hover:bg-destructive/10"
+                hx-delete="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete"
+                hx-target="#row-{{ row.pk }}"
+                hx-swap="outerHTML swap:0.2s"
+                hx-confirm="Delete this {{ model_admin.get_verbose_name() }}?"
+              >{{ icon("delete", "w-4 h-4 shrink-0") }}<span class="truncate">Delete</span></button>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not rows %}
+  <p class="{{ ui('table', 'empty') }}">No records.</p>
+  {% endif %}
+  </div>
+</div>

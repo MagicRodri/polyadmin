@@ -1,43 +1,87 @@
-{% from "admin/components/form.html" import render_form_input with context %}
+{% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/inline.html" import render_inline_section with context %}
 {% from "admin/components/icons.html" import icon %}
 {# HTMX posts to itself and swaps its own outerHTML with the response,
    so a validation error redisplays this form in place; a plain HTML
-   POST to `action` works identically without JS. #}
-<form id="resource-form" method="post" action="{{ form_action }}"
-      hx-post="{{ form_action }}" hx-target="#resource-form" hx-swap="outerHTML"
-      class="w-full max-w-xl rounded-lg border border-neutral-200/70 bg-white p-7 shadow-sm">
-  {% if non_field_errors %}
-  <div class="relative mb-4 rounded-lg border border-transparent bg-red-600 p-4 text-white">
-    <h5 class="mb-1 text-sm font-medium leading-none tracking-tight">Couldn't save {{ model_admin.get_verbose_name() }}</h5>
-    <div class="text-sm opacity-80">
-      {% for error in non_field_errors %}<p>{{ error }}</p>{% endfor %}
-    </div>
+   POST to `action` works identically without JS.
+
+   The swap targets #resource-form-wrapper -- this whole element -- and
+   not the <form> inside it, because the error response *is* this
+   template. Targeting the <form> nested a fresh copy of the wrapper
+   inside the old one on every failed save, duplicating the inline
+   sections and the action bar each time.
+
+   Layout comes from ui("page"): the record scrolls in a vertically
+   centered column and Save/Cancel stay pinned to the bottom of the
+   viewport, so a long form never buries its own submit button. See
+   ui.py's "page" entry for why sticky beats fixed here. Mirrors
+   go-polyadmin/templates/admin/form.html. #}
+<div id="resource-form-wrapper" class="{{ ui('page') }}">
+  <div class="{{ ui('page', 'body') }}">
+    <form id="resource-form" method="post" action="{{ form_action }}"
+          hx-post="{{ form_action }}" hx-target="#resource-form-wrapper" hx-swap="outerHTML"
+          class="{{ ui('panel', 'form') }}">
+      {% if non_field_errors %}
+      {# Alert (destructive), ported from shadcn/ui: a tinted, outlined
+         panel rather than the solid red block this used to be -- solid
+         destructive is reserved for buttons, so an error summary doesn't
+         out-shout the Save button. #}
+      <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4">
+        <h5 class="{{ ui('alert', 'title') }}">Couldn't save {{ model_admin.get_verbose_name() }}</h5>
+        <div class="{{ ui('alert', 'description') }}">
+          {% for error in non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% for name in form_fields %}
+      {% set field = model_admin.get_field(name) %}
+      {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
+      {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+      {% endfor %}
+    </form>
+    {# Inline sections carry their own <form> elements, so they have to
+       stay siblings of the record form -- HTML forbids nesting one form
+       inside another. #}
+    {% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}
   </div>
-  {% endif %}
-  {% for name in form_fields %}
-  {% set field = model_admin.get_field(name) %}
-  {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
-  {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
-  {% endfor %}
-  {# `name="_continue"` rides along only when *this* button is the one
+  {# The buttons sit outside #resource-form so the bar can span the full
+     content width instead of being trapped in the centered column.
+     `form="resource-form"` re-associates them: the browser submits the
+     form normally, and htmx resolves the same attribute (its
+     getRelatedFormData checks '#' + the form attribute before falling
+     back to the closest ancestor form), so the `_continue` submitter
+     value below still reaches the handler over HTMX.
+
+     `name="_continue"` rides along only when *this* button is the one
      that submitted the form (per the HTML spec, an unclicked submit
      button's name/value never makes it into the form data) -- the
      handler reads its presence to redirect back to this same edit page
      instead of the detail page, Django-admin style. #}
-  <div class="flex flex-col gap-2 sm:flex-row">
-    <button type="submit"
-            class="inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium tracking-wide text-white transition-colors duration-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900">
-      {{ icon("check", "w-4 h-4") }} Save
-    </button>
-    <button type="submit" name="_continue" value="1"
-            class="inline-flex items-center justify-center gap-1.5 rounded-md border-2 border-neutral-900 bg-white px-4 py-2 text-sm font-medium tracking-wide text-neutral-900 transition-colors duration-100 hover:bg-neutral-900 hover:text-white">
-      {{ icon("edit", "w-4 h-4") }} Save and continue editing
-    </button>
-    <a href="{{ base_path }}/{{ model_admin.get_slug() }}"
-       class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium tracking-wide text-neutral-600 transition-colors duration-100 hover:bg-neutral-100 hover:text-neutral-900">
-      Cancel
-    </a>
+  <div class="{{ ui('page', 'actions') }}">
+    <div class="{{ ui('page', 'actions-inner') }}">
+      {# Delete lives here, on the edit form, and nowhere else: there's
+         nothing to delete while creating (`object` is None), and the
+         detail page deliberately no longer offers it. Kept alone on the
+         left, away from Save, so the destructive action is never
+         adjacent to the one people click by reflex. #}
+      {% if object is not none and permissions.can_delete %}
+      <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/delete"
+         class="{{ ui('button', 'destructive-outline') }}">
+        {{ icon("delete", "w-4 h-4") }} Delete
+      </a>
+      {% endif %}
+      <div class="{{ ui('page', 'actions-primary') }}">
+        <button type="submit" form="resource-form" class="{{ ui('button') }}">
+          {{ icon("check", "w-4 h-4") }} Save
+        </button>
+        <button type="submit" form="resource-form" name="_continue" value="1"
+                class="{{ ui('button', 'outline') }}">
+          {{ icon("edit", "w-4 h-4") }} Save and continue editing
+        </button>
+        <a href="{{ base_path }}/{{ model_admin.get_slug() }}" class="{{ ui('button', 'ghost-muted') }}">
+          Cancel
+        </a>
+      </div>
+    </div>
   </div>
-</form>
-{% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}
+</div>

@@ -1,9 +1,9 @@
-{# Confirmation modal, adapted from PinesUI's Modal component
-   (devdojo.com/pines/docs/modal), covering both places a "confirm
+{# Confirmation modal, the Dialog/AlertDialog port from shadcn/ui
+   (Radix Dialog), covering both places a "confirm
    before doing something irreversible" prompt shows up: Actions --
    the list view's bulk-select form and each detail-page
    record-action form -- and the list view's per-row Delete button
-   (components/table.html's `hx-delete`/`hx-confirm`). One teleported
+   (components/ui/table.html's `hx-delete`/`hx-confirm`). One teleported
    instance backs both: it opens on a window-level `action-confirm-request`
    event carrying `{message, onConfirm}`, where `onConfirm` is a plain
    JS callback -- form submission and htmx's own confirm hook need
@@ -20,16 +20,23 @@
    a CustomEvent, never re-embedded into markup. Same pattern as
    components/toasts.html's flash-message relay. #}
 <template x-teleport="body">
+  {# `onConfirm = $event.detail.onConfirm` (assigning the callback
+     straight from the event, in the same statement Alpine sees) makes
+     Alpine invoke it immediately instead of just storing it -- the
+     modal would flash open and the action would already be done
+     before anyone could click anything. Routing it through a plain
+     local first avoids whatever in Alpine's expression evaluation
+     triggers that auto-call. #}
   <div x-data="{ open: false, message: '', onConfirm: null }"
-       @action-confirm-request.window="onConfirm = $event.detail.onConfirm; message = $event.detail.message; open = true"
+       @action-confirm-request.window="let cb = $event.detail.onConfirm; onConfirm = cb; message = $event.detail.message; open = true"
        @keydown.escape.window="open = false"
        x-show="open" x-cloak
        class="fixed inset-0 z-[99]">
     <div x-show="open"
          x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         @click="open = false" class="absolute inset-0 bg-black/40"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4">
+         @click="open = false" class="{{ ui('dialog', 'overlay') }}"></div>
+    <div class="{{ ui('dialog', 'container') }}">
       <div x-show="open"
            x-trap.inert.noscroll="open"
            x-transition:enter="ease-out duration-300"
@@ -38,17 +45,17 @@
            x-transition:leave="ease-in duration-200"
            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-           class="relative w-full max-w-sm rounded-lg bg-white px-6 py-5 shadow-[0_5px_15px_-3px_rgb(0_0_0_/_0.1)]">
-        <h3 class="text-base font-semibold text-neutral-900">Confirm</h3>
-        <p class="mt-2 text-sm text-neutral-600" x-text="message"></p>
-        <div class="mt-5 flex justify-end gap-2">
+           class="{{ ui('dialog', 'content-sm') }}">
+        <h3 class="{{ ui('dialog', 'title') }}">Confirm</h3>
+        <p class="{{ ui('dialog', 'description') }}" x-text="message"></p>
+        <div class="{{ ui('dialog', 'footer') }}">
           <button type="button" @click="open = false; onConfirm = null"
-                  class="inline-flex h-9 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
+                  class="{{ ui('button', 'outline', 'size-sm') }}">
             Cancel
           </button>
           <button type="button"
                   @click="open = false; if (onConfirm) { onConfirm(); onConfirm = null; }"
-                  class="inline-flex h-9 items-center justify-center rounded-md bg-neutral-950 px-3 text-sm font-medium text-white hover:bg-neutral-900">
+                  class="{{ ui('button', 'size-sm') }}">
             Confirm
           </button>
         </div>

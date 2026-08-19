@@ -8,24 +8,27 @@
 {%- set target_admin = admin.get_model_admin(relation.target) if admin else none -%}
 {%- set label = target_admin.get_field(relation.display_field).get_value(related_obj) if target_admin else related_obj -%}
 {%- if target_admin and relation_permissions.get(relation.target) -%}
-<a class="text-blue-600 hover:underline" href="{{ base_path }}/{{ relation.target }}/{{ target_admin.get_pk(related_obj) }}">{{ label }}</a>
+<a class="{{ ui('text', 'link') }}" href="{{ base_path }}/{{ relation.target }}/{{ target_admin.get_pk(related_obj) }}">{{ label }}</a>
 {%- else -%}
 {{ label }}
 {%- endif -%}
 {% endmacro %}
 
+{# "Yes" keeps a green that reads as affirmative in both themes; the
+   emerald-600/400 pair is picked for contrast against bg-card either
+   way, since there is no shadcn "success" token to defer to. #}
 {% macro render_field_value(field, value) -%}
 {%- if value is none -%}
-<span class="text-neutral-400">&mdash;</span>
+<span class="{{ ui('text', 'placeholder') }}">&mdash;</span>
 {%- elif field.field_type == "boolean" -%}
-{% if value %}<span class="text-green-700">Yes</span>{% else %}<span class="text-neutral-400">No</span>{% endif %}
+{% if value %}<span class="font-medium text-emerald-600 dark:text-emerald-400">Yes</span>{% else %}<span class="{{ ui('text', 'placeholder') }}">No</span>{% endif %}
 {%- elif field.field_type == "password" -%}
-<span class="text-neutral-400">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+<span class="{{ ui('text', 'placeholder') }}">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
 {%- elif field.field_type in ("foreignkey", "onetoone") -%}
 {{ render_related_link(field.relation, value) }}
 {%- elif field.field_type == "manytomany" -%}
 {%- if not value -%}
-<span class="text-neutral-400">&mdash;</span>
+<span class="{{ ui('text', 'placeholder') }}">&mdash;</span>
 {%- else -%}
 {%- for related_obj in value -%}
 {{ render_related_link(field.relation, related_obj) }}{% if not loop.last %}, {% endif %}

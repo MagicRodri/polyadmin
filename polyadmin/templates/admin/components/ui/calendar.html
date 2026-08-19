@@ -1,0 +1,174 @@
+{# Calendar + DatePicker, ported from shadcn/ui (which wraps
+   react-day-picker in a Popover).
+
+   Mirrors go-polyadmin/templates/admin/components/ui/calendar.html --
+   the `adminCalendar` factory below is copied from it verbatim, so the
+   two implementations cannot drift on the date maths.
+
+   There is no react-day-picker here, so the month grid is computed in
+   Alpine by that factory -- always six weeks, so the popover never
+   changes height as you page through months, which is what
+   react-day-picker's `fixedWeeks` does too.
+
+   Three macros:
+
+     calendar()          just the month grid. Must be called inside an
+                         element whose x-data is adminCalendar(), and
+                         expects an x-ref="dateInput" in the same scope
+                         -- the grid never holds the value itself, it
+                         only writes to that input, so whatever the
+                         input posts stays the single source of truth.
+
+     date_picker(...)    the whole control: a native <input type="date">
+                         with a calendar button that opens the grid in a
+                         popover.
+
+     calendar_script()   the shared Alpine factory; included once by
+                         admin/base.html.
+
+   Why the native input stays underneath: it already posts YYYY-MM-DD
+   with no JS, gets the platform picker on mobile, and is what the
+   generated `date` form fields render (components/ui/field.html). The
+   popover is a progressive enhancement over it, not a replacement -- so
+   a date field keeps working identically with Alpine absent, and the
+   server-side parsing never has to care which one was used. #}
+{% from "admin/components/icons.html" import icon %}
+
+{% macro calendar() %}
+<div class="{{ ui('calendar') }}">
+  <div class="{{ ui('calendar', 'header') }}">
+    <button type="button" @click="shift(-1)" class="{{ ui('calendar', 'nav') }}" aria-label="Previous month">
+      {{ icon("chevron-left", "w-4 h-4") }}
+    </button>
+    <span class="{{ ui('calendar', 'caption') }}" x-text="monthLabel" aria-live="polite"></span>
+    <button type="button" @click="shift(1)" class="{{ ui('calendar', 'nav') }}" aria-label="Next month">
+      {{ icon("chevron-right", "w-4 h-4") }}
+    </button>
+  </div>
+  <div class="grid grid-cols-7 gap-0.5" role="grid">
+    <template x-for="weekday in weekdays" :key="weekday">
+      <div class="{{ ui('calendar', 'weekday') }}" role="columnheader" x-text="weekday"></div>
+    </template>
+    <template x-for="day in days" :key="day.iso">
+      <button type="button" role="gridcell" @click="pick(day.iso)"
+              :aria-selected="day.iso === selectedISO ? 'true' : 'false'"
+              :class="[
+                day.iso === selectedISO ? '{{ ui('calendar', 'day-selected') }}' : '',
+                day.outside ? '{{ ui('calendar', 'day-outside') }}' : '',
+                (day.iso === todayISO && day.iso !== selectedISO) ? '{{ ui('calendar', 'day-today') }}' : ''
+              ]"
+              class="{{ ui('calendar', 'day') }}" x-text="day.label"></button>
+    </template>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro date_picker(name, value="", required=false, disabled=false) %}
+<div class="relative" x-data="adminCalendar()" @keydown.escape="open = false">
+  <div class="flex items-center gap-1">
+    <input x-ref="dateInput" type="date" id="field-{{ name }}" name="{{ name }}"
+           value="{{ value }}" autocomplete="off"
+           {% if required %}required{% endif %}{% if disabled %} disabled{% endif %}
+           class="{{ ui('input') }}">
+    <button type="button" @click="toggle()" x-ref="trigger"
+            :aria-expanded="open ? 'true' : 'false'"
+            aria-label="Open calendar"
+            {% if disabled %}disabled{% endif %}
+            class="{{ ui('button', 'outline', 'size-icon') }}">
+      {{ icon("calendar", "w-4 h-4") }}
+    </button>
+  </div>
+  <div x-show="open" x-cloak @click.outside="open = false"
+       x-anchor.bottom-end.offset.6="$refs.trigger"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       class="{{ ui('popover', 'content') }} w-auto p-0">
+    {{ calendar() }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro calendar_script() %}
+<script>
+  // Idempotent global, same pattern as window.toast (toasts.html) and
+  // window.adminConfirmSubmit (action_confirm_modal.html) -- the
+  // component may be included many times per page, but only the first
+  // copy defines the factory.
+  window.adminCalendar = window.adminCalendar || function () {
+    return {
+      open: false,
+      // The month on screen. Never the selection -- that lives in the
+      // date input (see this file's header comment).
+      view: new Date(),
+      weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+
+      init() {
+        this.view = this.parsed() || new Date();
+      },
+
+      // Local-time construction on purpose: `new Date("2024-03-01")`
+      // parses as UTC and can land on the previous day west of
+      // Greenwich, which would render the wrong month.
+      parsed() {
+        var match = /^(\d{4})-(\d{2})-(\d{2})/.exec(this.$refs.dateInput.value || "");
+        return match ? new Date(+match[1], +match[2] - 1, +match[3]) : null;
+      },
+
+      iso(date) {
+        return date.getFullYear() + "-" +
+          String(date.getMonth() + 1).padStart(2, "0") + "-" +
+          String(date.getDate()).padStart(2, "0");
+      },
+
+      get monthLabel() {
+        return this.view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      },
+
+      get todayISO() { return this.iso(new Date()); },
+
+      get selectedISO() {
+        var date = this.parsed();
+        return date ? this.iso(date) : null;
+      },
+
+      get days() {
+        var first = new Date(this.view.getFullYear(), this.view.getMonth(), 1);
+        // Back up to the Monday of the week the 1st falls in.
+        // getDay() is 0=Sunday, so (day + 6) % 7 is 0=Monday.
+        var start = new Date(first);
+        start.setDate(1 - ((first.getDay() + 6) % 7));
+        var out = [];
+        for (var i = 0; i < 42; i++) {
+          var day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+          out.push({
+            iso: this.iso(day),
+            label: day.getDate(),
+            outside: day.getMonth() !== this.view.getMonth(),
+          });
+        }
+        return out;
+      },
+
+      shift(months) {
+        this.view = new Date(this.view.getFullYear(), this.view.getMonth() + months, 1);
+      },
+
+      pick(iso) {
+        this.$refs.dateInput.value = iso;
+        // So anything listening on the input (htmx hx-trigger="change",
+        // a validation handler) reacts as if a person had typed it.
+        this.$refs.dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+        this.open = false;
+      },
+
+      toggle() {
+        // Re-sync on open: the input may have been typed into directly
+        // since the last time the grid was shown.
+        if (!this.open) this.view = this.parsed() || new Date();
+        this.open = !this.open;
+      },
+    };
+  };
+</script>
+{% endmacro %}

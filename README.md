@@ -25,13 +25,13 @@ permissions) and you get:
 - Custom admin pages (`admin.route`) for functionality that isn't
   resource CRUD — reports, wizards, internal tools — rendered inside
   the same layout, auth, and sidebar grouping as everything else
-- Relation fields rendered as links, or as a searchable PinesUI
+- Relation fields rendered as links, or as a searchable shadcn/ui
   Command-style autocomplete backed by a server-side `/lookup` route
   (never dumps the target model's full queryset into the page)
 - Inline related records (`StackedInline`/`TabularInline`) — a
   parent's create/detail/edit pages can show and manage a child's
   records that point back at it, Django-admin style
-- Record and bulk Actions, with a PinesUI modal confirmation step for
+- Record and bulk Actions, with a shadcn/ui Dialog confirmation step for
   destructive ones
 - Authentication/authorization hooks gating every route *and* every
   control the templates render
@@ -40,12 +40,15 @@ permissions) and you get:
 - Per-resource (and per-widget) template overrides, so an application
   can replace one view's markup without forking the framework
 
-Styling follows [PinesUI](https://devdojo.com/pines) conventions
-throughout (Tailwind's neutral palette, Alpine.js, no separate JS
-component framework): a mobile-first layout with a collapsible
-sidebar, a Django-admin-style right-hand filter panel on wider
-screens, and breadcrumbs as the page title. Tailwind/Alpine/HTMX are
-all CDN-loaded — no frontend build step.
+Styling is [shadcn/ui](https://ui.shadcn.com), hand-ported to
+Alpine.js + Tailwind — its CSS-variable token system and component
+markup, without React or Radix. That gives the admin **dark mode and
+themability**: every color resolves through a CSS variable, so restyling
+the whole thing is a change to one template. The layout is mobile-first
+with a collapsible sidebar (a Sheet below `md`), a Django-admin-style
+right-hand filter panel on wider screens, and breadcrumbs as the page
+title. Tailwind/Alpine/HTMX are all CDN-loaded — no frontend build step.
+See [`docs/components.md`](docs/components.md).
 
 ## Quickstart
 
@@ -131,7 +134,8 @@ real) — see [`docs/authentication.md`](docs/authentication.md)
 and [`docs/permissions.md`](docs/permissions.md) before
 deploying. For everything else a `ModelAdmin` supports (relations,
 filters, actions, a dashboard, exports), see
-[`docs/model-admin.md`](docs/model-admin.md) and the rest of
+[`docs/model-admin.md`](docs/model-admin.md); for the UI components and
+theming, [`docs/components.md`](docs/components.md); and for the rest,
 [`docs/`](docs/).
 
 ## Status

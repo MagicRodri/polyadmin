@@ -181,8 +181,11 @@ def test_create_form_shows_relation_select_with_options():
 
     response = client.get("/admin/users/create")
     assert response.status_code == 200
-    assert '<select id="field-organization" name="organization"' in response.text
-    assert ">Acme<" in response.text
+    # The plain (non-autocomplete) relation field is the shadcn Select
+    # port (ui/select.html): a hidden input named after the field, and
+    # each choice as a listbox option rather than an <option>.
+    assert 'name="organization"' in response.text
+    assert 'data-value="1" data-label="Acme"' in response.text
 
 
 def test_edit_form_preselects_current_relation():
@@ -193,7 +196,10 @@ def test_edit_form_preselects_current_relation():
 
     response = client.get("/admin/users/1/edit")
     assert response.status_code == 200
-    assert f'<option value="{acme.id}" selected>Acme</option>' in response.text
+    # Hidden input carries the pk; the trigger's initial label text is
+    # the target's own label, not an <option selected>.
+    assert f'name="organization" x-ref="hiddenInput" value="{acme.id}"' in response.text
+    assert "Acme" in response.text
 
 
 class AutocompleteUserAdmin(UserAdmin):

@@ -1,0 +1,71 @@
+{# DropdownMenu, ported from shadcn/ui (Radix DropdownMenu).
+
+   Mirrors go-polyadmin/templates/admin/components/ui/dropdown-menu.html.
+
+   Radix -> Alpine, per plan/shadcnui-usage.md §6:
+     Portal            -> not needed; the panel is absolutely
+                          positioned inside a `relative` wrapper, which
+                          keeps it in the same stacking context as its
+                          trigger.
+     Floating UI       -> x-anchor (Alpine's anchor plugin), so the
+                          panel stays put when the header scrolls.
+     Escape / outside  -> @keydown.escape + @click.outside.
+     Roving tabindex   -> the items are real <button>/<a> elements, so
+                          Tab already walks them in order, and
+                          @keydown.escape returns focus to the trigger.
+
+   `items` is a list of dicts -- data, not markup -- so nothing here has
+   to trust an application-supplied HTML string:
+     {"label": ..., "icon": ..., "url": ...}   a link
+     {"separator": True}                        a divider
+     {"label": ...}                             a section label
+
+   The panel always anchors bottom-end; a start-aligned variant belongs
+   in its own macro rather than a flag here, to keep parity with the Go
+   side (where the alignment is baked into an x-anchor *attribute name*,
+   which html/template cannot build dynamically). #}
+{% from "admin/components/icons.html" import icon %}
+{% macro dropdown_menu(label, icon_name="dots", text=none, variant=none, items=()) %}
+<div class="relative inline-flex" x-data="{ open: false }"
+     @keydown.escape="open = false; $refs.trigger.focus()"
+     @click.outside="open = false">
+  {% if text %}
+  <button type="button" x-ref="trigger" @click="open = !open"
+          :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
+          class="{{ ui('button', variant or 'outline', 'size-default') }}">
+    {% if icon_name %}{{ icon(icon_name, "w-4 h-4") }}{% endif %}{{ text }}
+    <span :class="open ? 'rotate-180' : ''" class="transition-transform duration-200">
+      {{ icon("chevron-down", "w-3.5 h-3.5") }}
+    </span>
+  </button>
+  {% else %}
+  <button type="button" x-ref="trigger" @click="open = !open"
+          :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
+          aria-label="{{ label }}"
+          class="{{ ui('button', variant or 'ghost-muted', 'size-icon-sm') }}">
+    {{ icon(icon_name, "w-4 h-4") }}
+  </button>
+  {% endif %}
+  <div x-show="open" x-cloak role="menu"
+       x-anchor.bottom-end.offset.6="$refs.trigger"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       class="{{ ui('dropdown', 'content') }}">
+    {% for item in items %}
+    {% if item.get("separator") %}
+    <div role="separator" class="{{ ui('dropdown', 'separator') }}"></div>
+    {% elif item.get("url") %}
+    <a href="{{ item.url }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
+      {% if item.get("icon") %}{{ icon(item.icon, "w-4 h-4 shrink-0") }}{% endif %}<span class="truncate">{{ item.label }}</span>
+    </a>
+    {% else %}
+    <div role="presentation" class="{{ ui('dropdown', 'label') }}">{{ item.label }}</div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}

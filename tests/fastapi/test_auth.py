@@ -81,9 +81,11 @@ def test_edit_and_delete_controls_hidden_without_permission():
 
     response = client.get("/admin/users")
     assert response.status_code == 200
-    assert 'title="Edit"' not in response.text
-    assert 'title="Delete"' not in response.text
-    assert 'title="View"' in response.text
+    # Row actions render as one dropdown-menu's items rather than
+    # standalone icon buttons -- see components/ui/table.html.
+    assert ">Edit</span>" not in response.text
+    assert ">Delete</span>" not in response.text
+    assert ">View</span>" in response.text
     assert "New User" not in response.text
 
 
