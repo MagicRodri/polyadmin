@@ -7,6 +7,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# The CSRF token, for JS. The cookie is HttpOnly precisely so that
+     scripts read it here instead -- see theme.html's htmx:configRequest
+     listener. #}
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}{{ site_title }}{% endblock %} &middot; {{ site_title }}</title>
   {# Design tokens, Tailwind config, Alpine + plugins, HTMX, and the
      theme store -- all of it, in the one load order that works. See

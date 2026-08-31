@@ -10,10 +10,11 @@ from polyadmin.core.csrf import (
 )
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.fastapi.test_actions import ActionableUserAdmin
 
 
-def make_client(**admin_kwargs):
-    user_admin = InMemoryUserAdmin()
+def make_client(model_admin_cls=InMemoryUserAdmin, **admin_kwargs):
+    user_admin = model_admin_cls()
     admin = Admin(model_admins=[user_admin], **admin_kwargs)
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
@@ -98,3 +99,35 @@ def test_csrf_can_be_disabled():
     assert CSRF_COOKIE_NAME in response.cookies or CSRF_COOKIE_NAME in client.cookies
     # And the frame headers are not part of the opt-out.
     assert response.headers["x-frame-options"] == "DENY"
+
+
+# ActionableUserAdmin, not the plain one: the list page's bulk-actions
+# form and the detail page's record-action forms are both inside
+# `{% if actions %}`, so an admin with no declared actions renders
+# neither, and the assertions below would pass or fail for the wrong
+# reason.
+def test_pages_carry_the_token_for_forms_and_htmx():
+    client, user_admin = make_client(model_admin_cls=ActionableUserAdmin)
+    user = user_admin.create({"email": "a@example.com"})
+    for path in (
+        "/admin/users",
+        "/admin/users/create",
+        f"/admin/users/{user.id}",
+        f"/admin/users/{user.id}/edit",
+        f"/admin/users/{user.id}/delete",
+    ):
+        response = client.get(path)
+        # Compared against the cookie, not merely present: an empty token
+        # still renders both the tag and the field, so a presence-only
+        # assertion would pass even if nothing was threaded through.
+        token = client.cookies[CSRF_COOKIE_NAME]
+        page = response.text
+        assert f'<meta name="csrf-token" content="{token}">' in page, path
+        assert f'<input type="hidden" name="_csrf" value="{token}">' in page, path
+
+
+def test_htmx_requests_get_the_token_header():
+    client, _ = make_client()
+    page = client.get("/admin/users").text
+    assert "htmx:configRequest" in page
+    assert CSRF_HEADER_NAME in page

@@ -227,6 +227,7 @@ def base_context(
     breadcrumbs: list[dict[str, Any]] | None = None,
     active_nav_key: str | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     if active_nav_key is None and model_admin is not None:
         active_nav_key = f"resource:{model_admin.get_slug()}"
@@ -243,6 +244,10 @@ def base_context(
         # is signed in, so the principal has to reach every page that
         # renders a sidebar -- which is all of them.
         "principal": principal,
+        # Per-request state like principal, and needed on every page for
+        # the same reason: base.html renders it as a meta tag and every
+        # no-JS form renders it as a hidden field.
+        "csrf_token": csrf_token,
     }
 
 
@@ -257,6 +262,7 @@ def list_context(
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     list_request = list_request or ListRequest()
     # Carries the current search/filter/sort into the Export links, so
@@ -280,7 +286,7 @@ def list_context(
     ]
 
     return {
-        **base_context(admin, principal=principal, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "page": page,
         "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.actions],
         "list_display": list(model_admin.list_display),
@@ -334,6 +340,7 @@ def detail_context(
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
@@ -341,7 +348,7 @@ def detail_context(
         {"label": _object_label(model_admin, obj), "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
         "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.actions],
@@ -363,6 +370,7 @@ def form_context(
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     slug = model_admin.get_slug()
     if obj is not None:
@@ -381,7 +389,7 @@ def form_context(
         breadcrumbs.append({"label": "New", "url": None, "active": True})
 
     return {
-        **base_context(admin, principal=principal, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
         "data": data,
         "errors": errors or {},
@@ -405,12 +413,13 @@ def dashboard_context(
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     # A single active crumb -- since base.html has no separate <h1>,
     # this is the only page-title element the dashboard gets.
     breadcrumbs = [{"label": getattr(dashboard, "title", None) or "Dashboard", "url": None, "active": True}]
     return {
-        **base_context(admin, principal=principal, model_admin=None, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=None, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "dashboard": dashboard,
         "widgets": widgets,
     }
@@ -424,6 +433,7 @@ def delete_context(
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
+    csrf_token: str = "",
 ) -> dict[str, Any]:
     slug = model_admin.get_slug()
     breadcrumbs = [
@@ -433,6 +443,6 @@ def delete_context(
         {"label": "Delete", "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
     }

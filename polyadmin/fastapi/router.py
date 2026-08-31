@@ -62,7 +62,15 @@ def create_router(
         if admin.dashboard is not None:
             widgets = admin.dashboard.get_widgets(principal, admin.authorizer)
             messages = pop_flash(request)
-            html = renderer.render_dashboard(admin, admin.dashboard, widgets, base_path=base_path, messages=messages, principal=principal)
+            html = renderer.render_dashboard(
+                admin,
+                admin.dashboard,
+                widgets,
+                base_path=base_path,
+                messages=messages,
+                principal=principal,
+                csrf_token=request.state.csrf_token,
+            )
             response = HTMLResponse(html)
             clear_flash(response)
             return response

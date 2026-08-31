@@ -76,6 +76,7 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
+        csrf_token: str = "",
     ) -> str:
         context = list_context(
             admin,
@@ -87,6 +88,7 @@ class Renderer:
             base_path=base_path,
             messages=messages,
             principal=principal,
+            csrf_token=csrf_token,
         )
         return self.render_candidates(model_admin.get_template_candidates("list"), context)
 
@@ -101,6 +103,7 @@ class Renderer:
         relation_permissions: dict[str, bool] | None = None,
         base_path: str = "/admin",
         principal: Any = None,
+        csrf_token: str = "",
     ) -> str:
         context = list_context(
             admin,
@@ -111,6 +114,7 @@ class Renderer:
             relation_permissions=relation_permissions,
             base_path=base_path,
             principal=principal,
+            csrf_token=csrf_token,
         )
         return self.render("admin/components/list_content.html", context)
 
@@ -121,6 +125,7 @@ class Renderer:
         obj: Any,
         *,
         principal: Any = None,
+        csrf_token: str = "",
         permissions: dict[str, bool] | None = None,
         relation_permissions: dict[str, bool] | None = None,
         base_path: str = "/admin",
@@ -137,6 +142,7 @@ class Renderer:
             base_path=base_path,
             messages=messages,
             principal=principal,
+            csrf_token=csrf_token,
         )
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
         return self.render_candidates(model_admin.get_template_candidates("detail"), context)
@@ -147,6 +153,7 @@ class Renderer:
         model_admin: ModelAdmin,
         *,
         principal: Any = None,
+        csrf_token: str = "",
         obj: Any | None = None,
         data: dict[str, Any] | None = None,
         errors: dict[str, list[str]] | None = None,
@@ -170,6 +177,7 @@ class Renderer:
             base_path=base_path,
             messages=messages,
             principal=principal,
+            csrf_token=csrf_token,
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
@@ -181,6 +189,7 @@ class Renderer:
         model_admin: ModelAdmin,
         *,
         principal: Any = None,
+        csrf_token: str = "",
         obj: Any | None = None,
         data: dict[str, Any] | None = None,
         errors: dict[str, list[str]] | None = None,
@@ -202,6 +211,7 @@ class Renderer:
             permissions=compute_permissions(admin, principal, model_admin),
             base_path=base_path,
             principal=principal,
+            csrf_token=csrf_token,
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
@@ -239,8 +249,9 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
+        csrf_token: str = "",
     ) -> str:
-        context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages, principal=principal)
+        context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
         return self.render("admin/dashboard.html", context)
 
     def render_lookup(self, options: list[tuple[Any, Any]]) -> str:
@@ -255,6 +266,7 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
+        csrf_token: str = "",
     ) -> str:
-        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal)
+        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)

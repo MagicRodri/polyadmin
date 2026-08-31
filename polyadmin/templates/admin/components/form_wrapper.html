@@ -1,3 +1,4 @@
+{% from "admin/components/csrf-field.html" import csrf_field %}
 {% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/inline.html" import render_inline_section with context %}
 {% from "admin/components/icons.html" import icon %}
@@ -21,6 +22,7 @@
     <form id="resource-form" method="post" action="{{ form_action }}"
           hx-post="{{ form_action }}" hx-target="#resource-form-wrapper" hx-swap="outerHTML"
           class="{{ ui('panel', 'form') }}">
+      {{ csrf_field(csrf_token) }}
       {% if non_field_errors %}
       {# Alert (destructive), ported from shadcn/ui: a tinted, outlined
          panel rather than the solid red block this used to be -- solid

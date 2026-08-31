@@ -85,6 +85,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 relation_permissions=relation_permissions,
                 base_path=base_path,
                 principal=principal,
+                csrf_token=request.state.csrf_token,
             )
         else:
             messages = pop_flash(request)
@@ -98,6 +99,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 base_path=base_path,
                 messages=messages,
                 principal=principal,
+                csrf_token=request.state.csrf_token,
             )
         response = HTMLResponse(html)
         if not is_htmx_request(request):
@@ -127,6 +129,7 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             model_admin,
             obj,
             principal=principal,
+            csrf_token=request.state.csrf_token,
             permissions=permissions,
             relation_permissions=relation_permissions,
             base_path=base_path,
@@ -148,7 +151,12 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return error
         relation_options = compute_relation_options(admin, model_admin)
         html = renderer.render_form(
-            admin, model_admin, principal=principal, relation_options=relation_options, base_path=base_path
+            admin,
+            model_admin,
+            principal=principal,
+            csrf_token=request.state.csrf_token,
+            relation_options=relation_options,
+            base_path=base_path,
         )
         return HTMLResponse(html)
 
@@ -166,6 +174,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     admin,
                     model_admin,
                     principal=principal,
+                    csrf_token=request.state.csrf_token,
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
@@ -176,6 +185,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     admin,
                     model_admin,
                     principal=principal,
+                    csrf_token=request.state.csrf_token,
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
@@ -206,7 +216,13 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return HTMLResponse("Not found", status_code=404)
         relation_options = compute_relation_options(admin, model_admin, obj=obj)
         html = renderer.render_form(
-            admin, model_admin, principal=principal, obj=obj, relation_options=relation_options, base_path=base_path
+            admin,
+            model_admin,
+            principal=principal,
+            csrf_token=request.state.csrf_token,
+            obj=obj,
+            relation_options=relation_options,
+            base_path=base_path,
         )
         return HTMLResponse(html)
 
@@ -227,6 +243,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     admin,
                     model_admin,
                     principal=principal,
+                    csrf_token=request.state.csrf_token,
                     obj=obj,
                     data=data,
                     errors=errors,
@@ -238,6 +255,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     admin,
                     model_admin,
                     principal=principal,
+                    csrf_token=request.state.csrf_token,
                     obj=obj,
                     data=data,
                     errors=errors,
@@ -266,7 +284,14 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
-        html = renderer.render_delete(admin, model_admin, obj, base_path=base_path, principal=principal)
+        html = renderer.render_delete(
+            admin,
+            model_admin,
+            obj,
+            base_path=base_path,
+            principal=principal,
+            csrf_token=request.state.csrf_token,
+        )
         return HTMLResponse(html)
 
     async def delete_post(request: Request, pk: str):

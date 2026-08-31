@@ -1,0 +1,9 @@
+{# The CSRF token as a hidden field, for forms that can submit without
+   JavaScript. htmx-driven requests get it as a header instead (see
+   theme.html), so a form that only ever submits via hx-post -- the
+   inline sections, the list search bar -- does not need this.
+
+   Takes the token itself as its argument, not the whole context:
+   {{ csrf_field(csrf_token) }}. Mirrors
+   go-polyadmin/templates/admin/components/csrf-field.html. #}
+{% macro csrf_field(token) %}<input type="hidden" name="_csrf" value="{{ token }}">{% endmacro %}

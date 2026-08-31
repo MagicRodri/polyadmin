@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% from "admin/components/csrf-field.html" import csrf_field %}
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/inline.html" import render_inline_section with context %}
 {% from "admin/components/icons.html" import icon %}
@@ -49,6 +50,7 @@
         <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
               {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
               onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
+          {{ csrf_field(csrf_token) }}
           <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">
           <button type="submit" class="{{ ui('button', 'outline') }} w-full sm:w-auto">
             {{ action.label }}

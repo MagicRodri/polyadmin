@@ -1,8 +1,10 @@
 {% extends "admin/base.html" %}
+{% from "admin/components/csrf-field.html" import csrf_field %}
 {% from "admin/components/icons.html" import icon %}
 {% block title %}Delete {{ model_admin.get_verbose_name() }}{% endblock %}
 {% block content %}
 <form method="post" class="{{ ui('panel', 'form') }} max-w-xl">
+  {{ csrf_field(csrf_token) }}
   <div class="mb-4 flex items-start gap-3">
     <span class="inline-flex shrink-0 items-center justify-center rounded-full bg-destructive/10 p-2 text-destructive">
       {{ icon("delete", "w-5 h-5") }}

@@ -1,3 +1,4 @@
+{% from "admin/components/csrf-field.html" import csrf_field %}
 {% from "admin/components/icons.html" import icon %}
 {# Bulk-actions listbox, rendered separately from ui/table.html so
    components/list_content.html can put it beside the search bar
@@ -25,6 +26,7 @@
 <form id="bulk-actions-form" method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/"
       onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)"
       class="{{ ui('toolbar', 'item') }}">
+  {{ csrf_field(csrf_token) }}
   {# w-full on both the positioning wrapper and the trigger: a button
      can only fill a box that is itself full width, and the <form>
      above is what the stacked toolbar actually stretches. #}

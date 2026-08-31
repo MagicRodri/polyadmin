@@ -56,6 +56,11 @@ class PageContext:
                     {"label": self.page.label, "url": None, "active": True},
                 ],
                 active_nav_key=f"page:{self.page.path}",
+                # getattr, not attribute access: mirrors the Fiber
+                # adapter's csrfToken(c), which yields "" rather than
+                # failing if a page is somehow rendered outside the
+                # mounted router that sets it.
+                csrf_token=getattr(self.request.state, "csrf_token", ""),
             ),
             "page": self.page,
             **extra,

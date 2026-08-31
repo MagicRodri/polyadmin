@@ -135,6 +135,20 @@
 <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+  // One listener covers every mutating hx-* attribute in the admin --
+  // including the bodyless hx-deletes, which have no form field to
+  // carry a token -- and any added later.
+  //
+  // On `document`, not `document.body`: this file is included from
+  // base.html's <head>, where document.body is still null. htmx's
+  // events bubble, so the document catches them all either way.
+  document.addEventListener("htmx:configRequest", function (evt) {
+    if (/^(GET|HEAD|OPTIONS|TRACE)$/i.test(evt.detail.verb)) return;
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) evt.detail.headers["X-CSRF-Token"] = meta.content;
+  });
+</script>
 
 <style>
   /* shadcn/ui's stock "Zinc" palette, as bare HSL triplets. */
