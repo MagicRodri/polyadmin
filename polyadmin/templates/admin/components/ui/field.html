@@ -79,8 +79,9 @@
      never has to survive being embedded in a JS expression. #}
   <div class="{{ ui('combobox') }}"
        x-data="{
-         open: false, query: '', activeEl: null,
-         selectItem(pk, label) { this.$refs.hiddenInput.value = pk; this.query = label; this.open = false; this.activeEl = null; },
+         open: false, query: '', activeEl: null, activeId: '',
+         selectItem(pk, label) { this.$refs.hiddenInput.value = pk; this.query = label; this.open = false; this.clearActive(); },
+         clearActive() { this.activeEl = null; this.activeId = ''; },
          moveActive(delta) {
            const items = Array.from(this.$refs.results.children).filter(el => el.dataset.pk !== undefined);
            if (!items.length) return;
@@ -90,6 +91,12 @@
            this.activeEl = items[idx];
            this.activeEl.classList.add('{{ ui('combobox', 'item-active') }}');
            this.activeEl.scrollIntoView({ block: 'nearest' });
+           // The results are server-rendered by /lookup and re-swapped on
+           // every keystroke, so they carry no ids of their own --
+           // aria-activedescendant needs one, minted here against the
+           // panel's own (unique) id.
+           if (!this.activeEl.id) this.activeEl.id = this.$refs.results.id + '-opt-' + idx;
+           this.activeId = this.activeEl.id;
          },
          selectActive() { if (this.activeEl) this.activeEl.click(); }
        }"
@@ -99,9 +106,16 @@
            value="{{ relation.selected_pk if relation.selected_pk is not none else '' }}">
     <div class="{{ ui('combobox', 'trigger') }}">
       {{ icon("search", ui('combobox', 'icon')) }}
+      {# role=combobox on the input, not the wrapper: the input is what
+         holds focus, so it is what has to advertise the popup and name
+         the highlighted option. Mirrors ui/multi-select. #}
       <input x-ref="textInput" type="text" autocomplete="off" placeholder="Search&hellip;"
              value="{{ relation.selected_label if relation.selected_label is not none else '' }}"
              x-model="query" @focus="open = true"
+             role="combobox" aria-autocomplete="list"
+             :aria-expanded="open ? 'true' : 'false'"
+             aria-controls="combobox-results-{{ field.name }}"
+             :aria-activedescendant="activeId || null"
              @keydown.escape="open = false" @keydown.down.prevent="open = true; moveActive(1)"
              @keydown.up.prevent="moveActive(-1)" @keydown.enter.prevent="selectActive()"
              {% if field.disabled %}disabled{% endif %}
@@ -110,7 +124,10 @@
              hx-target="#combobox-results-{{ field.name }}" hx-swap="innerHTML"
              class="{{ ui('input', 'bare') }}">
     </div>
-    <div x-ref="results" id="combobox-results-{{ field.name }}"
+    {# htmx replaces these children on every keystroke, so the
+       remembered highlight is stale the moment a swap lands. #}
+    <div x-ref="results" id="combobox-results-{{ field.name }}" role="listbox"
+         @htmx:after-swap="clearActive()"
          class="{{ ui('combobox', 'content') }}"
          x-show="open" x-cloak></div>
   </div>

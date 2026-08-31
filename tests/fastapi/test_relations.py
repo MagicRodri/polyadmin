@@ -331,3 +331,40 @@ def test_multi_select_is_keyboard_operable():
     assert 'role="option" tabindex="0"' not in ms, (
         "options must not be individually tabbable -- the search box holds focus"
     )
+
+
+# The autocomplete relation field is the fourth listbox in the tree. It
+# always had arrow keys, but announced nothing: no combobox role and no
+# way for a screen reader to know which result was highlighted.
+def test_relation_combobox_is_announced_to_assistive_tech():
+    # _make_autocomplete_client, not make_client: the plain fixture
+    # renders a ui/select for the relation and a multi-select for the
+    # m2m, both of which carry these same attributes -- the assertions
+    # below would pass without the combobox being on the page at all.
+    client, _, org_admin = _make_autocomplete_client()
+    org_admin.create({"name": "Acme"})
+    page = client.get("/admin/users/create").text
+
+    assert "adminMultiSelect()" not in page and "adminSelect()" not in page, (
+        "fixture leaked another listbox onto the page; these assertions would be vacuous"
+    )
+    for want in (
+        'role="combobox"',
+        'aria-autocomplete="list"',
+        ':aria-activedescendant="activeId || null"',
+        'role="listbox"',
+        # A swap replaces the results, so the remembered highlight has to
+        # be dropped or activeId names a detached node.
+        '@htmx:after-swap="clearActive()"',
+    ):
+        assert want in page, f"relation combobox is missing {want!r}"
+
+
+def test_lookup_results_are_listbox_options():
+    client, _, org_admin = _make_autocomplete_client()
+    org_admin.create({"name": "Acme"})
+
+    fragment = client.get("/admin/organizations/lookup?q=acme").text
+    assert 'role="option"' in fragment, (
+        "lookup results must be options, or the panel is a listbox with no options in it"
+    )
