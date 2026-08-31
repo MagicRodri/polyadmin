@@ -185,6 +185,19 @@ def test_detail_view_shows_record_action_button():
     assert "Deactivate" in response.text
 
 
+def test_detail_record_action_buttons_stretch_while_the_bar_is_stacked():
+    # An action's <button> is a grandchild of the flex row (the <form>
+    # posting it sits in between), so the row's align-items:stretch stops
+    # at the form and the button needs w-full of its own to match the
+    # full-width Edit link beside it below sm.
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com"})
+    response = client.get(f"/admin/users/{a.id}")
+    assert "w-full sm:w-auto" in response.text, (
+        "expected the record-action button to stretch while the action bar is stacked"
+    )
+
+
 def test_form_error_swap_targets_the_wrapper_not_the_inner_form():
     """A validation error re-renders the whole form wrapper, so the swap
     has to replace the wrapper. It used to target the inner <form> with

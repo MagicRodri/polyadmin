@@ -1,9 +1,10 @@
 {# Search bar. Auto-submits via HTMX, swapping just
    #resource-list -- carries the current filters/sort along as hidden
    fields so searching never clears them. Filters live in their own
-   component (components/filters.html) now that they're Django-admin
-   style links rather than <select> options in this same form. #}
-<form
+   component (components/ui/filter-panel.html), a right-hand drawer
+   behind a single toolbar trigger, rather than <select> options in
+   this same form. #}
+<form class="{{ ui('toolbar', 'item') }}"
   hx-get="{{ base_path }}/{{ model_admin.get_slug() }}"
   hx-target="#resource-list"
   hx-select="#resource-list"
@@ -17,5 +18,5 @@
   {% endfor %}
   <input type="search" id="search" name="search" value="{{ search }}"
          placeholder="Search..."
-         class="{{ ui('input') }} sm:w-64">
+         class="{{ ui('input') }} lg:w-64">
 </form>

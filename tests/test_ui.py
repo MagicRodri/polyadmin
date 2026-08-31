@@ -198,6 +198,6 @@ def test_registry_matches_the_go_implementation_key_for_key():
         # Phase D
         "field", "combobox", "calendar", "slider",
         # dashboard / misc
-        "widget", "panel", "page", "toolbar",
+        "widget", "panel", "page", "toolbar", "filter-panel",
     }
     assert set(UI_REGISTRY) == expected_components

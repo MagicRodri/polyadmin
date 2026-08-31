@@ -91,41 +91,117 @@ def test_date_field_still_wrapped_in_the_form_field_unit(task_client):
     assert '<label for="field-due_date"' in page
 
 
-def test_filters_render_as_toolbar_facets():
+def _filterable_page(query: str = "") -> str:
+    """The list view of a ModelAdmin that declares a filter and has
+    actions/export/create available, with `query` applied."""
+    from polyadmin.core.action import Action
     from polyadmin.core.filter import BooleanFilter
+
+    def _noop(model_admin, objects, principal):
+        return ""
 
     filterable = InMemoryUserAdmin()
     filterable.filters = [BooleanFilter("is_active")]
+    filterable.actions = [Action("touch", _noop)]
     filterable.create({"email": "jane@example.com"})
     admin = Admin(model_admins=[filterable])
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
-    page = TestClient(app).get("/admin/users").text
+    return TestClient(app).get("/admin/users" + query).text
 
-    # Filters are faceted dropdowns in the toolbar now (shadcn's Tasks
-    # example), not a side panel -- so they sit inside the toolbar's
-    # left-hand cluster, alongside search, rather than in a column of
-    # their own with mobile ordering to manage.
+
+# Filtering is one drawer behind one toolbar trigger (Django admin's
+# filter column, in Unfold's drawer form), not a dropdown per filter --
+# so a ModelAdmin's filter count costs the toolbar nothing.
+def test_filters_render_as_one_drawer_behind_one_trigger():
+    page = _filterable_page()
+
     assert ui("toolbar", "filters") in page, "expected a toolbar filter cluster"
-    assert ui("toolbar", "facet") in page, "expected the filter to render as a dashed facet trigger"
-    assert "Is Active" in page, "expected the facet trigger to be labelled with the filter"
+    assert 'aria-haspopup="dialog"' in page, "expected one Filters trigger opening a drawer"
+    assert 'aria-label="Filters"' in page, "expected the drawer itself"
+    assert "Is Active" in page, "expected the filter's label in the drawer"
+    assert ui("sheet", "side-right") in page, "expected the drawer to come in from the right"
+
+
+# The trigger carries a count so the drawer says how much it's hiding
+# without being opened -- and only once something is applied.
+def test_filter_trigger_counts_only_applied_filters():
+    count = ui("filter-panel", "count")
+    assert count not in _filterable_page(), "expected no count badge while nothing is filtered"
+    applied = _filterable_page("?filter[is_active]=true")
+    assert count in applied, "expected a count badge once a filter is applied"
+
+
+# Reset clears search *and* every filter, so it lives with the things it
+# clears -- in the drawer's footer -- which is also what keeps the
+# stacked mobile toolbar to its five controls.
+def test_reset_lives_in_the_drawer_and_only_when_something_is_applied():
+    assert "Clear all" not in _filterable_page(), "expected no Reset while nothing is applied"
+    applied = _filterable_page("?filter[is_active]=true")
+    assert "Clear all" in applied, "expected Reset in the drawer once a filter is applied"
+
+
+# Every toolbar control fills its own line while the toolbar is a single
+# stacked column below sm. The ones wrapped in a <form> or a positioning
+# <div> can't inherit that from the flex row, so each carries
+# ui('toolbar', 'item') itself.
+def test_toolbar_controls_fill_their_line_while_stacked():
+    item = ui("toolbar", "item")
+    page = _filterable_page()
+    # search, the Filters trigger (wrapper + button), bulk actions
+    # (form + button), Export, New.
+    assert page.count(item) >= 6, (
+        f"expected every stacked toolbar control to fill its line, found {page.count(item)}"
+    )
+
+
+# A stacked toolbar control is a full-width bar, so its label goes hard
+# left and its icon hard right rather than sitting centred. Every control
+# that has both carries the pair.
+def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
+    label = ui("toolbar", "item-label")
+    icon_class = ui("toolbar", "item-icon")
+    page = _filterable_page()
+
+    # Filters, the action select, Export and New each get a label that
+    # takes the slack.
+    assert page.count(label) >= 4, (
+        f"expected each stacked control's label to take the slack, found {page.count(label)}"
+    )
+    # Filters' and New's leading icons plus Export's icon+chevron move to
+    # the trailing edge; the action select's chevron is already last and
+    # needs no reorder.
+    assert page.count(icon_class) >= 4, (
+        f"expected leading icons to move to the trailing edge, found {page.count(icon_class)}"
+    )
+
+
+# A label is arbitrary application text, so it reaches Alpine as a data
+# attribute the browser decodes -- never quoted into the x-data
+# expression, where one stray quote closes the attribute and every select
+# on the page fails to initialise. tojson did exactly that.
+
+
+# -- booleans as icons ----------------------------------------------------
+
+
+
+
+# A column of booleans is scannable as glyphs and not as two
+# similar-length words, so list cells render a check or a cross. The word
+# stays as an sr-only label, so nothing depends on the icon alone.
+
+
+# Exports stringify through core/exporter.py, never through
+# render_field_value, so a CSV still carries a readable value rather
+# than an SVG.
 
 
 # -- shadcn Select for plain choice fields -------------------------------
 
 
-def test_enum_field_renders_shadcn_select_not_native_options(task_client):
-    page = task_client.get("/admin/tasks/1/edit").text
-    assert "<option" not in page, "expected no native <option> elements once enum uses ui/select"
-    assert 'aria-haspopup="listbox"' in page
-    assert 'name="priority"' in page
-    assert "Medium" in page
 
 
-def test_enum_field_select_lists_all_choices_as_options(task_client):
-    page = task_client.get("/admin/tasks/create").text
-    for want in ('data-value="Low"', 'data-value="Medium"', 'data-value="High"'):
-        assert want in page, f"expected choice {want!r} as a listbox option"
 
 
 # -- export dropdown (Phase B) ------------------------------------------

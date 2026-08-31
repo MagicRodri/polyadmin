@@ -25,16 +25,31 @@
    side (where the alignment is baked into an x-anchor *attribute name*,
    which html/template cannot build dynamically). #}
 {% from "admin/components/icons.html" import icon %}
-{% macro dropdown_menu(label, icon_name="dots", text=none, variant=none, items=()) %}
-<div class="relative inline-flex" x-data="{ open: false }"
+{% macro dropdown_menu(label, icon_name="dots", text=none, variant=none, items=(), full_width=false) %}
+{# full_width makes the trigger fill its line while a stacked
+   toolbar is one column, then shrink back to its content at lg --
+   the wrapper needs it too, since the button can only fill a box
+   that is itself full width. See ui.py's "toolbar" for why lg. #}
+<div class="relative {% if full_width %}flex w-full lg:inline-flex lg:w-auto{% else %}inline-flex{% endif %}"
+     x-data="{ open: false }"
      @keydown.escape="open = false; $refs.trigger.focus()"
      @click.outside="open = false">
   {% if text %}
+  {# Under full_width the label goes hard left and both icons -- the
+     leading one and the chevron -- go hard right, so a stacked
+     full-width trigger reads like the rest of the toolbar rather than
+     floating its content in the middle. Giving them the same
+     order-last keeps their relative order (icon, then chevron); the
+     label's flex-1 is what pushes them there. #}
   <button type="button" x-ref="trigger" @click="open = !open"
           :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
-          class="{{ ui('button', variant or 'outline', 'size-default') }}">
-    {% if icon_name %}{{ icon(icon_name, "w-4 h-4") }}{% endif %}{{ text }}
-    <span :class="open ? 'rotate-180' : ''" class="transition-transform duration-200">
+          class="{{ ui('button', variant or 'outline', 'size-default') }}{% if full_width %} w-full lg:w-auto{% endif %}">
+    {% if icon_name %}
+    {{ icon(icon_name, "w-4 h-4" ~ (" " ~ ui('toolbar', 'item-icon') if full_width else "")) }}
+    {% endif %}
+    <span {% if full_width %}class="{{ ui('toolbar', 'item-label') }}"{% endif %}>{{ text }}</span>
+    <span :class="open ? 'rotate-180' : ''"
+          class="transition-transform duration-200{% if full_width %} {{ ui('toolbar', 'item-icon') }}{% endif %}">
       {{ icon("chevron-down", "w-3.5 h-3.5") }}
     </span>
   </button>

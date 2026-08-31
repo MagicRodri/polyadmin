@@ -272,6 +272,8 @@ def list_context(
         export_params.append(("sort", list_request.ordering))
     export_query = f"?{urlencode(export_params)}" if export_params else ""
 
+    filter_controls = _filter_controls(model_admin, list_request, base_path)
+
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
         {"label": model_admin.get_verbose_name(), "url": None, "active": True},
@@ -290,7 +292,7 @@ def list_context(
         ],
         "search": list_request.search or "",
         "filters": list_request.filters,
-        "filter_controls": _filter_controls(model_admin, list_request, base_path),
+        "filter_controls": filter_controls,
         "sort_controls": _sort_controls(model_admin, list_request, base_path),
         "page_size_options": _page_size_options(model_admin, list_request, base_path),
         # Every paging control is a precomputed URL for the same reason
@@ -308,6 +310,12 @@ def list_context(
         # you're narrowing it to.
         "reset_url": _list_url(model_admin, list_request, base_path, search=None, filters=None, page=None),
         "has_active_filters": bool(list_request.search or list_request.filters),
+        # How many declared filters are currently narrowing the list --
+        # the badge on the Filters trigger, so the panel says how much
+        # it's hiding without being opened. Search isn't included, since
+        # it has its own visible box in the toolbar. Mirrors
+        # go-polyadmin's listData.ActiveFilterCount.
+        "active_filter_count": sum(1 for control in filter_controls if control["active"]),
         "ordering": list_request.ordering or "",
         "export_query": export_query,
         "permissions": permissions or default_permissions(model_admin),

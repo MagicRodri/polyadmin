@@ -39,11 +39,18 @@
         </a>
         {% endif %}
         {% for action in actions %}
+        {# w-full sm:w-auto tracks "actions-primary"'s own flex-col ->
+           sm:flex-row switch by hand: Edit is a direct flex child, so
+           align-items:stretch already gives it the full width while the
+           group is stacked, but an action's button is a grandchild --
+           the stretch stops at the <form> wrapping it -- and would
+           otherwise sit stunted at its content width next to a
+           full-width Edit. #}
         <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
               {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
               onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
           <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">
-          <button type="submit" class="{{ ui('button', 'outline') }}">
+          <button type="submit" class="{{ ui('button', 'outline') }} w-full sm:w-auto">
             {{ action.label }}
           </button>
         </form>

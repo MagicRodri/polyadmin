@@ -1,0 +1,108 @@
+{% from "admin/components/icons.html" import icon %}
+{# Filter drawer: one "Filters" trigger in the toolbar plus a Sheet
+   that slides in from the right listing every declared filter
+   vertically -- Django admin's right-hand filter column, in the drawer
+   form Unfold gives it. Mirrors
+   go-polyadmin/templates/admin/components/ui/filter-panel.html.
+
+   Replaces the row of per-filter dropdown triggers that used to sit in
+   the toolbar: one trigger stays one trigger however many filters a
+   ModelAdmin declares, and vertical space in a drawer is free in a way
+   horizontal space in a toolbar is not.
+
+   Each choice is a link, not a form control, so filtering still works
+   with JS off (the drawer is then simply always-closed markup the user
+   can't reach -- the same links remain in the DOM for assistive tech,
+   and the URLs are the real navigation). The precomputed URLs come
+   from core/template_context.py, keeping query-string assembly out of
+   the template.
+
+   Reset lives in the drawer's footer rather than the toolbar: it
+   clears search *and* every filter, so it belongs with the things it
+   clears, and keeping it out of the toolbar is what lets the mobile
+   toolbar stay exactly five stacked controls.
+
+   The open flag is mirrored onto a window global so it survives htmx's
+   outerHTML swap of #resource-list: applying a filter re-renders this
+   whole component, and without that the drawer would slam shut on
+   every single click, which makes setting two filters in a row
+   needlessly tedious. It's read back at init, so a fresh page load
+   (where the global is undefined) still starts closed.
+
+   Included (not a macro) from components/list_content.html, sharing
+   its ambient context (filter_controls, active_filter_count,
+   has_active_filters, reset_url). #}
+{% if filter_controls %}
+<div x-data="{ open: window.polyadminFiltersOpen === true }"
+     x-effect="window.polyadminFiltersOpen = open"
+     @keydown.escape.window="open = false"
+     class="{{ ui('toolbar', 'item') }}">
+  <button type="button" @click="open = !open"
+          :aria-expanded="open ? 'true' : 'false'" aria-haspopup="dialog"
+          class="{{ ui('button', 'outline', 'size-sm') }} {{ ui('toolbar', 'item') }}">
+    {{ icon("filter", "size-4 shrink-0 " ~ ui('toolbar', 'item-icon')) }}
+    <span class="{{ ui('toolbar', 'item-label') }}">Filters</span>
+    {% if active_filter_count %}
+    <span class="{{ ui('separator', 'vertical') }} mx-1 !h-4"></span>
+    <span class="{{ ui('badge', 'secondary') }} {{ ui('filter-panel', 'count') }}">{{ active_filter_count }}</span>
+    {% endif %}
+  </button>
+
+  <div x-show="open" x-cloak @click="open = false"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+       class="{{ ui('sheet', 'overlay') }}"></div>
+
+  <div x-show="open" x-cloak role="dialog" aria-modal="true" aria-label="Filters"
+       x-transition:enter="transition ease-in-out duration-300"
+       x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+       x-transition:leave="transition ease-in-out duration-300"
+       x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+       class="{{ ui('sheet', 'content') }} {{ ui('sheet', 'side-right') }} {{ ui('sheet', 'panel') }}
+              {{ ui('sheet', 'width-panel') }} flex flex-col">
+    <div class="{{ ui('filter-panel', 'header') }}">
+      <h2 class="{{ ui('filter-panel', 'title') }}">Filters</h2>
+      <button type="button" @click="open = false" aria-label="Close filters"
+              class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
+        {{ icon("close", "size-4") }}
+      </button>
+    </div>
+
+    <div class="{{ ui('filter-panel', 'body') }}">
+      {% for control in filter_controls %}
+      <div>
+        <h3 class="{{ ui('filter-panel', 'group-label') }}">{{ control.label }}</h3>
+        <ul>
+          {% for choice in control.choices %}
+          <li>
+            <a href="{{ choice.url }}"
+               hx-get="{{ choice.url }}" hx-target="#resource-list" hx-select="#resource-list"
+               hx-swap="outerHTML" hx-push-url="true"
+               class="{{ ui('filter-panel', 'choice') }}
+                      {% if choice.selected %}{{ ui('filter-panel', 'choice-active') }}{% else %}{{ ui('filter-panel', 'choice-inactive') }}{% endif %}">
+              <span class="flex size-4 shrink-0 items-center justify-center">
+                {% if choice.selected %}{{ icon("check", "size-4") }}{% endif %}</span>
+              <span class="truncate">{{ choice.label }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if has_active_filters %}
+    <div class="{{ ui('filter-panel', 'footer') }}">
+      <a href="{{ reset_url }}"
+         hx-get="{{ reset_url }}" hx-target="#resource-list" hx-select="#resource-list"
+         hx-swap="outerHTML" hx-push-url="true"
+         class="{{ ui('button', 'ghost-muted', 'size-sm') }} w-full">
+        {{ icon("close", "size-4") }} Clear all
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

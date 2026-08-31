@@ -23,13 +23,17 @@
    its ambient context (actions, base_path, model_admin). #}
 {% if actions %}
 <form id="bulk-actions-form" method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/"
-      onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
-  <div class="relative inline-flex" x-data="{ open: false, label: 'Action…' }"
+      onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)"
+      class="{{ ui('toolbar', 'item') }}">
+  {# w-full on both the positioning wrapper and the trigger: a button
+     can only fill a box that is itself full width, and the <form>
+     above is what the stacked toolbar actually stretches. #}
+  <div class="relative flex w-full lg:inline-flex lg:w-auto" x-data="{ open: false, label: 'Action…' }"
        @keydown.escape="open = false" @click.outside="open = false">
     <button type="button" x-ref="trigger" @click="open = !open"
             :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
-            class="{{ ui('button', 'outline', 'size-sm') }}">
-      <span x-text="label"></span>
+            class="{{ ui('button', 'outline', 'size-sm') }} {{ ui('toolbar', 'item') }}">
+      <span x-text="label" class="{{ ui('toolbar', 'item-label') }}"></span>
       {{ icon("chevron-down", "w-3.5 h-3.5") }}
     </button>
     <div x-show="open" x-cloak role="listbox"

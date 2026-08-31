@@ -414,20 +414,65 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
     # (Export, New) on the right. The footer is the example's
     # DataTablePagination: selection count left, rows-per-page + page
     # indicator + the four jump buttons right.
+    # Stacked into one full-width column until lg, a row from lg up.
+    #
+    # lg, not sm, because of where the sidebar lands: it's an off-canvas
+    # sheet below md and a static 16rem column from md up, so the
+    # content area *shrinks* at md (735px -> 549px at the breakpoint
+    # itself) rather than growing. Measured, the five controls only stop
+    # wrapping into a ragged three-or-four line block at ~1024px; sm
+    # (640px) and md (768px) both put them in a row that immediately
+    # wraps, which reads as misalignment above the table. So they stay
+    # stacked, one per line, through both.
     "toolbar": {
-        "base": "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+        "base": "flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between",
         "parts": {
+            # Every control inside carries its own "item" to fill its
+            # line while stacked -- stretch alone can't do it, since
+            # several of them are buttons wrapped in a <form> or a
+            # positioning <div>.
+            #
             # flex-1 so the filter cluster takes the slack and the
-            # actions stay hard right however many filters there are.
-            "filters": "flex flex-1 flex-wrap items-center gap-2",
-            "actions": "flex items-center gap-2",
-            # A faceted filter trigger: dashed until it's actually
-            # filtering something, which is how the example distinguishes
-            # "available" from "applied" at a glance.
-            "facet": "h-8 border-dashed",
-            "facet-active": "h-8",
-            # The count badge shown inside an applied facet trigger.
-            "facet-value": "rounded-sm px-1 font-mono text-xs font-normal",
+            # actions stay hard right once they are rows.
+            "filters": "flex flex-1 flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center",
+            "actions": "flex flex-col gap-2 lg:flex-row lg:items-center",
+            "item": "w-full lg:w-auto",
+            # A stacked control is a full-width bar, and centred content
+            # in a full-width bar reads as floating: the label goes hard
+            # left, the icon hard right. "item-label" takes the slack
+            # (which also makes the button base's justify-center a no-op
+            # while stacked -- there is no free space left to centre, so
+            # the two never fight), and "item-icon" moves a *leading*
+            # icon to the trailing edge without reordering the markup.
+            # Both revert at lg, where the button is content-width again
+            # and icon-then-label centred is right.
+            "item-label": "flex-1 text-left lg:flex-none",
+            "item-icon": "order-last lg:order-none",
+        },
+    },
+    # The filter drawer, after Django admin's right-hand filter column
+    # as Unfold restyles it: one Filters trigger in the toolbar, and a
+    # sheet that slides in from the right listing every filter
+    # vertically. One trigger stays one trigger however many filters a
+    # ModelAdmin declares, which a row of per-filter dropdowns doesn't.
+    "filter-panel": {
+        "parts": {
+            "header": "flex items-center justify-between gap-2 border-b border-border px-4 py-3",
+            "title": "text-sm font-semibold text-foreground",
+            "body": "flex-1 space-y-5 overflow-y-auto px-4 py-4",
+            "group-label": (
+                "mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            ),
+            "choice": (
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors "
+                "hover:bg-accent hover:text-accent-foreground"
+            ),
+            "choice-active": "bg-accent font-medium text-accent-foreground",
+            "choice-inactive": "text-muted-foreground",
+            "footer": "border-t border-border px-4 py-3",
+            # The count badge on the trigger, shown only while filters
+            # are actually narrowing the list.
+            "count": "rounded-sm px-1 font-mono text-xs font-normal",
         },
     },
 
