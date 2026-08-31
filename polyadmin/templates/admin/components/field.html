@@ -1,3 +1,4 @@
+{% from "admin/components/icons.html" import icon %}
 {# Context-aware read-only rendering of a field value.
    Default renderer, overridable by replacing this template.
 
@@ -14,14 +15,29 @@
 {%- endif -%}
 {% endmacro %}
 
-{# "Yes" keeps a green that reads as affirmative in both themes; the
+{# A boolean renders as a check or a cross rather than the words
+   "Yes"/"No" -- Django admin's convention, and the one thing that makes
+   a column of booleans scannable: a glyph reads as a shape at a glance
+   where two similar-length words have to be read.
+
+   The word stays in the markup as an sr-only label, so a screen reader
+   still hears "Yes"/"No" and nothing depends on the icon alone (the
+   icon itself is aria-hidden, from the icon macro). Exports are
+   untouched -- they stringify through core/exporter.py, never through
+   here.
+
+   "Yes" keeps a green that reads as affirmative in both themes; the
    emerald-600/400 pair is picked for contrast against bg-card either
    way, since there is no shadcn "success" token to defer to. #}
 {% macro render_field_value(field, value) -%}
 {%- if value is none -%}
 <span class="{{ ui('text', 'placeholder') }}">&mdash;</span>
 {%- elif field.field_type == "boolean" -%}
-{% if value %}<span class="font-medium text-emerald-600 dark:text-emerald-400">Yes</span>{% else %}<span class="{{ ui('text', 'placeholder') }}">No</span>{% endif %}
+{%- if value -%}
+<span class="inline-flex items-center text-emerald-600 dark:text-emerald-400">{{ icon("check", "size-4") }}<span class="sr-only">Yes</span></span>
+{%- else -%}
+<span class="inline-flex items-center {{ ui('text', 'placeholder') }}">{{ icon("close", "size-4") }}<span class="sr-only">No</span></span>
+{%- endif -%}
 {%- elif field.field_type == "password" -%}
 <span class="{{ ui('text', 'placeholder') }}">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
 {%- elif field.field_type in ("foreignkey", "onetoone") -%}

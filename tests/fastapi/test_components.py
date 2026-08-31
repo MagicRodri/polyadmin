@@ -196,16 +196,44 @@ def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
 # -- booleans as icons ----------------------------------------------------
 
 
+def _boolean_client():
+    user_admin = InMemoryUserAdmin()
+    admin = Admin(model_admins=[user_admin])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), user_admin
 
 
 # A column of booleans is scannable as glyphs and not as two
 # similar-length words, so list cells render a check or a cross. The word
 # stays as an sr-only label, so nothing depends on the icon alone.
+def test_boolean_cells_render_as_icons_with_an_accessible_label():
+    client, user_admin = _boolean_client()
+    user_admin.create({"email": "yes@example.com", "is_active": True})
+    user_admin.create({"email": "no@example.com", "is_active": False})
+
+    page = client.get("/admin/users").text
+
+    # The check and cross path data, from components/icons.html.
+    assert "M4.5 12.75l6 6 9-13.5" in page, "expected a check icon for a true boolean"
+    assert "M6 18L18 6M6 6l12 12" in page, "expected a cross icon for a false boolean"
+    assert '<span class="sr-only">Yes</span>' in page
+    assert '<span class="sr-only">No</span>' in page
+    # The old plain-text rendering is gone: the words survive only as
+    # the sr-only labels asserted above.
+    assert 'dark:text-emerald-400">Yes<' not in page
 
 
 # Exports stringify through core/exporter.py, never through
 # render_field_value, so a CSV still carries a readable value rather
 # than an SVG.
+def test_boolean_export_is_unaffected_by_the_icon_rendering():
+    client, user_admin = _boolean_client()
+    user_admin.create({"email": "yes@example.com", "is_active": True})
+
+    csv = client.get("/admin/users/export/csv").text
+    assert "<svg" not in csv and "sr-only" not in csv, f"export leaked list markup: {csv}"
+    assert "True" in csv or "true" in csv, f"expected the boolean as text in the export, got {csv}"
 
 
 # -- shadcn Select for plain choice fields -------------------------------
