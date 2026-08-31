@@ -14,14 +14,16 @@ from polyadmin.core.dashboard import Dashboard
 from polyadmin.core.widget import Chart, Donut, Metric, Stat, Table, Tabs, Timeline
 from polyadmin.fastapi.router import create_router
 from fastapi import FastAPI
-from models import OrganizationRepository, UserRepository, seed
+from models import OrganizationRepository, RoleRepository, UserRepository, seed
 from organization_admin import OrganizationAdmin
 from pages import register_pages
+from role_admin import RoleAdmin
 from user_admin import UserAdmin
 
 users = UserRepository()
 organizations = OrganizationRepository()
-seed(users, organizations)
+roles = RoleRepository()
+seed(users, organizations, roles)
 
 dashboard = Dashboard(
     title="Overview",
@@ -99,7 +101,7 @@ dashboard = Dashboard(
 # Stand-ins for a real app's own session/IAM integration:
 # swap these for something that reads your actual auth state.
 admin = Admin(
-    model_admins=[UserAdmin(users, organizations), OrganizationAdmin(organizations)],
+    model_admins=[UserAdmin(users, organizations, roles), OrganizationAdmin(organizations), RoleAdmin(roles)],
     dashboard=dashboard,
     authenticator=AllowAllAuthenticator(
         Principal(id="demo", display_name="Demo Admin", is_superuser=True)

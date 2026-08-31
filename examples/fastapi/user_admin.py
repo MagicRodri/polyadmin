@@ -8,13 +8,19 @@ from __future__ import annotations
 
 from polyadmin import BooleanField, EmailField, ModelAdmin
 from polyadmin.core.action import Action
-from polyadmin.core.field import ForeignKeyField
+from polyadmin.core.field import ForeignKeyField, ManyToManyField
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.relation import Relation
-from models import OrganizationRepository, User, UserRepository
+from models import OrganizationRepository, RoleRepository, User, UserRepository
 
 ORGANIZATION_RELATION = Relation(
     "organization", target="organizations", display_field="name"
+)
+# cardinality="many" is what marks this as the collection side; the
+# adapter reads the field's current value as a list and renders every
+# role in the target's queryset as a choice.
+ROLES_RELATION = Relation(
+    "roles", target="roles", display_field="name", cardinality="many"
 )
 
 
@@ -43,8 +49,11 @@ class UserAdmin(ModelAdmin):
     category = "Directory"
 
     list_display = ["id", "email", "is_active", "organization"]
-    detail_fields = ["id", "email", "is_active", "organization"]
-    form_fields = ["email", "is_active", "organization"]
+    detail_fields = ["id", "email", "is_active", "organization", "roles"]
+    # roles is on the form but not in list_display: a many-to-many
+    # column costs a lookup per row and reads as noise in a table, which
+    # is why Django keeps it off list_display too.
+    form_fields = ["email", "is_active", "organization", "roles"]
     search_fields = ["email"]
     filters = [BooleanFilter("is_active")]
     # Routes the "organization" relation through the /lookup endpoint
@@ -60,16 +69,22 @@ class UserAdmin(ModelAdmin):
         EmailField("email", required=True),
         BooleanField("is_active", default=True),
         ForeignKeyField("organization", relation=ORGANIZATION_RELATION),
+        # Renders as the searchable multi-select
+        # (components/ui/multi-select.html) -- the whole point of
+        # seeding eight roles in models.py.
+        ManyToManyField("roles", relation=ROLES_RELATION),
     ]
 
     def __init__(
         self,
         repository: UserRepository,
         organization_repository: OrganizationRepository,
+        role_repository: RoleRepository,
     ) -> None:
         super().__init__()
         self.repository = repository
         self.organization_repository = organization_repository
+        self.role_repository = role_repository
 
     def get_queryset(self):
         return self.repository.list()
@@ -86,11 +101,29 @@ class UserAdmin(ModelAdmin):
             return None
         return self.organization_repository.get(int(pk))
 
+    def _resolve_roles(self, data):
+        """Turn the posted pks back into role objects.
+
+        The form posts one value per selection under "roles" (exactly
+        what a <select multiple> posted), which parse_form_data hands
+        over as a list of strings.
+        """
+        resolved = []
+        for pk in data.get("roles") or []:
+            try:
+                role = self.role_repository.get(int(pk))
+            except (TypeError, ValueError):
+                continue
+            if role is not None:
+                resolved.append(role)
+        return resolved
+
     def create(self, data):
         return self.repository.create(
             email=data["email"],
             is_active=bool(data.get("is_active")),
             organization=self._resolve_organization(data),
+            roles=self._resolve_roles(data),
         )
 
     def update(self, obj, data):
@@ -99,6 +132,7 @@ class UserAdmin(ModelAdmin):
             email=data.get("email"),
             is_active=data.get("is_active"),
             organization=self._resolve_organization(data),
+            roles=self._resolve_roles(data),
         )
 
     def delete(self, obj):
