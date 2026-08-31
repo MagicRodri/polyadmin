@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.field import ForeignKeyField, StringField
+from polyadmin.core.field import ForeignKeyField, ManyToManyField, StringField
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
@@ -15,10 +15,11 @@ class Organization:
 
 
 class User:
-    def __init__(self, id, email, organization=None):
+    def __init__(self, id, email, organization=None, teams=()):
         self.id = id
         self.email = email
         self.organization = organization
+        self.teams = list(teams)
 
 
 class OrganizationAdmin(ModelAdmin):
@@ -51,17 +52,22 @@ class OrganizationAdmin(ModelAdmin):
 
 
 ORG_RELATION = Relation("organization", target="organizations", display_field="name")
+# teams reuses the organizations admin as its target -- the widget only
+# cares that a relation resolves to (pk, label) pairs, not what the
+# target models.
+TEAMS_RELATION = Relation("teams", target="organizations", display_field="name")
 
 
 class UserAdmin(ModelAdmin):
     model = User
     slug = "users"
     list_display = ["id", "email", "organization"]
-    detail_fields = ["id", "email", "organization"]
-    form_fields = ["email", "organization"]
+    detail_fields = ["id", "email", "organization", "teams"]
+    form_fields = ["email", "organization", "teams"]
     fields = [
         StringField("email", required=True),
         ForeignKeyField("organization", relation=ORG_RELATION),
+        ManyToManyField("teams", relation=TEAMS_RELATION),
     ]
 
     def __init__(self):
@@ -204,6 +210,11 @@ def test_edit_form_preselects_current_relation():
 
 class AutocompleteUserAdmin(UserAdmin):
     autocomplete_fields = ["organization"]
+    # Drop the many-to-many: it targets the same admin and renders every
+    # option inline (that is what a multi-select is), which would defeat
+    # the "an autocomplete field never dumps its target's queryset into
+    # the page" assertion these fixtures exist to make.
+    form_fields = ["email", "organization"]
 
 
 def _make_autocomplete_client():
@@ -240,3 +251,46 @@ def test_autocomplete_field_prefills_current_selection_label_on_edit():
     assert response.status_code == 200
     assert 'value="Acme"' in response.text
     assert f'value="{acme.id}"' in response.text
+
+
+# -- many-to-many: the searchable multi-select --------------------------
+
+
+def test_many_to_many_renders_searchable_multi_select_not_a_native_multiple():
+    client, _, _, org_admin = make_client()
+    org_admin.create({"name": "Acme"})
+    org_admin.create({"name": "Widgets Inc"})
+
+    text = client.get("/admin/users/create").text
+
+    assert "<select multiple" not in text, "expected the native <select multiple> to be gone"
+    assert 'x-data="adminMultiSelect()"' in text, "expected the multi-select component"
+    # The list is "what you can still add": a chosen option leaves it for
+    # a chip, so nothing in it is ever in a selected state -- no check
+    # indicator, and no aria-selected to carry.
+    assert 'x-show="available($el)"' in text, "expected the list to hide options once chosen"
+    assert "aria-selected" not in text and "aria-multiselectable" not in text, (
+        "expected no selected-state ARIA on a list that never shows selected options"
+    )
+    # Every option is in the page -- a many-to-many's list is already
+    # fully rendered, which is what lets the search filter client-side.
+    for want in ('data-value="1"', 'data-value="2"', "Acme", "Widgets Inc"):
+        assert want in text, f"expected option {want!r} in the page"
+    assert 'placeholder="Search&hellip;"' in text, "expected the search box"
+
+
+# The widget posts what a <select multiple> posted: repeated inputs under
+# the field's own name, which is what parse_form_data's getlist reads.
+def test_many_to_many_selection_posts_under_the_field_name():
+    client, _, user_admin, org_admin = make_client()
+    org_admin.create({"name": "Acme"})
+    widgets = org_admin.create({"name": "Widgets Inc"})
+    user_admin._store[1] = User(1, "john@example.com", teams=[widgets])
+
+    text = client.get("/admin/users/1/edit").text
+
+    assert '<input type="hidden" name="teams"' in text
+    # The current selection is marked on the option, which is what the
+    # component hydrates its initial state from.
+    assert 'data-value="2" data-label="Widgets Inc" data-selected="true"' in text
+    assert 'data-value="1" data-label="Acme" data-selected="true"' not in text

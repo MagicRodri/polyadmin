@@ -551,6 +551,30 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         },
     },
 
+    # The many-to-many control: a Command-style searchable list (shadcn's
+    # Combobox/Command idiom) over the relation's options, with the
+    # current selection shown as removable chips on the trigger. Same job
+    # as Django admin's filter_horizontal permissions widget -- the point
+    # of both is that a long option list is unusable until you can type
+    # at it -- without the two-pane layout, which needs width this form
+    # column doesn't have.
+    "multi-select": {
+        "parts": {
+            # min-h matches the single Select's h-10 so a field with
+            # nothing chosen lines up with its neighbours; it grows from
+            # there as chips wrap onto more lines.
+            "trigger": "min-h-10 justify-between gap-2 text-left",
+            "values": "flex flex-1 flex-wrap items-center gap-1",
+            "chip": "gap-1 py-0.5 pr-1 pl-2 font-normal",
+            # The chip's own remove affordance. Not a <button>: the chip
+            # lives inside the trigger <button>, and HTML forbids nesting
+            # one button in another.
+            "chip-remove": "rounded-sm p-0.5 transition-colors hover:bg-background/60",
+            "search": "flex items-center gap-2 border-b border-border px-3",
+            "list": "max-h-56 overflow-y-auto py-1",
+        },
+    },
+
     "calendar": {
         "base": "w-auto p-3",
         "parts": {

@@ -180,6 +180,17 @@ def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
 # attribute the browser decodes -- never quoted into the x-data
 # expression, where one stray quote closes the attribute and every select
 # on the page fails to initialise. tojson did exactly that.
+def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
+    page = task_client.get("/admin/tasks/1/edit").text
+
+    xdata = 'x-data="{ open: false, label: ' + "''" + ' }"'
+    assert xdata in page, "expected the x-data to carry no interpolated label"
+    assert 'x-init="label = $el.dataset.label"' in page, (
+        "expected the label to be hydrated from the DOM"
+    )
+    assert 'data-label="Medium"' in page
+    # The shape that broke: tojson's double quote closing the attribute.
+    assert 'label: "' not in page
 
 
 # -- booleans as icons ----------------------------------------------------
@@ -200,8 +211,18 @@ def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
 # -- shadcn Select for plain choice fields -------------------------------
 
 
+def test_enum_field_renders_shadcn_select_not_native_options(task_client):
+    page = task_client.get("/admin/tasks/1/edit").text
+    assert "<option" not in page, "expected no native <option> elements once enum uses ui/select"
+    assert 'aria-haspopup="listbox"' in page
+    assert 'name="priority"' in page
+    assert "Medium" in page
 
 
+def test_enum_field_select_lists_all_choices_as_options(task_client):
+    page = task_client.get("/admin/tasks/create").text
+    for want in ('data-value="Low"', 'data-value="Medium"', 'data-value="High"'):
+        assert want in page, f"expected choice {want!r} as a listbox option"
 
 
 # -- export dropdown (Phase B) ------------------------------------------

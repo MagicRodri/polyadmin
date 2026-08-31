@@ -22,6 +22,7 @@
 {% from "admin/components/icons.html" import icon %}
 {% from "admin/components/ui/calendar.html" import date_picker %}
 {% from "admin/components/ui/select.html" import select %}
+{% from "admin/components/ui/multi-select.html" import multi_select %}
 {% macro render_form_input(field, value, errors, relation=none) %}
 {% set input_types = {
   "integer": "number",
@@ -117,14 +118,11 @@
   {{ select(field.name, relation.options if relation else [],
             selected=(relation.selected_pk if relation else none), placeholder="—", disabled=field.disabled) }}
   {% elif field.field_type == "manytomany" %}
-  <select multiple id="field-{{ field.name }}" name="{{ field.name }}" autocomplete="off"
-          {% if field.disabled %}disabled{% endif %}
-          size="{{ [(relation.options|length if relation else 1), 1] | max }}"
-          class="{{ ui('select', 'size-auto') }}">
-    {% for pk, label in (relation.options if relation else []) %}
-    <option value="{{ pk }}" {% if relation and pk in relation.selected_pks %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  {% set m2m_options = namespace(pairs=[]) %}
+  {% for pk, label in (relation.options if relation else []) %}
+  {% set m2m_options.pairs = m2m_options.pairs + [(pk, label, relation and pk in relation.selected_pks)] %}
+  {% endfor %}
+  {{ multi_select(field.name, m2m_options.pairs, placeholder="Select…", disabled=field.disabled) }}
   {% else %}
   <input type="{{ input_types.get(field.field_type, 'text') }}" id="field-{{ field.name }}" name="{{ field.name }}"
          value="{{ value if value is not none else '' }}" placeholder="{{ field.placeholder }}" autocomplete="off"

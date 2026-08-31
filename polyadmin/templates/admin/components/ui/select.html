@@ -30,7 +30,15 @@
 {% for value, label in options %}
 {% if value == selected %}{% set selected_label.value = label %}{% endif %}
 {% endfor %}
-<div class="{{ ui('combobox') }}" x-data="{ open: false, label: {{ (selected_label.value or placeholder) | tojson }} }"
+{# The initial label rides in as a data attribute and is read back with
+   $el.dataset in x-init, never interpolated into the x-data expression.
+   tojson emits a raw double quote, which inside this double-quoted
+   attribute closed it early and left Alpine parsing "{ open: false,
+   label: " -- every select on the page then failed to initialise. A
+   data attribute is escaped by the template engine and decoded by the
+   browser, so an apostrophe or a quote in a label is a non-event. #}
+<div class="{{ ui('combobox') }}" data-label="{{ selected_label.value or placeholder }}"
+     x-data="{ open: false, label: '' }" x-init="label = $el.dataset.label"
      @keydown.escape="open = false" @click.outside="open = false">
   <input type="hidden" name="{{ name }}" x-ref="hiddenInput" value="{{ selected if selected is not none else '' }}">
   <button type="button" x-ref="trigger" @click="open = !open"

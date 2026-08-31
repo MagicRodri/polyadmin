@@ -196,7 +196,7 @@ def test_registry_matches_the_go_implementation_key_for_key():
         "sidebar", "nav-item", "tabs", "accordion", "breadcrumb",
         "pagination", "table",
         # Phase D
-        "field", "combobox", "calendar", "slider",
+        "field", "combobox", "calendar", "slider", "multi-select",
         # dashboard / misc
         "widget", "panel", "page", "toolbar", "filter-panel",
     }

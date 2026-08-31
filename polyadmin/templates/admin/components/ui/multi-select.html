@@ -1,0 +1,167 @@
+{% from "admin/components/icons.html" import icon %}
+{# MultiSelect: a searchable Command-style list over a many-to-many
+   relation's options, with the current selection shown as removable
+   chips on the trigger. Mirrors
+   go-polyadmin/templates/admin/components/ui/multi-select.html.
+
+   Same job as Django admin's filter_horizontal permissions widget -- a
+   long option list is unusable until you can type at it -- built from
+   shadcn's Combobox/Command idiom rather than Django's two-pane layout,
+   which needs more width than a form column has.
+
+   Unlike the relation combobox in ui/field.html, the filtering is
+   client-side: a many-to-many's options are already in the page in full
+   (the server rendered every one of them), so there is nothing to fetch
+   and a /lookup round-trip per keystroke would be pure latency. The
+   autocomplete combobox exists precisely because *its* dataset is too
+   big to put in the page; this one's isn't.
+
+   Posting: one hidden input per selection, all under the field's own
+   name, which is exactly what a <select multiple> posts -- the handler
+   reads them with form.getlist() and can't tell the difference. An
+   empty selection posts nothing, again matching the native control, so
+   "cleared" and "untouched" stay as indistinguishable as they already
+   were.
+
+   Values and labels flow through data-value/data-label and are read
+   back via $el.dataset, never interpolated into an Alpine expression --
+   same reasoning as ui/select.html and the relation combobox: a label
+   containing quotes must never have to survive being embedded in a JS
+   string.
+
+   Args:
+     name         form field name
+     options      [(value, label, selected), ...]
+     placeholder  shown when nothing is chosen
+     disabled     bool #}
+{% macro multi_select(name, options, placeholder="Select…", disabled=false) %}
+<div class="{{ ui('combobox') }}" x-data="adminMultiSelect()" x-init="hydrate()"
+     @keydown.escape="open = false" @click.outside="open = false">
+  {# The selection itself. x-for over real inputs rather than one
+     comma-joined value: the server side already speaks "repeated field
+     name", and joining would mean inventing a separator that some
+     primary key eventually contains. #}
+  <template x-for="item in selected" :key="item.value">
+    <input type="hidden" name="{{ name }}" :value="item.value">
+  </template>
+
+  <button type="button" x-ref="trigger" @click="open = !open"
+          :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
+          {% if disabled %}disabled{% endif %}
+          class="{{ ui('select') }} {{ ui('select', 'size-auto') }} {{ ui('multi-select', 'trigger') }}">
+    <span class="{{ ui('multi-select', 'values') }}">
+      <template x-for="item in selected" :key="item.value">
+        <span class="{{ ui('badge', 'secondary') }} {{ ui('multi-select', 'chip') }}">
+          <span x-text="item.label"></span>
+          <span role="button" tabindex="0" :aria-label="'Remove ' + item.label"
+                @click.stop="remove(item.value)" @keydown.enter.stop.prevent="remove(item.value)"
+                @keydown.space.stop.prevent="remove(item.value)"
+                class="{{ ui('multi-select', 'chip-remove') }}">
+            {{ icon("close", "size-3") }}
+          </span>
+        </span>
+      </template>
+      <span x-show="!selected.length" class="{{ ui('text', 'placeholder') }}">{{ placeholder }}</span>
+    </span>
+    {{ icon("chevron-down", "size-4 shrink-0 text-muted-foreground") }}
+  </button>
+
+  <div x-show="open" x-cloak role="listbox"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       class="{{ ui('combobox', 'content') }}">
+    <div class="{{ ui('multi-select', 'search') }}">
+      {{ icon("search", ui('combobox', 'icon')) }}
+      <input type="text" x-model="query" autocomplete="off" placeholder="Search&hellip;"
+             @keydown.escape.stop="open = false"
+             class="{{ ui('input', 'bare') }}">
+    </div>
+    {# The list holds what you can still add: picking an option moves it
+       out of here and into a chip on the trigger, the same
+       available/chosen split Django's filter_horizontal draws. So
+       nothing in this list is ever in a selected state -- hence no
+       check indicator, and no aria-selected/aria-multiselectable to go
+       with it. The chips are the record of what's chosen, each with its
+       own Remove button. #}
+    <div x-ref="options" class="{{ ui('multi-select', 'list') }}">
+      {% for value, label, selected in options %}
+      <div role="option" tabindex="0"
+           data-value="{{ value }}" data-label="{{ label }}" {% if selected %}data-selected="true"{% endif %}
+           @click="toggle($el)" @keydown.enter.prevent="toggle($el)"
+           x-show="available($el)"
+           class="{{ ui('combobox', 'item') }}">
+        <span class="truncate">{{ label }}</span>
+      </div>
+      {% endfor %}
+      {# Two different emptinesses, and saying "No matches" for the
+         second one would be a lie. #}
+      <div x-show="!availableCount()" x-cloak class="{{ ui('combobox', 'empty') }}"
+           x-text="query.trim() ? 'No matches.' : 'Everything is selected.'"></div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro multi_select_script() %}
+<script>
+  // Idempotent global, same pattern as window.adminCalendar
+  // (ui/calendar.html) -- a form may have several many-to-many fields,
+  // but only the first copy defines the factory.
+  window.adminMultiSelect = window.adminMultiSelect || function () {
+    return {
+      open: false,
+      query: "",
+      // [{value, label}], seeded from whichever options the server
+      // marked data-selected. The DOM is the source of truth at load for
+      // the same reason the relation combobox reads its initial value
+      // off the rendered input: no server state has to survive a trip
+      // through a JS literal.
+      selected: [],
+
+      hydrate() {
+        this.selected = Array.from(
+          this.$refs.options.querySelectorAll("[data-selected]")
+        ).map(function (el) {
+          return { value: el.dataset.value, label: el.dataset.label };
+        });
+      },
+
+      has(value) {
+        return this.selected.some(function (item) { return item.value === value; });
+      },
+
+      toggle(el) {
+        if (this.has(el.dataset.value)) {
+          this.remove(el.dataset.value);
+        } else {
+          this.selected.push({ value: el.dataset.value, label: el.dataset.label });
+        }
+      },
+
+      remove(value) {
+        this.selected = this.selected.filter(function (item) { return item.value !== value; });
+      },
+
+      // Substring match on the label, the same rule the server-side
+      // /lookup route applies for the autocomplete combobox.
+      matches(el) {
+        var q = this.query.trim().toLowerCase();
+        return q === "" || (el.dataset.label || "").toLowerCase().indexOf(q) !== -1;
+      },
+
+      // Still addable: matches the search *and* isn't already chosen.
+      available(el) {
+        return this.matches(el) && !this.has(el.dataset.value);
+      },
+
+      availableCount() {
+        var self = this;
+        return Array.from(this.$refs.options.children).filter(function (el) {
+          return el.dataset.value !== undefined && self.available(el);
+        }).length;
+      },
+    };
+  };
+</script>
+{% endmacro %}
