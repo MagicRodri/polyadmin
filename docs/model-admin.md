@@ -168,9 +168,14 @@ with data that already passed validation.
   search box.
 - `filters`/`DeclaredFilters` — a sequence of `Filter` objects
   (`BooleanFilter(name)`, `ChoiceFilter(name, choices=[...])` in
-  Python; `core.NewBooleanFilter(name)` in Go) rendered as a
-  Django-admin-style right-hand panel of links, each toggling one
-  filter while preserving the others.
+  Python; `core.NewBooleanFilter(name)` in Go). They render behind a
+  single **Filters** button in the list toolbar, which opens a
+  right-hand drawer listing every filter vertically — Django admin's
+  filter column, in the drawer form Unfold gives it. Each choice is a
+  link that toggles one filter while preserving the others, so
+  filtering works with JS off, and the trigger carries a count of how
+  many are currently applied. One trigger stays one trigger however
+  many filters a `ModelAdmin` declares.
 - Any column in `list_display` is sortable by clicking its header;
   `?sort=name` / `?sort=-name` for ascending/descending.
 
@@ -208,6 +213,17 @@ full queryset is never loaded into the page, only whatever the search
 matches (up to 20 results) plus the current selection. Use this for
 any relation whose target could grow large, or where dumping the
 whole list would leak more than the viewer should see.
+
+A `ManyToManyField`/`FieldTypeManyToMany` renders as a searchable
+multi-select (`ui/multi-select.html`): a Command-style list you can
+type at, with the current selection as removable chips — the same job
+Django admin's `filter_horizontal` permissions widget does. Its
+filtering is client-side, because a many-to-many's options are already
+in the page in full; that also means it is *not* the control for a
+target with thousands of rows (there is no many-to-many equivalent of
+`autocomplete_fields` yet). It posts one value per selection under the
+field's own name, exactly as a `<select multiple>` did, so nothing on
+the server side changes.
 
 A relation's *reverse* side — showing/managing a child's records from
 the parent's own create/detail/edit pages, Django-admin

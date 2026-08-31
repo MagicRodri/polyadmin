@@ -7,7 +7,7 @@ ported the way it was.
 
 Nothing here is an npm dependency. shadcn distributes component markup
 as code you copy into your own project rather than a package you
-install, which is what makes it usable from Jinja2 at all — the
+install, which is what makes it usable from `html/template` at all — the
 parts that don't come across (React, Radix UI, `cva`,
 `tailwind-merge`) are reimplemented, not vendored. See
 `plan/shadcnui-usage.md` for the full plan.
@@ -19,25 +19,26 @@ parts that don't come across (React, Radix UI, `cva`,
 `ui` is the server-side stand-in for shadcn's
 [`class-variance-authority`](https://cva.style). shadcn resolves a
 component's class list in JS at React render time; there is no JS render
-step here, so the same lookup lives in [`polyadmin/ui.py`](../polyadmin/ui.py)
+step here, so the same lookup lives in [`fiber/ui.go`](../fiber/ui.go)
 and resolves while the template executes.
 
-```jinja
-<button class="{{ ui('button') }}">Save</button>
-<button class="{{ ui('button', 'outline', 'size-sm') }}">Cancel</button>
-<button class="{{ ui('button', 'destructive') }}">Delete</button>
-<th class="{{ ui('table', 'th') }}">Email</th>
+```gotemplate
+<button class="{{ui "button"}}">Save</button>
+<button class="{{ui "button" "outline" "size-sm"}}">Cancel</button>
+<button class="{{ui "button" "destructive"}}">Delete</button>
+<th class="{{ui "table" "th"}}">Email</th>
 ```
 
 Two kinds of modifier, and the difference matters:
 
 | Kind | Behavior | Examples |
 | --- | --- | --- |
-| **variant** / **size** | *Composed* with the component's base, exactly like `cva`. Sizes are prefixed `size-`. | `ui('button', 'ghost', 'size-icon')` |
-| **part** | *Replaces* the base. These are shadcn's sub-components — `CardTitle`, `TableHead`, `BreadcrumbLink` — which have their own class lists and are not variants of the parent. | `ui('card', 'title')`, `ui('table', 'cell')` |
+| **variant** / **size** | *Composed* with the component's base, exactly like `cva`. Sizes are prefixed `size-`. | `ui "button" "ghost" "size-icon"` |
+| **part** | *Replaces* the base. These are shadcn's sub-components — `CardTitle`, `TableHead`, `BreadcrumbLink` — which have their own class lists and are not variants of the parent. | `ui "card" "title"`, `ui "table" "cell"` |
 
 Requesting a part alongside another modifier is an error, as is an
-unknown component or modifier. An exception from a Jinja global aborts the render, so a typo fails loudly in the render tests instead of
+unknown component or modifier. Errors from a template func abort
+`ExecuteTemplate`, so a typo fails loudly in the render tests instead of
 shipping an unstyled control.
 
 > **Why the split is load-bearing.** React-side `cva` runs its output
@@ -47,36 +48,32 @@ shipping an unstyled control.
 > written. The registry therefore holds a rule by construction: a base
 > never sets a property its own variants or sizes also set (which is why
 > `button`'s base carries no height, padding, or background). Two tests
-> pin it: `test_base_does_not_fight_its_variants` and
-> `test_parts_are_usable_from_classlist`.
+> pin it: `TestUIRegistryBaseDoesNotFightItsVariants` and
+> `TestUIRegistryPartsUsableFromClassList`.
 
-### `ui/*` macros — component partials
+### `dict` / `list` — component partials
 
-Components with real markup and behavior are Jinja macros under
-[`polyadmin/templates/admin/components/ui/`](../polyadmin/templates/admin/components/ui/).
-Import the macro, then call it with keyword arguments:
+Components with real markup and behavior are `{{define "ui/..."}}`
+partials under
+[`templates/admin/components/ui/`](../templates/admin/components/ui/).
+`{{template}}` accepts only one data value, so `dict` and `list` build
+one:
 
-```jinja
-{% from "admin/components/ui/dropdown-menu.html" import dropdown_menu %}
-
-{{ dropdown_menu(
-     "Export",
-     icon_name="download",
-     text="Export",
-     items=[
-       {"label": "CSV",  "url": base_path ~ "/" ~ slug ~ "/export/csv"},
-       {"label": "XLSX", "url": base_path ~ "/" ~ slug ~ "/export/xlsx"},
-     ],
-   ) }}
+```gotemplate
+{{template "ui/dropdown-menu" dict
+    "label" "Export" "icon" "download" "text" "Export"
+    "items" (list
+      (dict "Label" "CSV"  "URL" (printf "%s/%s/export/csv" .BasePath .Slug))
+      (dict "Label" "XLSX" "URL" (printf "%s/%s/export/xlsx" .BasePath .Slug)))}}
 ```
 
-Item lists are always *data*, never HTML strings, so a macro never has
+Item lists are always *data*, never HTML strings, so a partial never has
 to trust caller-supplied markup.
 
 ## Tokens and theming
 
 Every color in the registry is a CSS variable declared in
-[`polyadmin/templates/admin/theme.html`](../polyadmin/templates/admin/theme.html) — shadcn's
+[`templates/admin/theme.html`](../templates/admin/theme.html) — shadcn's
 stock "Zinc" palette, as bare HSL triplets so Tailwind's
 `<alpha-value>` opacity modifiers (`bg-primary/90`, `bg-muted/50`) work:
 
@@ -98,7 +95,7 @@ The `chart-*` set is deliberately separate from the chrome tokens above,
 the same split shadcn draws: a slice color carries data, not hierarchy,
 so it is spaced around the color wheel for distinguishability rather than
 picked for contrast against a surface. It is still theme-owned, though —
-the palette is retuned in dark mode, and the Donut's `_DONUT_COLORS` names
+the palette is retuned in dark mode, and the Donut's `donutColors` names
 these tokens rather than literal shades, so a retheme restyles the
 dashboard's charts too.
 
@@ -123,7 +120,7 @@ says otherwise.
 | `button` | variants `default`, `destructive`, `destructive-outline`, `outline`, `secondary`, `ghost`, `link`, `ghost-destructive`, `ghost-muted`; sizes `size-default/sm/xs/lg/icon/icon-sm/icon-xs` | shadcn's six variants plus three of ours: `destructive-outline` for a detail page's Delete (matching the weight of the outline Edit beside it — solid `destructive` is reserved for the confirmation page's submit), `ghost-destructive` for a row's delete icon, `ghost-muted` for low-emphasis icon buttons. |
 | `input` | sizes `size-default/sm`; part `bare` | Native. `bare` is for an input inside an already-bordered wrapper (the combobox). |
 | `textarea` | size `size-default` | Native. |
-| `select` | sizes `size-default/sm/auto` | The base class list, shared by two different controls: a native `<select multiple>` (`size-auto`, for manytomany fields, which still need the plain control — a multi-value combobox is a different component shadcn doesn't ship either) and, since `ui/select.html` (below), the trigger *button* of the styled single-value Select. |
+| `select` | sizes `size-default/sm/auto` | The base class list, now used only as the trigger *button* of the styled Selects — `ui/select.html` for a single value and `ui/multi-select.html` (`size-auto`, so it grows as chips wrap) for a many-to-many. The native `<select>` it was named for survives only in the compact tabular-inline cells. |
 | `label` | — | |
 | `checkbox`, `radio` | — | Native, tinted with `accent-primary`. A custom listbox gains nothing over the native control here (no multi-item list, no search), so these stay native. |
 | `switch` | parts `track`, `on`, `off`, `thumb`, `thumb-on`, `thumb-off` | A real Alpine port: `<button role="switch">` plus a hidden input so it still posts. **Custom pages only** — generated boolean fields use a checkbox. |
@@ -138,11 +135,11 @@ says otherwise.
 
 | Component | Radix → Alpine | Where it's used |
 | --- | --- | --- |
-| `dialog` | Dialog → `x-teleport` + `x-trap.inert.noscroll` + `x-show`/`x-transition` | `admin/components/action_confirm_modal.html`, behind both bulk/record action confirmations and the row-delete `hx-confirm`. |
+| `dialog` | Dialog → `x-teleport` + `x-trap.inert.noscroll` + `x-show`/`x-transition` | `admin/action_confirm_modal.html`, behind both bulk/record action confirmations and the row-delete `hx-confirm`. |
 | `dropdown` | DropdownMenu; Floating UI → `x-anchor` | `ui/dropdown-menu`, used for the list view's Export menu. |
 | `popover` | Popover; Floating UI → `x-anchor` | The date picker's calendar. |
 | `tooltip` | Tooltip → CSS only (`peer-hover:`, `peer-focus-visible:`), so it works before Alpine loads | The theme toggle. |
-| `toast` | Sonner | `admin/components/toasts.html` — a PinesUI-derived queue restyled onto the tokens. |
+| `toast` | Sonner | `admin/toasts.html` — a PinesUI-derived queue restyled onto the tokens. |
 | `sheet` | Dialog + slide transition | The sidebar below `md`. |
 
 ### Navigation and data
@@ -161,9 +158,10 @@ says otherwise.
 
 | Component | Notes |
 | --- | --- |
-| `field` | shadcn's `FormItem`/`FormLabel`/`FormDescription`/`FormMessage`. Wraps every generated input — its `render_form_input` macro does the per-type dispatch directly (Jinja's `in`/`==` operators handle the comparisons natively, unlike Go's template language — see go-polyadmin's version of this file for why that side precomputes everything instead). |
-| `combobox` | Radix Popover + `cmdk`, but the filtering stays **server-side**: `cmdk` filters a client array, whereas the whole point of `autocomplete_fields` is never loading the target's dataset into the page. htmx owns the round trip to `/lookup`; Alpine owns open/close and arrow keys. Its `content`/`item` parts are also reused, unmodified, by `ui/select` and `ui/bulk-actions` below — the same popover/listbox look, just without a search box. |
-| `select` (`ui/select.html`) | Radix Select — a styled trigger + listbox for a *static* choice list (enum fields, and a plain foreignkey/onetoone without `autocomplete_fields`). A hidden input carries the posted value, same reasoning as the relation combobox above: the model layer never has to know a value came from anything but a plain `<select>`. Not used for `<select multiple>` (manytomany) — see the `select` primitive's own note. The list view's bulk-actions control (`ui/bulk-actions.html`) is the same trigger+listbox shape generalized to *run* an action on pick instead of holding a value. |
+| `field` | shadcn's `FormItem`/`FormLabel`/`FormDescription`/`FormMessage`. Its markup lives in `ui/field.html`; `fiber/render_helpers.go`'s `formInputHTML` does the per-type derivation (stringifying values, matching selections) in Go and hands the result to that partial to print — see the partial's own doc comment for why no comparison logic lives in the template itself. |
+| `combobox` | Radix Popover + `cmdk`, but the filtering stays **server-side**: `cmdk` filters a client array, whereas the whole point of `AutocompleteFieldNames` is never loading the target's dataset into the page. htmx owns the round trip to `/lookup`; Alpine owns open/close and arrow keys. Its `content`/`item` parts are also reused, unmodified, by `ui/select` and `ui/bulk-actions` below — the same popover/listbox look, just without a search box. |
+| `select` (`ui/select.html`) | Radix Select — a styled trigger + listbox for a *static* choice list (enum fields, and a plain foreignkey/onetoone without `AutocompleteFieldNames`). A hidden input carries the posted value, same reasoning as the relation combobox above: the model layer never has to know a value came from anything but a plain `<select>`. Not used for many-to-many — that's `ui/multi-select.html` below. The list view's bulk-actions control (`ui/bulk-actions.html`) is the same trigger+listbox shape generalized to *run* an action on pick instead of holding a value. |
+| `multi-select` (`ui/multi-select.html`) | The many-to-many control: a Command-style searchable list with the selection as removable chips — Django admin's `filter_horizontal` job, without the two-pane layout. Filtering is client-side, unlike the relation combobox, because a many-to-many's options are already all in the page. Posts one hidden input per selection under the field's name, which is what a `<select multiple>` posted, so the handler's `PeekMulti`/`getlist` is unchanged. |
 | `calendar` | `ui/calendar` (the month grid) and `ui/date-picker` (a native `<input type="date">` plus the grid in a popover). There's no `react-day-picker`, so the grid is computed by the `adminCalendar` Alpine factory — always six weeks, like `fixedWeeks`. |
 | `slider` | Native `<input type="range">` tinted with `accent-primary`; Alpine only drives the value readout. **Custom pages only.** |
 | `radio-group` | Native radios. Radix rebuilds radio semantics on divs with a roving tabindex; the native control already has all of it and posts too. **Custom pages only.** |
@@ -171,51 +169,49 @@ says otherwise.
 ## Using components on a custom page
 
 A custom `AdminPage` ([`routing.md`](routing.md#custom-admin-pages))
-gets the same components — the `ui` global is registered on the Jinja environment, and every
-`ui/*` macro is importable from any template the loader can reach --
-including page templates resolved from `template_dirs`. The example app's broadcast page
-(`examples/fastapi/templates/pages/broadcast.html`) is the worked
+gets the same components — the `ui` func and every `ui/*` partial are
+parsed into every template set, including page templates resolved from
+`WithTemplateDirs`. The example app's broadcast page
+(`examples/fiber/templates/pages/broadcast.html`) is the worked
 demonstration, and is where `switch`, `radio-group`, and `slider` are
 exercised.
 
-```jinja
-{% extends "admin/base.html" %}
-{% from "admin/components/ui/switch.html" import switch %}
-{% from "admin/components/ui/slider.html" import slider %}
-{% block content %}
-<form method="post" action="{{ base_path }}/tools/broadcast" class="{{ ui('panel', 'form') }} max-w-xl">
-  <div class="{{ ui('field') }}">
-    <label for="message" class="{{ ui('field', 'label') }}">Message</label>
-    <div class="{{ ui('field', 'control') }}">
-      <textarea id="message" name="message" class="{{ ui('textarea') }}"></textarea>
+```gotemplate
+{{define "content"}}
+<form method="post" action="{{.BasePath}}/tools/broadcast" class="{{ui "panel" "form"}} max-w-xl">
+  <div class="{{ui "field"}}">
+    <label for="message" class="{{ui "field" "label"}}">Message</label>
+    <div class="{{ui "field" "control"}}">
+      <textarea id="message" name="message" class="{{ui "textarea"}}"></textarea>
     </div>
   </div>
 
-  {{ switch("also_email", "Also send by email", checked=False) }}
-  {{ slider("rate", "Throttle", min=10, max=500, step=10, value=100, suffix="/min") }}
+  {{template "ui/switch" dict "name" "also_email" "label" "Also send by email" "checked" false}}
+  {{template "ui/slider" dict "name" "rate" "label" "Throttle" "min" 10 "max" 500 "step" 10 "value" 100 "suffix" "/min"}}
 
-  <button type="submit" class="{{ ui('button') }}">Send</button>
+  <button type="submit" class="{{ui "button"}}">Send</button>
 </form>
-{% endblock %}
+{{end}}
 ```
 
 Each of those posts as an ordinary form field, so the handler reads them
-with `await ctx.form()` — no JSON body, no client-side state.
+with `pc.C.FormValue` — no JSON body, no client-side state.
 
 ## Adding a component
 
 1. Read the component's rendered DOM on ui.shadcn.com (the markup and
    class list), not its `.tsx` source.
-2. Add its class lists to `UI_REGISTRY` in [`polyadmin/ui.py`](../polyadmin/ui.py),
+2. Add its class lists to `uiRegistry` in [`fiber/ui.go`](../fiber/ui.go),
    splitting variants/sizes from parts, and keeping colors on tokens.
-   Mirror the same keys into `go-polyadmin/fiber/ui.go` — a
+   Mirror the same keys into `python-polyadmin/polyadmin/ui.py` — a
    test in each language fails if one side gains a component the other
    lacks.
-3. If it needs markup, add a macro under
-   `polyadmin/templates/admin/components/ui/`. Import it where it's used.
+3. If it needs markup, add a `{{define "ui/<name>"}}` partial under
+   `templates/admin/components/ui/`. It's picked up automatically by the
+   `admin/components/ui/*.html` glob.
 4. Swap the Radix primitive for its Alpine equivalent (`x-teleport`,
    `x-trap`, `x-anchor`, `x-collapse`, `@click.outside`,
    `@keydown.escape`) and keep every `aria-*`/`role` attribute from the
    reference markup verbatim — Radix's accessibility work is the part
    most worth keeping.
-5. Add a render test. `tests/fastapi/test_components.py` is the pattern.
+5. Add a render test. `fiber/components_test.go` is the pattern.
