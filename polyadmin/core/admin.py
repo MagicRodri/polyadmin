@@ -27,12 +27,17 @@ class Admin:
         authorizer: Any | None = None,
         site_title: str = "PolyAdmin",
         site_logo_url: str | None = None,
+        disable_csrf: bool = False,
     ) -> None:
         self.dashboard = dashboard
         self.authenticator = authenticator
         self.authorizer = authorizer
         self.site_title = site_title
         self.site_logo_url = site_logo_url
+        # Opt-out, never opt-in: a security control that defaults to off
+        # is one nobody turns on. The token cookie is still minted when
+        # this is set, so templates and custom pages behave identically.
+        self.disable_csrf = disable_csrf
         self._registry: dict[str, ModelAdmin] = {}
         self._pages: dict[str, AdminPage] = {}
         for model_admin in model_admins:

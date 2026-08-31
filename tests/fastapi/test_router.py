@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from polyadmin.core.admin import Admin
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.conftest import csrf
 
 
 def make_client():
@@ -56,6 +57,7 @@ def test_create_post_redirects_to_detail():
         "/admin/users/create",
         data={"email": "new@example.com", "is_active": "on"},
         follow_redirects=False,
+        headers=csrf(client),
     )
     assert response.status_code == 303
     users = user_admin.get_queryset()
@@ -67,13 +69,18 @@ def test_create_post_redirects_to_detail():
 
 def test_create_post_without_checkbox_is_false():
     client, user_admin = make_client()
-    client.post("/admin/users/create", data={"email": "new@example.com"}, follow_redirects=False)
+    client.post(
+        "/admin/users/create",
+        data={"email": "new@example.com"},
+        follow_redirects=False,
+        headers=csrf(client),
+    )
     assert user_admin.get_queryset()[0].is_active is False
 
 
 def test_create_post_invalid_rerenders_form_with_errors():
     client, user_admin = make_client()
-    response = client.post("/admin/users/create", data={"email": ""})
+    response = client.post("/admin/users/create", data={"email": ""}, headers=csrf(client))
     assert response.status_code == 422
     assert "is required" in response.text
     assert user_admin.get_queryset() == []
@@ -105,7 +112,10 @@ def test_edit_post_updates_and_redirects():
     client, user_admin = make_client()
     user = user_admin.create({"email": "john@example.com"})
     response = client.post(
-        f"/admin/users/{user.id}/edit", data={"email": "updated@example.com"}, follow_redirects=False
+        f"/admin/users/{user.id}/edit",
+        data={"email": "updated@example.com"},
+        follow_redirects=False,
+        headers=csrf(client),
     )
     assert response.status_code == 303
     assert user.email == "updated@example.com"
@@ -114,7 +124,9 @@ def test_edit_post_updates_and_redirects():
 def test_edit_post_invalid_rerenders_form_with_errors():
     client, user_admin = make_client()
     user = user_admin.create({"email": "john@example.com"})
-    response = client.post(f"/admin/users/{user.id}/edit", data={"email": ""})
+    response = client.post(
+        f"/admin/users/{user.id}/edit", data={"email": ""}, headers=csrf(client)
+    )
     assert response.status_code == 422
     assert "is required" in response.text
     assert user.email == "john@example.com"  # unchanged
@@ -131,7 +143,9 @@ def test_delete_get_renders_confirmation():
 def test_delete_post_removes_and_redirects_to_list():
     client, user_admin = make_client()
     user = user_admin.create({"email": "john@example.com"})
-    response = client.post(f"/admin/users/{user.id}/delete", follow_redirects=False)
+    response = client.post(
+        f"/admin/users/{user.id}/delete", follow_redirects=False, headers=csrf(client)
+    )
     assert response.status_code == 303
     assert response.headers["location"] == "/admin/users"
     assert user_admin.get_queryset() == []

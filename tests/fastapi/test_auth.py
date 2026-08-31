@@ -6,6 +6,7 @@ from polyadmin.core.auth import AllowAllAuthenticator, DenyAllAuthenticator, Pri
 from polyadmin.core.authorization import AllowAllAuthorizer, DenyAllAuthorizer, SuperuserAuthorizer
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.conftest import csrf
 
 
 def make_client(*, authenticator=None, authorizer=None):
@@ -53,12 +54,20 @@ def test_all_crud_routes_are_gated():
     assert client.get("/admin/users").status_code == 401
     assert client.get(f"/admin/users/{user.id}").status_code == 401
     assert client.get("/admin/users/create").status_code == 401
-    assert client.post("/admin/users/create", data={}).status_code == 401
+    assert client.post("/admin/users/create", data={}, headers=csrf(client)).status_code == 401
     assert client.get(f"/admin/users/{user.id}/edit").status_code == 401
-    assert client.post(f"/admin/users/{user.id}/edit", data={}).status_code == 401
+    assert (
+        client.post(f"/admin/users/{user.id}/edit", data={}, headers=csrf(client)).status_code
+        == 401
+    )
     assert client.get(f"/admin/users/{user.id}/delete").status_code == 401
-    assert client.post(f"/admin/users/{user.id}/delete").status_code == 401
-    assert client.request("DELETE", f"/admin/users/{user.id}/delete").status_code == 401
+    assert client.post(f"/admin/users/{user.id}/delete", headers=csrf(client)).status_code == 401
+    assert (
+        client.request(
+            "DELETE", f"/admin/users/{user.id}/delete", headers=csrf(client)
+        ).status_code
+        == 401
+    )
 
 
 def test_deny_all_authorizer_still_requires_authentication_first():
@@ -100,5 +109,12 @@ def test_edit_route_still_enforced_even_if_hidden():
     user = user_admin.create({"email": "john@example.com"})
 
     assert client.get(f"/admin/users/{user.id}/edit").status_code == 403
-    assert client.post(f"/admin/users/{user.id}/edit", data={"email": "x@example.com"}).status_code == 403
+    assert (
+        client.post(
+            f"/admin/users/{user.id}/edit",
+            data={"email": "x@example.com"},
+            headers=csrf(client),
+        ).status_code
+        == 403
+    )
     assert user.email == "john@example.com"

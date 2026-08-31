@@ -18,6 +18,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import DASHBOARD_VIEW
 from polyadmin.core.exporter import CSVExporter, XLSXExporter
 from polyadmin.fastapi.auth import authorize
+from polyadmin.fastapi.csrf import make_csrf_route
 from polyadmin.fastapi.handlers import (
     build_action_handler,
     build_create_handlers,
@@ -47,7 +48,8 @@ def create_router(
     exporters: tuple = tuple(DEFAULT_EXPORTERS),
 ) -> APIRouter:
     renderer = Renderer(template_dirs=template_dirs)
-    router = APIRouter()
+    # route_class, not a dependency: see polyadmin/fastapi/csrf.py.
+    router = APIRouter(route_class=make_csrf_route(admin, base_path))
 
     mount_static(router, static_dir=static_dir)
 

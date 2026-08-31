@@ -5,6 +5,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator, DenyAllAuthenticator, Principal
 from polyadmin.core.authorization import SuperuserAuthorizer
 from polyadmin.fastapi.router import create_router
+from tests.conftest import csrf
 
 BROADCAST_TEMPLATE = """
 {% extends "admin/base.html" %}
@@ -49,7 +50,9 @@ def test_get_renders_page_template_inside_shared_layout(tmp_path):
 
 def test_post_reposts_and_redirects_with_flash(tmp_path):
     client = make_client(tmp_path)
-    response = client.post("/admin/tools/broadcast", data={"message": "hello"})
+    response = client.post(
+        "/admin/tools/broadcast", data={"message": "hello"}, headers=csrf(client)
+    )
     assert response.status_code == 200  # TestClient follows the 303 redirect by default
     assert "Broadcast sent: hello" in response.text
 

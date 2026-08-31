@@ -10,6 +10,7 @@ from polyadmin.core.inline import StackedInline, TabularInline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
+from tests.conftest import csrf
 
 ORG_RELATION = Relation("organization", target="organizations", display_field="name")
 
@@ -167,7 +168,9 @@ def test_inline_create_adds_row_and_returns_section_fragment():
     org, _ = seed_org_with_users(org_admin, user_admin)
 
     response = client.post(
-        f"/admin/organizations/{org.id}/inlines/users", data={"email": "new@example.com", "is_active": "true"}
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "new@example.com", "is_active": "true"},
+        headers=csrf(client),
     )
     assert response.status_code == 200
     assert "<html" not in response.text.lower()
@@ -181,7 +184,9 @@ def test_inline_create_validation_error_returns_422_with_redisplay():
     client, org_admin, user_admin = make_client()
     org, _ = seed_org_with_users(org_admin, user_admin)
 
-    response = client.post(f"/admin/organizations/{org.id}/inlines/users", data={"email": ""})
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users", data={"email": ""}, headers=csrf(client)
+    )
     assert response.status_code == 422
     assert len(user_admin.get_queryset()) == 0
 
@@ -193,6 +198,7 @@ def test_inline_update_edits_existing_row():
     response = client.post(
         f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
         data={"email": "changed@example.com", "is_active": "true"},
+        headers=csrf(client),
     )
     assert response.status_code == 200
     assert user_admin.get_queryset()[0].email == "changed@example.com"
@@ -202,7 +208,11 @@ def test_inline_delete_removes_row():
     client, org_admin, user_admin = make_client()
     org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
-    response = client.request("DELETE", f"/admin/organizations/{org.id}/inlines/users/{users[0].id}")
+    response = client.request(
+        "DELETE",
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        headers=csrf(client),
+    )
     assert response.status_code == 200
     assert len(user_admin.get_queryset()) == 0
     assert "a@example.com" not in response.text
@@ -218,7 +228,11 @@ def test_inline_create_denied_without_child_create_permission():
     )
     org, _ = seed_org_with_users(org_admin, user_admin)
 
-    response = client.post(f"/admin/organizations/{org.id}/inlines/users", data={"email": "x@example.com"})
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "x@example.com"},
+        headers=csrf(client),
+    )
     assert response.status_code == 403
     assert len(user_admin.get_queryset()) == 0
 
@@ -234,7 +248,9 @@ def test_inline_update_denied_without_child_update_permission():
     org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
     response = client.post(
-        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}", data={"email": "changed@example.com"}
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        data={"email": "changed@example.com"},
+        headers=csrf(client),
     )
     assert response.status_code == 403
     assert user_admin.get_queryset()[0].email == "a@example.com"
@@ -250,7 +266,11 @@ def test_inline_delete_denied_without_child_delete_permission():
     )
     org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
-    response = client.request("DELETE", f"/admin/organizations/{org.id}/inlines/users/{users[0].id}")
+    response = client.request(
+        "DELETE",
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        headers=csrf(client),
+    )
     assert response.status_code == 403
     assert len(user_admin.get_queryset()) == 1
 
@@ -265,7 +285,11 @@ def test_inline_mutation_denied_without_parent_update_permission():
     )
     org, _ = seed_org_with_users(org_admin, user_admin)
 
-    response = client.post(f"/admin/organizations/{org.id}/inlines/users", data={"email": "x@example.com"})
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "x@example.com"},
+        headers=csrf(client),
+    )
     assert response.status_code == 403
 
 

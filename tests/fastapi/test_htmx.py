@@ -5,6 +5,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.conftest import csrf
 
 HTMX_HEADERS = {"HX-Request": "true"}
 
@@ -65,7 +66,9 @@ def test_htmx_delete_removes_row_without_redirect():
     client, user_admin = make_client()
     user = user_admin.create({"email": "john@example.com"})
 
-    response = client.request("DELETE", f"/admin/users/{user.id}/delete", headers=HTMX_HEADERS)
+    response = client.request(
+        "DELETE", f"/admin/users/{user.id}/delete", headers={**HTMX_HEADERS, **csrf(client)}
+    )
     assert response.status_code == 200
     assert response.text == ""
     assert user_admin.get_queryset() == []
@@ -76,7 +79,7 @@ def test_htmx_create_post_returns_hx_redirect_header():
     response = client.post(
         "/admin/users/create",
         data={"email": "new@example.com"},
-        headers=HTMX_HEADERS,
+        headers={**HTMX_HEADERS, **csrf(client)},
         follow_redirects=False,
     )
     assert response.status_code == 200
@@ -85,7 +88,9 @@ def test_htmx_create_post_returns_hx_redirect_header():
 
 def test_htmx_create_post_invalid_returns_form_fragment_only():
     client, _ = make_client()
-    response = client.post("/admin/users/create", data={"email": ""}, headers=HTMX_HEADERS)
+    response = client.post(
+        "/admin/users/create", data={"email": ""}, headers={**HTMX_HEADERS, **csrf(client)}
+    )
     assert response.status_code == 422
     assert "<html" not in response.text
     assert 'id="resource-form"' in response.text
@@ -94,7 +99,12 @@ def test_htmx_create_post_invalid_returns_form_fragment_only():
 
 def test_flash_message_shown_after_create_redirect():
     client, _ = make_client()
-    create = client.post("/admin/users/create", data={"email": "new@example.com"}, follow_redirects=False)
+    create = client.post(
+        "/admin/users/create",
+        data={"email": "new@example.com"},
+        follow_redirects=False,
+        headers=csrf(client),
+    )
     location = create.headers["location"]
 
     detail = client.get(location)
@@ -103,7 +113,12 @@ def test_flash_message_shown_after_create_redirect():
 
 def test_flash_message_only_shown_once():
     client, _ = make_client()
-    create = client.post("/admin/users/create", data={"email": "new@example.com"}, follow_redirects=False)
+    create = client.post(
+        "/admin/users/create",
+        data={"email": "new@example.com"},
+        follow_redirects=False,
+        headers=csrf(client),
+    )
     location = create.headers["location"]
 
     client.get(location)

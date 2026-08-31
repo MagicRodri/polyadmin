@@ -6,6 +6,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.conftest import csrf
 
 
 def _deactivate(model_admin, objects, principal):
@@ -36,6 +37,7 @@ def test_bulk_action_runs_handler_over_selected_objects():
         "/admin/users/actions/deactivate",
         data={"pks": [str(a.id), str(b.id)]},
         follow_redirects=False,
+        headers=csrf(client),
     )
     assert response.status_code == 303
     assert user_admin.get_object(a.id).is_active is False
@@ -48,7 +50,10 @@ def test_record_action_from_detail_page_selects_one_object():
     a = user_admin.create({"email": "a@example.com", "is_active": True})
 
     response = client.post(
-        "/admin/users/actions/deactivate", data={"pks": [str(a.id)]}, follow_redirects=False
+        "/admin/users/actions/deactivate",
+        data={"pks": [str(a.id)]},
+        follow_redirects=False,
+        headers=csrf(client),
     )
     assert response.status_code == 303
     assert user_admin.get_object(a.id).is_active is False
@@ -58,7 +63,9 @@ def test_bulk_action_with_no_selection_flashes_warning_and_skips_handler():
     client, user_admin = make_client()
     a = user_admin.create({"email": "a@example.com", "is_active": True})
 
-    response = client.post("/admin/users/actions/deactivate", data={}, follow_redirects=False)
+    response = client.post(
+        "/admin/users/actions/deactivate", data={}, follow_redirects=False, headers=csrf(client)
+    )
     assert response.status_code == 303
     assert user_admin.get_object(a.id).is_active is True  # handler never ran
 
@@ -66,7 +73,9 @@ def test_bulk_action_with_no_selection_flashes_warning_and_skips_handler():
 def test_unknown_action_name_is_404():
     client, user_admin = make_client()
     a = user_admin.create({"email": "a@example.com"})
-    response = client.post("/admin/users/actions/nonexistent", data={"pks": [str(a.id)]})
+    response = client.post(
+        "/admin/users/actions/nonexistent", data={"pks": [str(a.id)]}, headers=csrf(client)
+    )
     assert response.status_code == 404
 
 
@@ -99,7 +108,9 @@ def test_action_requires_extra_permission_when_declared():
     client = TestClient(app)
     a = user_admin.create({"email": "a@example.com"})
 
-    response = client.post("/admin/users/actions/deactivate", data={"pks": [str(a.id)]})
+    response = client.post(
+        "/admin/users/actions/deactivate", data={"pks": [str(a.id)]}, headers=csrf(client)
+    )
     assert response.status_code == 403
     assert user_admin.get_object(a.id).is_active is True
 
@@ -211,7 +222,7 @@ def test_form_error_swap_targets_the_wrapper_not_the_inner_form():
     )
 
     error = client.post(
-        "/admin/users/create", data={"email": ""}, headers={"HX-Request": "true"}
+        "/admin/users/create", data={"email": ""}, headers={"HX-Request": "true", **csrf(client)}
     ).text
     # The response must be exactly one wrapper -- the element the swap
     # replaces -- so re-rendering it can never nest.
