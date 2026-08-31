@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
+from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import paginate
@@ -350,7 +351,15 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
         # Back to wherever the bulk-action form was submitted from
         # (preserving the current search/filter/sort/page), falling
         # back to the bare list URL if there's no Referer to work with.
-        redirect_to = request.headers.get("referer") or f"{base_path}/{slug}"
+        #
+        # The Referer is attacker-controlled, so it is validated before
+        # being used as a redirect target -- see safe_redirect_path.
+        redirect_to = safe_redirect_path(
+            request.headers.get("referer"),
+            request.url.netloc,
+            base_path,
+            f"{base_path}/{slug}",
+        )
         if not pks:
             response = redirect(request, redirect_to)
             set_flash(response, "warning", "No items selected.")

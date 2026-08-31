@@ -279,3 +279,33 @@ def test_delete_button_hidden_when_authorizer_denies_it():
 
     page = client.get(f"/admin/users/{a.id}/edit").text
     assert "/delete" not in page, "expected Delete to be omitted when the authorizer denies it"
+
+
+def test_action_ignores_an_off_site_referer():
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com", "is_active": True})
+    headers = csrf(client)
+    headers["referer"] = "https://evil.example.com/admin/users"
+
+    response = client.post(
+        "/admin/users/actions/deactivate",
+        data={"pks": [str(a.id)]},
+        headers=headers,
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/admin/users"
+
+
+def test_action_keeps_an_on_site_referer():
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com", "is_active": True})
+    headers = csrf(client)
+    headers["referer"] = "/admin/users?page=2"
+
+    response = client.post(
+        "/admin/users/actions/deactivate",
+        data={"pks": [str(a.id)]},
+        headers=headers,
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/admin/users?page=2"
