@@ -256,6 +256,17 @@ def test_autocomplete_field_prefills_current_selection_label_on_edit():
 # -- many-to-many: the searchable multi-select --------------------------
 
 
+def multi_select_markup(page):
+    """Just the multi-select component's markup: from its x-data to the
+    next component's, so an assertion about this control can neither be
+    satisfied nor broken by a sibling field."""
+    marker = 'x-data="adminMultiSelect()"'
+    start = page.index(marker) + len(marker)
+    rest = page[start:]
+    end = rest.find("x-data=")
+    return rest if end < 0 else rest[:end]
+
+
 def test_many_to_many_renders_searchable_multi_select_not_a_native_multiple():
     client, _, _, org_admin = make_client()
     org_admin.create({"name": "Acme"})
@@ -269,7 +280,11 @@ def test_many_to_many_renders_searchable_multi_select_not_a_native_multiple():
     # a chip, so nothing in it is ever in a selected state -- no check
     # indicator, and no aria-selected to carry.
     assert 'x-show="available($el)"' in text, "expected the list to hide options once chosen"
-    assert "aria-selected" not in text and "aria-multiselectable" not in text, (
+    # Scoped to the multi-select's own markup: this form also renders a
+    # ui/select for the foreign key, and that one carries aria-selected
+    # legitimately (its list does show a chosen option).
+    ms = multi_select_markup(text)
+    assert "aria-selected" not in ms and "aria-multiselectable" not in ms, (
         "expected no selected-state ARIA on a list that never shows selected options"
     )
     # Every option is in the page -- a many-to-many's list is already
@@ -294,3 +309,25 @@ def test_many_to_many_selection_posts_under_the_field_name():
     # component hydrates its initial state from.
     assert 'data-value="2" data-label="Widgets Inc" data-selected="true"' in text
     assert 'data-value="1" data-label="Acme" data-selected="true"' not in text
+
+
+# The multi-select declares role=combobox/listbox, which promises
+# assistive tech that the keyboard works. Focus stays in the search box
+# -- typing is the point of this control -- so the arrows move an
+# aria-activedescendant highlight rather than real focus.
+def test_multi_select_is_keyboard_operable():
+    client, _, _, org_admin = make_client()
+    org_admin.create({"name": "Acme"})
+    ms = multi_select_markup(client.get("/admin/users/create").text)
+
+    for want in (
+        '@keydown.down.prevent="move(1)"',
+        '@keydown.up.prevent="move(-1)"',
+        '@keydown.enter.prevent="chooseActive()"',
+        ':aria-activedescendant="activeId || null"',
+        'role="combobox"',
+    ):
+        assert want in ms, f"multi-select is missing {want!r}"
+    assert 'role="option" tabindex="0"' not in ms, (
+        "options must not be individually tabbable -- the search box holds focus"
+    )

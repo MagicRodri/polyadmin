@@ -183,14 +183,19 @@ def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
 def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
     page = task_client.get("/admin/tasks/1/edit").text
 
-    xdata = 'x-data="{ open: false, label: ' + "''" + ' }"'
-    assert xdata in page, "expected the x-data to carry no interpolated label"
-    assert 'x-init="label = $el.dataset.label"' in page, (
-        "expected the label to be hydrated from the DOM"
+    assert 'x-data="adminSelect()"' in page, (
+        "expected the x-data to be the bare factory call, with no interpolated label"
     )
+    assert 'x-init="hydrate()"' in page, "expected the label to be hydrated from the DOM"
     assert 'data-label="Medium"' in page
-    # The shape that broke: tojson's double quote closing the attribute.
-    assert 'label: "' not in page
+    # The point of the whole arrangement: the label must never appear
+    # inside the Alpine expression, only as an HTML attribute value.
+    assert "label: 'Medium'" not in page and 'label: "Medium"' not in page, (
+        "the label must not be interpolated into a JS string literal"
+    )
+    # (The blanket `'label: "' not in page` this replaces now matches the
+    # factory's own `label: ""` initializer -- the assertion above is the
+    # precise form of the same guarantee.)
 
 
 # -- booleans as icons ----------------------------------------------------
@@ -339,3 +344,33 @@ def test_toast_viewport_sits_bottom_right_and_does_not_block_clicks():
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
     page = TestClient(app).get("/admin/users").text
     assert viewport in page
+
+
+# The listbox-ish components declare ARIA roles, which is a promise to
+# assistive tech that the keyboard works. These pin the mechanics that
+# make the promise true; the behaviour itself is exercised in a browser.
+def test_select_is_keyboard_operable(task_client):
+    page = task_client.get("/admin/tasks/1/edit").text
+
+    for want in (
+        '@keydown.down.prevent="openAndMove(1)"',
+        '@keydown.up.prevent="openAndMove(-1)"',
+        "@keydown.home.prevent=\"if (open) setActive(optionEls()[0])\"",
+        # Focus stays on the trigger, so the trigger is what names the
+        # highlighted option.
+        ':aria-activedescendant="open ? activeId : null"',
+        ":aria-controls=\"$id('select-listbox')\"",
+    ):
+        assert want in page, f"select is missing {want!r}"
+    # tabindex="0" on every option would make Tab walk the whole list;
+    # with a roving highlight the options must be out of the tab order.
+    assert 'role="option" tabindex="0"' not in page, (
+        "options must not be individually tabbable"
+    )
+
+
+def test_filter_drawer_traps_focus():
+    # aria-modal="true" is a promise that focus cannot leave the drawer.
+    assert 'x-trap="open"' in _filterable_page(), (
+        "the filter drawer declares aria-modal but does not trap focus"
+    )

@@ -55,7 +55,12 @@
        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
        class="{{ ui('sheet', 'overlay') }}"></div>
 
-  <div x-show="open" x-cloak role="dialog" aria-modal="true" aria-label="Filters"
+  {# x-trap makes aria-modal="true" true: without it the drawer claims to
+     be modal while Tab walks straight out into the page behind the
+     overlay. It also restores focus to the Filters trigger on close, and
+     moves focus into the panel on open. (Alpine's focus plugin is loaded
+     in theme.html.) #}
+  <div x-show="open" x-cloak x-trap="open" role="dialog" aria-modal="true" aria-label="Filters"
        x-transition:enter="transition ease-in-out duration-300"
        x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
        x-transition:leave="transition ease-in-out duration-300"

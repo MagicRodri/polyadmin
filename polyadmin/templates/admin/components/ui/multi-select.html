@@ -35,8 +35,14 @@
      placeholder  shown when nothing is chosen
      disabled     bool #}
 {% macro multi_select(name, options, placeholder="Select…", disabled=false) %}
+{# Keyboard model: focus stays in the search box -- typing is the point
+   of this control -- and the arrow keys move a highlight that the input
+   reports via aria-activedescendant. Same approach as ui/select and the
+   relation combobox in ui/field.html; moving real focus into the list
+   would mean you could not keep typing. #}
 <div class="{{ ui('combobox') }}" x-data="adminMultiSelect()" x-init="hydrate()"
-     @keydown.escape="open = false" @click.outside="open = false">
+     x-id="['ms-option', 'ms-listbox']"
+     @keydown.escape="closeToTrigger()" @click.outside="close()">
   {# The selection itself. x-for over real inputs rather than one
      comma-joined value: the server side already speaks "repeated field
      name", and joining would mean inventing a separator that some
@@ -45,8 +51,10 @@
     <input type="hidden" name="{{ name }}" :value="item.value">
   </template>
 
-  <button type="button" x-ref="trigger" @click="open = !open"
+  <button type="button" x-ref="trigger" @click="toggleOpen()"
           :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
+          :aria-controls="$id('ms-listbox')"
+          @keydown.down.prevent="openList()" @keydown.enter.prevent="openList()"
           {% if disabled %}disabled{% endif %}
           class="{{ ui('select') }} {{ ui('select', 'size-auto') }} {{ ui('multi-select', 'trigger') }}">
     <span class="{{ ui('multi-select', 'values') }}">
@@ -66,15 +74,24 @@
     {{ icon("chevron-down", "size-4 shrink-0 text-muted-foreground") }}
   </button>
 
-  <div x-show="open" x-cloak role="listbox"
+  <div x-show="open" x-cloak
        x-transition:enter="transition ease-out duration-150"
        x-transition:enter-start="opacity-0 scale-95"
        x-transition:enter-end="opacity-100 scale-100"
        class="{{ ui('combobox', 'content') }}">
     <div class="{{ ui('multi-select', 'search') }}">
       {{ icon("search", ui('combobox', 'icon')) }}
-      <input type="text" x-model="query" autocomplete="off" placeholder="Search&hellip;"
-             @keydown.escape.stop="open = false"
+      {# role=combobox on the input, not the wrapper: the input is what
+         holds focus, so it is what has to advertise the popup and name
+         the highlighted option. #}
+      <input type="text" x-ref="search" x-model="query" autocomplete="off" placeholder="Search&hellip;"
+             role="combobox" aria-autocomplete="list" :aria-expanded="open ? 'true' : 'false'"
+             :aria-controls="$id('ms-listbox')" :aria-activedescendant="activeId || null"
+             @keydown.escape.stop="closeToTrigger()"
+             @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+             @keydown.home.prevent="setActive(availableEls()[0])"
+             @keydown.end.prevent="setActive(availableEls().slice(-1)[0])"
+             @keydown.enter.prevent="chooseActive()"
              class="{{ ui('input', 'bare') }}">
     </div>
     {# The list holds what you can still add: picking an option moves it
@@ -84,11 +101,11 @@
        check indicator, and no aria-selected/aria-multiselectable to go
        with it. The chips are the record of what's chosen, each with its
        own Remove button. #}
-    <div x-ref="options" class="{{ ui('multi-select', 'list') }}">
+    <div x-ref="options" role="listbox" :id="$id('ms-listbox')" class="{{ ui('multi-select', 'list') }}">
       {% for value, label, selected in options %}
-      <div role="option" tabindex="0"
+      <div role="option" tabindex="-1" :id="$id('ms-option', {{ loop.index0 }})"
            data-value="{{ value }}" data-label="{{ label }}" {% if selected %}data-selected="true"{% endif %}
-           @click="toggle($el)" @keydown.enter.prevent="toggle($el)"
+           @click="pick($el)"
            x-show="available($el)"
            class="{{ ui('combobox', 'item') }}">
         <span class="truncate">{{ label }}</span>
@@ -109,9 +126,16 @@
   // (ui/calendar.html) -- a form may have several many-to-many fields,
   // but only the first copy defines the factory.
   window.adminMultiSelect = window.adminMultiSelect || function () {
+    // Single space-free class, toggled with classList rather than an
+    // x-bind: the options are server-rendered, not in an x-for.
+    var ACTIVE = "{{ ui('combobox', 'item-active') }}";
     return {
       open: false,
       query: "",
+      // The highlighted (not chosen) option, named by the search
+      // input's aria-activedescendant while focus stays in the input.
+      activeEl: null,
+      activeId: "",
       // [{value, label}], seeded from whichever options the server
       // marked data-selected. The DOM is the source of truth at load for
       // the same reason the relation combobox reads its initial value
@@ -155,12 +179,68 @@
         return this.matches(el) && !this.has(el.dataset.value);
       },
 
-      availableCount() {
+      // The options you could still pick, in document order -- what the
+      // arrow keys walk. Recomputed per call rather than cached: the
+      // search query and the selection both change what is available,
+      // and both change while the list is open.
+      availableEls() {
         var self = this;
         return Array.from(this.$refs.options.children).filter(function (el) {
           return el.dataset.value !== undefined && self.available(el);
-        }).length;
+        });
       },
+
+      availableCount() { return this.availableEls().length; },
+
+      setActive(el) {
+        Array.from(this.$refs.options.children).forEach(function (o) {
+          o.classList.remove(ACTIVE);
+        });
+        this.activeEl = el || null;
+        this.activeId = el ? el.id : "";
+        if (el) {
+          el.classList.add(ACTIVE);
+          el.scrollIntoView({ block: "nearest" });
+        }
+      },
+
+      clearActive() { this.setActive(null); },
+
+      move(delta) {
+        if (!this.open) { this.open = true; }
+        var opts = this.availableEls();
+        if (!opts.length) { this.clearActive(); return; }
+        var i = opts.indexOf(this.activeEl);
+        i = i < 0 ? (delta > 0 ? 0 : opts.length - 1) : (i + delta + opts.length) % opts.length;
+        this.setActive(opts[i]);
+      },
+
+      // Picking removes the option from the available list, so the
+      // highlight has to move rather than sit on a now-hidden row.
+      pick(el) {
+        var opts = this.availableEls();
+        var next = opts[opts.indexOf(el) + 1] || opts[opts.indexOf(el) - 1] || null;
+        this.toggle(el);
+        this.setActive(next);
+      },
+
+      chooseActive() { if (this.activeEl) this.pick(this.activeEl); },
+
+      openList() {
+        var self = this;
+        this.open = true;
+        this.$nextTick(function () {
+          if (self.$refs.search) self.$refs.search.focus();
+          self.setActive(self.availableEls()[0]);
+        });
+      },
+
+      close() { this.open = false; this.clearActive(); },
+
+      closeToTrigger() { var wasOpen = this.open; this.close(); if (wasOpen) this.$refs.trigger.focus(); },
+
+      // Distinct from toggle(el), which adds or removes one option.
+      toggleOpen() { if (this.open) { this.close(); } else { this.openList(); } },
     };
   };
 </script>

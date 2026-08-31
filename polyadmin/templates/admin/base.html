@@ -1,6 +1,7 @@
 {% from "admin/components/icons.html" import icon %}
 {% from "admin/components/ui/theme-toggle.html" import theme_toggle %}
 {% from "admin/components/ui/calendar.html" import calendar_script %}
+{% from "admin/components/ui/select.html" import select_script %}
 {% from "admin/components/ui/multi-select.html" import multi_select_script %}
 <!doctype html>
 <html lang="en" class="h-full">
@@ -17,6 +18,7 @@
      admin/theme.html. #}
   {% include "admin/theme.html" %}
   {{ calendar_script() }}
+  {{ select_script() }}
   {{ multi_select_script() }}
   {% block extra_head %}{% endblock %}
 </head>

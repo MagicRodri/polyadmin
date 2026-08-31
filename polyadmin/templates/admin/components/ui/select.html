@@ -37,18 +37,33 @@
    label: " -- every select on the page then failed to initialise. A
    data attribute is escaped by the template engine and decoded by the
    browser, so an apostrophe or a quote in a label is a non-event. #}
+{# Keyboard model: focus stays on the trigger and the arrow keys move a
+   highlight, which the trigger reports via aria-activedescendant --
+   rather than moving real DOM focus into the list. That matches the
+   relation combobox in ui/field.html (the codebase's existing keyboard
+   listbox) and means one focusable element instead of one per option;
+   the options are therefore tabindex="-1", so Tab leaves the control
+   instead of walking through every choice. #}
 <div class="{{ ui('combobox') }}" data-label="{{ selected_label.value or placeholder }}"
-     x-data="{ open: false, label: '' }" x-init="label = $el.dataset.label"
-     @keydown.escape="open = false" @click.outside="open = false">
+     x-data="adminSelect()" x-init="hydrate()" x-id="['select-option', 'select-listbox']"
+     @keydown.escape="closeToTrigger()" @click.outside="close()">
   <input type="hidden" name="{{ name }}" x-ref="hiddenInput" value="{{ selected if selected is not none else '' }}">
-  <button type="button" x-ref="trigger" @click="open = !open"
+  <button type="button" x-ref="trigger" @click="toggle()"
           :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
+          :aria-controls="$id('select-listbox')"
+          :aria-activedescendant="open ? activeId : null"
+          @keydown.down.prevent="openAndMove(1)"
+          @keydown.up.prevent="openAndMove(-1)"
+          @keydown.enter.prevent="open ? chooseActive() : openAndMove(1)"
+          @keydown.space.prevent="open ? chooseActive() : openAndMove(1)"
+          @keydown.home.prevent="if (open) setActive(optionEls()[0])"
+          @keydown.end.prevent="if (open) setActive(optionEls().slice(-1)[0])"
           {% if disabled %}disabled{% endif %}
           class="{{ ui('select') }} justify-between">
     <span x-text="label" class="truncate text-left"></span>
     {{ icon("chevron-down", "w-3.5 h-3.5 shrink-0 text-muted-foreground") }}
   </button>
-  <div x-show="open" x-cloak role="listbox"
+  <div x-show="open" x-cloak role="listbox" :id="$id('select-listbox')" x-ref="options"
        x-transition:enter="transition ease-out duration-150"
        x-transition:enter-start="opacity-0 scale-95"
        x-transition:enter-end="opacity-100 scale-100"
@@ -57,13 +72,102 @@
        x-transition:leave-end="opacity-0 scale-95"
        class="{{ ui('combobox', 'content') }}">
     {% for value, label in options %}
-    <div role="option" tabindex="0" data-value="{{ value }}" data-label="{{ label }}"
-         @click="label = $el.dataset.label; open = false;
-                 $refs.hiddenInput.value = $el.dataset.value;
-                 $refs.hiddenInput.dispatchEvent(new Event('change', { bubbles: true }))"
+    <div role="option" tabindex="-1" :id="$id('select-option', {{ loop.index0 }})"
+         data-value="{{ value }}" data-label="{{ label }}"
+         :aria-selected="value === $el.dataset.value ? 'true' : 'false'"
+         @click="choose($el)"
          class="{{ ui('combobox', 'item') }}">{{ label }}</div>
     {% endfor %}
     {% if not options %}<div class="{{ ui('combobox', 'empty') }}">No options.</div>{% endif %}
   </div>
 </div>
+{% endmacro %}
+
+{% macro select_script() %}
+<script>
+  // Idempotent global, same pattern as window.adminMultiSelect and
+  // window.adminCalendar -- a form may hold several selects, but only
+  // the first copy defines the factory.
+  window.adminSelect = window.adminSelect || function () {
+    // Single space-free class, added and removed with classList (see
+    // ui("combobox", "item-active")) rather than an x-bind, because the
+    // options are server-rendered in a Jinja loop, not an x-for.
+    var ACTIVE = "{{ ui('combobox', 'item-active') }}";
+    return {
+      open: false,
+      label: "",
+      // Mirrors the hidden input so aria-selected can be bound; the
+      // input stays the source of truth for what actually posts.
+      value: "",
+      activeEl: null,
+      activeId: "",
+
+      hydrate() {
+        this.label = this.$el.dataset.label;
+        this.value = this.$refs.hiddenInput.value;
+      },
+
+      optionEls() {
+        return Array.from(this.$refs.options.children).filter(function (el) {
+          return el.dataset.value !== undefined;
+        });
+      },
+
+      setActive(el) {
+        this.optionEls().forEach(function (o) { o.classList.remove(ACTIVE); });
+        this.activeEl = el || null;
+        this.activeId = el ? el.id : "";
+        if (el) {
+          el.classList.add(ACTIVE);
+          el.scrollIntoView({ block: "nearest" });
+        }
+      },
+
+      clearActive() { this.setActive(null); },
+
+      // Opening highlights whatever is already chosen, so the arrow
+      // keys continue from the current value rather than the top.
+      syncActive() {
+        var self = this;
+        var opts = this.optionEls();
+        this.setActive(opts.find(function (el) { return el.dataset.value === self.value; }) || opts[0]);
+      },
+
+      toggle() {
+        this.open = !this.open;
+        if (this.open) { this.syncActive(); } else { this.clearActive(); }
+      },
+
+      close() { this.open = false; this.clearActive(); },
+
+      // Escape and choosing both return focus to the trigger -- it is
+      // the only focusable part of the control, so without this the
+      // focus ring would be left on nothing.
+      closeToTrigger() { var wasOpen = this.open; this.close(); if (wasOpen) this.$refs.trigger.focus(); },
+
+      openAndMove(delta) {
+        if (!this.open) { this.open = true; this.syncActive(); return; }
+        this.move(delta);
+      },
+
+      move(delta) {
+        var opts = this.optionEls();
+        if (!opts.length) return;
+        var i = opts.indexOf(this.activeEl);
+        i = i < 0 ? (delta > 0 ? 0 : opts.length - 1) : (i + delta + opts.length) % opts.length;
+        this.setActive(opts[i]);
+      },
+
+      choose(el) {
+        this.label = el.dataset.label;
+        this.value = el.dataset.value;
+        this.$refs.hiddenInput.value = el.dataset.value;
+        this.$refs.hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        this.closeToTrigger();
+      },
+
+      chooseActive() { if (this.activeEl) this.choose(this.activeEl); },
+    };
+  };
+</script>
 {% endmacro %}
