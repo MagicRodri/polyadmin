@@ -138,6 +138,24 @@ filters, actions, a dashboard, exports), see
 theming, [`docs/components.md`](docs/components.md); and for the rest,
 [`docs/`](docs/).
 
+## Upgrading: CSRF protection
+
+Every mutating route now requires a CSRF token, on by default. The
+framework's own pages carry it automatically; a **custom `AdminPage` that
+renders its own `<form>`** must add the hidden field, or its posts will be
+rejected with `403`:
+
+```html
+{% from "admin/components/csrf-field.html" import csrf_field %}
+{{ csrf_field(csrf_token) }}
+```
+
+Forms that only submit via `hx-post` need no change. Every admin response
+also sends `X-Frame-Options: DENY`. See
+[`docs/authentication.md`](docs/authentication.md#csrf-protection) for the
+cookie/header/field names, the proxy caveat (`X-Forwarded-Proto`), and how
+to opt out.
+
 ## Status
 
 All 9 implementation phases are done:

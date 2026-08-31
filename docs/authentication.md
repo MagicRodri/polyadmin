@@ -90,3 +90,82 @@ responds `401 Unauthorized` before any `ModelAdmin` code runs. A
 authorization check (see [`permissions.md`](permissions.md)) gets
 `403 Forbidden` instead — the two failure modes are distinguished
 deliberately, same as any standard web framework's auth stack.
+
+## CSRF protection
+
+Both adapters protect every mutating route — anything that isn't `GET`,
+`HEAD`, `OPTIONS` or `TRACE` — with a double-submit CSRF token. It is on
+by default and needs no configuration.
+
+On every request the admin mints a token (32 random bytes as unpadded
+base64url) into an `HttpOnly` cookie, and requires the same value back on
+unsafe requests. Three names are shared by both languages:
+
+| Name | Where |
+| --- | --- |
+| `admin_csrf` | the cookie, `HttpOnly`, `SameSite=Lax`, scoped to the admin's base path |
+| `X-CSRF-Token` | the request header, used by every htmx request |
+| `_csrf` | the hidden form field, used by forms that submit without JavaScript |
+
+The framework's own pages carry the token three ways: a
+`<meta name="csrf-token">` tag for scripts, a hidden `_csrf` field on the
+four forms that can submit without JavaScript, and an
+`htmx:configRequest` listener that attaches the header to every mutating
+`hx-*` request — including the bodyless `hx-delete`s, which have no form
+field to carry one.
+
+The cookie is `HttpOnly` precisely because the token reaches JavaScript
+through the meta tag instead, so a script that leaks the DOM does not
+also leak a value usable from another origin.
+
+### Behind a proxy
+
+The cookie's `Secure` attribute follows the request's scheme: set over
+HTTPS, unset over plain HTTP — otherwise the reference apps would break
+on a LAN address, since a `Secure` cookie isn't sent over HTTP at all. A
+TLS-terminating proxy must therefore forward `X-Forwarded-Proto` and the
+app must be configured to trust it, or the cookie will be issued without
+`Secure` on a site that is in fact HTTPS.
+
+### Custom admin pages
+
+A custom page that renders its own `<form>` and posts it must include the
+token, or the post will be rejected with `403`:
+
+```html
+{{/* Go */}}
+{{template "csrf-field" .CSRFToken}}
+```
+
+```html
+{# Python #}
+{% from "admin/components/csrf-field.html" import csrf_field %}
+{{ csrf_field(csrf_token) }}
+```
+
+A form that only ever submits via `hx-post`/`hx-get` needs neither: the
+listener adds the header, and without JavaScript such a form never
+submits at all.
+
+### Clickjacking headers
+
+Every admin response also carries `X-Frame-Options: DENY` and
+`Content-Security-Policy: frame-ancestors 'none'`. These are not part of
+the CSRF opt-out below — framing is a different attack from forgery.
+
+### Opting out
+
+If your host application already provides CSRF protection for the whole
+site, you can turn the verification off. The token cookie is still minted
+and the templates still render it, so nothing else changes:
+
+```go
+admin := core.New(core.WithModelAdmins(...), core.WithCSRFDisabled())
+```
+
+```python
+admin = Admin(model_admins=[...], disable_csrf=True)
+```
+
+There is no opt-in switch, only this opt-out: a security control that
+defaults to off is one nobody turns on.
