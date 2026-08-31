@@ -4,6 +4,7 @@ from polyadmin.core.csrf import (
     csrf_tokens_match,
     is_safe_method,
     new_csrf_token,
+    safe_redirect_path,
 )
 
 BASE64URL = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -29,3 +30,21 @@ def test_csrf_tokens_match():
     # Empty must never validate empty -- that is "no token at all".
     for a, b in (("abc", "abd"), ("abc", "ab"), ("", ""), ("abc", ""), ("", "abc"), (None, None)):
         assert not csrf_tokens_match(a, b)
+
+
+def test_safe_redirect_path():
+    host, base, fallback = "admin.example.com", "/admin", "/admin/users"
+    cases = [
+        ("/admin/users?page=2", "/admin/users?page=2"),
+        ("https://admin.example.com/admin/users", "/admin/users"),
+        ("/admin", "/admin"),
+        ("", fallback),
+        ("https://evil.example.com/admin/users", fallback),
+        ("/etc/passwd", fallback),
+        # "/adminX" must not pass a naive prefix check for "/admin".
+        ("/adminX/pwned", fallback),
+        ("://not a url", fallback),
+        ("//evil.example.com/admin", fallback),
+    ]
+    for referer, want in cases:
+        assert safe_redirect_path(referer, host, base, fallback) == want, referer
