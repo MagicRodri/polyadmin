@@ -27,6 +27,16 @@
       onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)"
       class="{{ ui('toolbar', 'item') }}">
   {{ csrf_field(csrf_token) }}
+  {# The query the list is showing, carried on the form so that "select
+     all matching" can be resolved server-side. A checkbox only ever
+     reaches the rows on this page, so without these the filtered set
+     would be unreachable from a 25-row window. #}
+  <input type="hidden" name="search" value="{{ search or '' }}">
+  <input type="hidden" name="sort" value="{{ ordering or '' }}">
+  {% for name, value in (filters or {}).items() %}
+  <input type="hidden" name="filter[{{ name }}]" value="{{ value }}">
+  {% endfor %}
+  <input type="hidden" name="_select_all" value="">
   {# w-full on both the positioning wrapper and the trigger: a button
      can only fill a box that is itself full width, and the <form>
      above is what the stacked toolbar actually stretches. #}

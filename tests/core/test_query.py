@@ -1,5 +1,7 @@
 from polyadmin.core.filter import BooleanFilter
-from polyadmin.core.query import DEFAULT_PAGE_SIZE, ListRequest, execute_list_query
+from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.field import StringField
+from polyadmin.core.query import DEFAULT_PAGE_SIZE, ListRequest, execute_list_query, list_objects
 from tests.core.test_model_admin import InMemoryUserAdmin
 
 
@@ -89,3 +91,43 @@ def test_unlimited_window_ignores_the_page_number():
     # export of a filtered set is the whole set, whichever page the user
     # happened to be looking at when they clicked Export.
     assert ListRequest(page=5, page_size=10, unlimited=True).window() == (0, 0)
+
+
+# -- default ordering -----------------------------------------------------
+
+
+class _Row:
+    def __init__(self, name):
+        self.name = name
+
+
+def _ordered_admin(ordering):
+    class A(ModelAdmin):
+        model = _Row
+        list_display = ["name"]
+        fields = [StringField("name")]
+
+        def get_queryset(self):
+            return [_Row("charlie"), _Row("alpha"), _Row("bravo")]
+
+    A.ordering = ordering
+    return A()
+
+
+def _names(objects):
+    return ",".join(o.name for o in objects)
+
+
+def test_default_ordering_applies_when_the_request_names_none():
+    objects, _ = list_objects(_ordered_admin("name"), ListRequest(unlimited=True))
+    assert _names(objects) == "alpha,bravo,charlie"
+
+
+def test_an_explicit_sort_beats_the_default():
+    objects, _ = list_objects(_ordered_admin("name"), ListRequest(ordering="-name", unlimited=True))
+    assert _names(objects) == "charlie,bravo,alpha", "the user's own sort must win"
+
+
+def test_no_default_ordering_leaves_the_source_order_alone():
+    objects, _ = list_objects(_ordered_admin(None), ListRequest(unlimited=True))
+    assert _names(objects) == "charlie,alpha,bravo"

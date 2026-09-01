@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.action import Action
+from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator
 from polyadmin.fastapi.router import create_router
@@ -309,3 +310,66 @@ def test_action_keeps_an_on_site_referer():
         follow_redirects=False,
     )
     assert response.headers["location"] == "/admin/users?page=2"
+
+
+# -- select all matching --------------------------------------------------
+
+
+def test_select_all_matching_acts_on_every_filtered_row_not_just_the_page():
+    # A checkbox can only reach the rows on screen, so before this an
+    # action over a filtered set of 60 from a 25-row page was impossible
+    # to express: the user ticked "all", got 25, and was told 25 records
+    # were affected. The count was honest; the intent was not.
+    client, user_admin = make_client()
+    for i in range(60):
+        user_admin.create({"email": f"user{i}@example.com", "is_active": True})
+
+    response = client.post(
+        "/admin/users/actions/deactivate",
+        data={"_select_all": "1"},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    for obj in user_admin.get_queryset():
+        assert not obj.is_active, f"{obj.email} was left untouched"
+
+
+def test_select_all_matching_honours_the_posted_filters():
+    # "All matching" means matching what the user was looking at.
+    #
+    # The excluded record is *active* and the filter selects *inactive*
+    # ones, so acting on everything would flip it and honouring the
+    # filter leaves it alone -- the two outcomes differ, which an
+    # excluded record that already looked like the action's result could
+    # not show.
+    class FilterableActionableUserAdmin(ActionableUserAdmin):
+        filters = [BooleanFilter("is_active")]
+
+    client, user_admin = make_client(model_admin_cls=FilterableActionableUserAdmin)
+    untouched = user_admin.create({"email": "active@example.com", "is_active": True})
+    for i in range(5):
+        user_admin.create({"email": f"inactive{i}@example.com", "is_active": False})
+
+    client.post(
+        "/admin/users/actions/deactivate",
+        data={"_select_all": "1", "filter[is_active]": "false"},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert user_admin.get_object(untouched.id).is_active, (
+        "the record outside the filter was acted on -- the filters were ignored"
+    )
+
+
+def test_no_selection_without_the_flag_still_acts_on_nothing():
+    client, user_admin = make_client()
+    a = user_admin.create({"email": "a@example.com", "is_active": True})
+
+    client.post(
+        "/admin/users/actions/deactivate",
+        data={},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert user_admin.get_object(a.id).is_active, "an empty selection must not act on everything"

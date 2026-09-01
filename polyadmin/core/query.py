@@ -6,7 +6,7 @@ a custom action -- each decides separately whether to paginate it.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 
@@ -123,6 +123,11 @@ def list_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any]
     Returns the objects for the requested window and the total matching
     rows before it, which is what pagination needs.
     """
+    # Resolved here rather than inside the in-memory branch so a
+    # list_page implementation is told about it too -- it is part of the
+    # question, not part of the answer.
+    if not list_request.ordering:
+        list_request = replace(list_request, ordering=model_admin.get_default_ordering())
     if hasattr(model_admin, "list_page"):
         return model_admin.list_page(list_request)
     objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)

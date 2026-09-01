@@ -52,6 +52,29 @@ def _parse_list_request(query_params: Any) -> ListRequest:
 # "scroll".
 LOOKUP_LIMIT = 20
 
+# The hidden flag the bulk-actions form sets when the user chose "select
+# all N matching" rather than ticking rows.
+SELECT_ALL_FIELD = "_select_all"
+
+
+def _parse_list_request_from_form(form: Any) -> ListRequest:
+    """Rebuild the list query from the *posted* form rather than the URL.
+
+    A bulk action posts to its own route, so the filters the user was
+    looking at arrive as form fields; reading them from the query string
+    would silently act on the unfiltered set.
+    """
+    filters = {
+        match.group(1): value
+        for key, value in form.items()
+        if (match := _FILTER_KEY.match(key))
+    }
+    return ListRequest(
+        search=form.get("search") or None,
+        filters=filters,
+        ordering=form.get("sort") or None,
+    )
+
 
 def _validate_writable(model_admin: ModelAdmin, data: dict[str, Any], obj: Any = None) -> dict[str, list[str]]:
     """Run the ModelAdmin's own validation, then drop any complaint about
@@ -405,12 +428,27 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             base_path,
             f"{base_path}/{slug}",
         )
-        if not pks:
+        # "Select all N matching" posts the filters instead of the pks:
+        # a checkbox can only reach the rows on screen, so acting on a
+        # filtered set of 500 from a 25-row page was impossible to
+        # express. The set is resolved server-side from the same query
+        # the list was showing.
+        select_all = bool(form.get(SELECT_ALL_FIELD))
+        if not select_all and not pks:
             response = redirect(request, redirect_to)
             set_flash(response, "warning", "No items selected.")
             return response
 
-        objects = [obj for pk in pks if (obj := model_admin.get_object(pk)) is not None]
+        if select_all:
+            list_request = _parse_list_request_from_form(form)
+            list_request.unlimited = True
+            objects, _ = list_objects(model_admin, list_request)
+        else:
+            objects = [obj for pk in pks if (obj := model_admin.get_object(pk)) is not None]
+        if not objects:
+            response = redirect(request, redirect_to)
+            set_flash(response, "warning", "No items selected.")
+            return response
         message = action.handler(model_admin, objects, principal)
         response = redirect(request, redirect_to)
         set_flash(response, "success", message or f"{action.label} applied to {len(objects)} record(s).")

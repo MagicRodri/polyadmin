@@ -134,6 +134,38 @@ Common options (Python keyword args / Go `With*` functional options):
 `disabled`/`WithDisabled()`, `default=`/`WithDefault(v)`,
 `help_text=`/`WithHelpText(s)`, `placeholder=`/`WithPlaceholder(s)`.
 
+## Default ordering
+
+Without one, rows arrive in whatever order the data source returned —
+which for a map- or dict-backed store is not even stable between two
+requests. Declare a default and the list has a defined order until the
+user sorts it themselves:
+
+```go
+OrderingDefault: "-CreatedAt",   // "-" for descending, like ?sort=
+```
+```python
+ordering = "-created_at"
+```
+
+An explicit `?sort=` from the user always wins. The default is resolved
+into the request before the query runs, so a `ListPage`/`list_page`
+implementation is told about it too rather than having to know the
+ModelAdmin's own configuration.
+
+## Acting on more than one page
+
+A bulk action normally receives the rows the user ticked, which can only
+ever be rows on the current page. When a whole page is selected the
+table offers **"Select all N matching"**, which posts the current
+search/filters instead of a pk list; the framework then resolves that
+same query server-side and hands the action every matching record.
+
+Nothing is needed to enable it. Two things are worth knowing when
+writing an action: it may now receive far more objects than a page's
+worth, and the set is exactly what the user was looking at — filters
+included, pagination excluded.
+
 ## Scaling the list: resolving the query yourself
 
 By default `GetQueryset`/`get_queryset` returns **everything**, and the

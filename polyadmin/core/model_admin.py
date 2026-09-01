@@ -65,6 +65,12 @@ class ModelAdmin:
     # get_readonly_fields to vary by object, which is how "editable on
     # create, frozen afterwards" is expressed.
     readonly_fields: ClassVar[Sequence[str]] = ()
+    # The sort applied when a request names none -- a field name,
+    # optionally prefixed with "-" for descending, the same syntax the
+    # ?sort= parameter uses. Without one, rows arrive in whatever order
+    # the data source happened to return, which for a dict-backed store
+    # is not even stable between requests.
+    ordering: ClassVar[str | None] = None
     search_fields: ClassVar[Sequence[str]] = ()
     detail_fields: ClassVar[Sequence[str] | None] = None
     filters: ClassVar[Sequence[Any]] = ()
@@ -165,6 +171,10 @@ class ModelAdmin:
         applies to both.
         """
         return list(self.readonly_fields)
+
+    def get_default_ordering(self) -> str | None:
+        """The sort to use when the request names none."""
+        return self.ordering
 
     def is_readonly(self, name: str, obj: Any = None) -> bool:
         """The question every call site actually asks."""

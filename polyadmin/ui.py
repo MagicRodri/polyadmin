@@ -503,6 +503,11 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         "parts": {
             "wrapper": "overflow-hidden rounded-lg border border-border bg-card",
             "scroll": "overflow-x-auto",
+            # The "select all N matching" strip: only ever visible once
+            # a whole page is ticked, so it reads as a follow-up
+            # question rather than permanent chrome.
+            "select-all": "flex flex-wrap items-center justify-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-center text-sm text-muted-foreground",
+            "select-all-action": "font-medium text-foreground underline underline-offset-2 hover:no-underline",
             "head": "[&_tr]:border-b [&_tr]:border-border",
             "th": "px-4 py-2.5 text-left align-middle font-medium whitespace-nowrap text-muted-foreground",
             "body": "divide-y divide-border",

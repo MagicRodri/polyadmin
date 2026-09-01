@@ -29,7 +29,49 @@
    no x-data: htmx's outerHTML swap (search/sort/pagination) replaces
    this whole component, and Alpine re-runs x-init on every element it
    discovers, so the drag keeps working after a swap for free. #}
-<div class="{{ ui('table', 'wrapper') }}">
+{# selectAll state lives here rather than on the bulk-actions form: the
+   header checkbox is inside this table, the form is a sibling in the
+   toolbar (the two are linked by the HTML form= attribute), and Alpine
+   state cannot span them. The form's hidden flag is written
+   imperatively for the same reason. #}
+<div class="{{ ui('table', 'wrapper') }}"
+     x-data="{
+       pageTicked: false,
+       allMatching: false,
+       total: {{ page.total_count }},
+       onPage: {{ rows | length }},
+       setFlag() {
+         var input = document.querySelector('#bulk-actions-form [name=\'_select_all\']');
+         if (input) input.value = this.allMatching ? '1' : '';
+       },
+       tickPage(checked) {
+         this.pageTicked = checked;
+         if (!checked) { this.allMatching = false; }
+         this.setFlag();
+         document.querySelectorAll('.row-checkbox').forEach(function (cb) { cb.checked = checked; });
+       },
+     }">
+  {% if actions %}
+  {# Only worth offering when there is more to select than is on screen. #}
+  <div x-show="pageTicked && total > onPage" x-cloak class="{{ ui('table', 'select-all') }}">
+    <span x-show="!allMatching">
+      All <span x-text="onPage"></span> on this page are selected.
+    </span>
+    <button type="button" x-show="!allMatching"
+            @click="allMatching = true; setFlag()"
+            class="{{ ui('table', 'select-all-action') }}">
+      Select all <span x-text="total"></span> matching
+    </button>
+    <span x-show="allMatching" x-cloak>
+      All <span x-text="total"></span> matching this filter are selected.
+    </span>
+    <button type="button" x-show="allMatching" x-cloak
+            @click="allMatching = false; setFlag()"
+            class="{{ ui('table', 'select-all-action') }}">
+      Clear selection
+    </button>
+  </div>
+  {% endif %}
   <div class="{{ ui('table', 'scroll') }}">
   <table class="{{ ui('table') }}">
     <thead class="{{ ui('table', 'head') }}">
@@ -38,7 +80,7 @@
         {% if actions %}
         <th scope="col" class="w-10 px-4 py-2.5">
           <input type="checkbox" title="Select all"
-                 onclick="document.querySelectorAll('.row-checkbox').forEach(function(cb){cb.checked = this.checked}, this)"
+                 @change="tickPage($event.target.checked)"
                  class="{{ ui('checkbox') }}">
         </th>
         {% endif %}
@@ -104,6 +146,7 @@
         {% if actions %}
         <td class="px-4 py-2.5">
           <input type="checkbox" name="pks" value="{{ row.pk }}" form="bulk-actions-form" title="Select row"
+                 @change="if (!$event.target.checked) { pageTicked = false; allMatching = false; setFlag(); }"
                  class="row-checkbox {{ ui('checkbox') }}">
         </td>
         {% endif %}
