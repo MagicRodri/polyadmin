@@ -13,12 +13,14 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from polyadmin.core.admin import Admin
+from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of, paginate
 from polyadmin.core.query import ListRequest, list_objects
+from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.relations import compute_relation_options, compute_relation_permissions
 from polyadmin.fastapi.responses import clear_flash, is_htmx_request, pop_flash, redirect, set_flash
@@ -252,6 +254,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                 )
             return HTMLResponse(html, status_code=422)
         obj = model_admin.create(data)
+        record_audit(admin, principal, model_admin, AUDIT_CREATE, obj)
         pk = model_admin.get_pk(obj)
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get("_continue"):
@@ -327,6 +330,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                 )
             return HTMLResponse(html, status_code=422)
         model_admin.update(obj, data)
+        record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get("_continue"):
             target += "/edit"
@@ -368,6 +372,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return HTMLResponse("Permission denied.", status_code=403)
             model_admin.delete(obj)
+            record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
         set_flash(response, "success", f"{model_admin.get_verbose_name()} deleted.")
         return response
@@ -385,6 +390,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return HTMLResponse("Permission denied.", status_code=403)
             model_admin.delete(obj)
+            record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         return HTMLResponse("")
 
     return delete_get, delete_post, delete_htmx
@@ -450,6 +456,11 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             set_flash(response, "warning", "No items selected.")
             return response
         message = action.handler(model_admin, objects, principal)
+        # One entry per record, not one per action: the log's question is
+        # "what happened to this record", and a bulk run over 500 rows is
+        # 500 answers to it.
+        for obj in objects:
+            record_audit(admin, principal, model_admin, action.name, obj)
         response = redirect(request, redirect_to)
         set_flash(response, "success", message or f"{action.label} applied to {len(objects)} record(s).")
         return response

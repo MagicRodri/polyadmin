@@ -28,6 +28,7 @@ class Admin:
         site_title: str = "PolyAdmin",
         site_logo_url: str | None = None,
         disable_csrf: bool = False,
+        audit_logger: Any | None = None,
     ) -> None:
         self.dashboard = dashboard
         self.authenticator = authenticator
@@ -38,6 +39,10 @@ class Admin:
         # is one nobody turns on. The token cookie is still minted when
         # this is set, so templates and custom pages behave identically.
         self.disable_csrf = disable_csrf
+        # When set, receives an entry for every create, update, delete
+        # and action. None means nothing is recorded -- the framework
+        # does not store a log itself. See core/audit.py.
+        self.audit_logger = audit_logger
         self._registry: dict[str, ModelAdmin] = {}
         self._pages: dict[str, AdminPage] = {}
         for model_admin in model_admins:

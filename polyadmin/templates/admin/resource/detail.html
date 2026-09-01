@@ -26,6 +26,22 @@
       {% endfor %}
     </dl>
     {% for inline in inlines %}{{ render_inline_section(inline) }}{% endfor %}
+    {# Only rendered when the configured audit logger can read back
+       (core.audit.AuditReader) -- a write-only logger records silently. #}
+    {% if history %}
+    <div class="{{ ui('history') }}">
+      <h2 class="{{ ui('history', 'title') }}">History</h2>
+      <ul class="divide-y divide-border">
+        {% for entry in history %}
+        <li class="{{ ui('history', 'row') }}">
+          <span><span class="{{ ui('history', 'who') }}">{{ entry.who }}</span>
+            <span class="{{ ui('history', 'what') }}">{{ entry.what }}</span></span>
+          <span class="{{ ui('history', 'when') }}">{{ entry.when }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   </div>
   {# No Delete here -- it lives on the edit form, so destroying a record
      is something you opt into by entering edit mode rather than a click

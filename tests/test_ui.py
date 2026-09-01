@@ -201,5 +201,7 @@ def test_registry_matches_the_go_implementation_key_for_key():
         "widget", "panel", "page", "toolbar", "filter-panel",
         # form grouping (Django's fieldsets)
         "fieldset",
+        # audit history panel
+        "history",
     }
     assert set(UI_REGISTRY) == expected_components

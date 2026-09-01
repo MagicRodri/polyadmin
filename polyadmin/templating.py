@@ -12,6 +12,8 @@ TemplateContext builder, so they never drift out of sync.
 """
 from __future__ import annotations
 
+import logging
+
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -145,6 +147,7 @@ class Renderer:
             csrf_token=csrf_token,
         )
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
+        context["history"] = _history_for(admin, model_admin, obj)
         return self.render_candidates(model_admin.get_template_candidates("detail"), context)
 
     def render_form(
@@ -270,3 +273,40 @@ class Renderer:
     ) -> str:
         context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)
+
+
+# The detail page's History panel caps at a summary of recent activity
+# rather than being an audit browser -- a logger that wants the full
+# trail exposed can surface it wherever it already lives.
+HISTORY_LIMIT = 10
+
+
+def _history_for(admin: Any, model_admin: Any, obj: Any) -> list[dict[str, str]]:
+    """The record's recent audit entries, or [] when no logger is
+    configured or the one configured cannot read back.
+    """
+    from polyadmin.core.audit import AuditReader
+
+    reader = admin.audit_logger
+    if reader is None or not isinstance(reader, AuditReader):
+        return []
+    try:
+        entries = reader.history(model_admin.get_slug(), model_admin.get_pk(obj), HISTORY_LIMIT)
+    except Exception as exc:  # noqa: BLE001
+        # A history panel is not worth failing a page render over.
+        logging.getLogger("polyadmin").warning(
+            "audit history unavailable for %s: %s", model_admin.get_slug(), exc
+        )
+        return []
+    rendered = []
+    for entry in entries:
+        who = "system"
+        principal = entry.principal
+        if principal is not None:
+            who = getattr(principal, "display_name", None) or str(
+                getattr(principal, "id", "") or "system"
+            )
+        rendered.append(
+            {"when": entry.at.strftime("%Y-%m-%d %H:%M"), "who": who, "what": entry.action}
+        )
+    return rendered
