@@ -193,6 +193,43 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         },
     },
 
+    # The login page, ported from shadcn/ui's login-04 block: a
+    # two-column card, form on the left, a panel on the right that drops
+    # away below md.
+    #
+    # Parts only, and no base -- there is no "a login" element to style,
+    # just the scaffold the one page hangs off. The block's social
+    # buttons, "Sign up" and "Forgot your password?" are deliberately
+    # not here: the framework has no route behind any of them, and a
+    # control that does nothing teaches the wrong thing.
+    "login": {
+        "parts": {
+            "page": "flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10",
+            "container": "flex w-full max-w-sm flex-col gap-6 md:max-w-3xl",
+            # Overrides card's own padding: in this block the columns pad
+            # themselves, so the card must not.
+            "grid": "grid p-0 md:grid-cols-2",
+            "form": "p-6 md:p-8",
+            "stack": "flex flex-col gap-6",
+            "heading": "flex flex-col items-center text-center",
+            "title": "text-2xl font-bold",
+            "subtitle": "text-balance text-muted-foreground",
+            "group": "grid gap-2",
+            # login-04 fills this column edge to edge with a photograph,
+            # so its own bg-muted never shows. With type in place of the
+            # photo the fill is all there is -- and bg-muted is exactly
+            # the page's own colour, which made the card read as
+            # half-width with text floating beside it. The chart tokens
+            # are the palette's decorative slots and are defined in both
+            # themes, so a tint built from them stays distinct from the
+            # card and the page without hardcoding a colour.
+            "aside": "relative hidden border-l border-border bg-gradient-to-br from-chart-1/20 via-chart-6/10 to-chart-3/20 md:block",
+            "panel": "absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center",
+            "logo": "h-12 w-auto opacity-80",
+            "brand": "text-xl font-semibold text-foreground",
+        },
+    },
+
     "alert": {
         # `border` with no color; the variants supply the color.
         "base": "relative w-full rounded-lg border p-4",

@@ -257,6 +257,33 @@ class Renderer:
         context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
         return self.render("admin/dashboard.html", context)
 
+    def render_login(
+        self,
+        admin: Admin,
+        *,
+        csrf_token: str = "",
+        identifier: str = "",
+        error: str = "",
+        notice: str = "",
+    ) -> str:
+        """The login page.
+
+        Deliberately not built on base_context: nothing on this page
+        comes from the admin shell. There is no principal (that is the
+        point), no nav to build, and no breadcrumb trail to sit in.
+        """
+        return self.render(
+            "admin/login.html",
+            {
+                "csrf_token": csrf_token,
+                "site_title": admin.site_title,
+                "site_logo_url": admin.site_logo_url,
+                "identifier": identifier,
+                "error": error,
+                "notice": notice,
+            },
+        )
+
     def render_lookup(self, options: list[tuple[Any, Any]]) -> str:
         return self.render("admin/components/lookup_results.html", {"options": options})
 

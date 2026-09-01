@@ -1,12 +1,12 @@
 # Architecture
 
-PolyAdmin is one design, implemented twice, in two separate
-repositories: [MagicRodri/polyadmin](https://github.com/MagicRodri/polyadmin)
-for FastAPI and [MagicRodri/go-polyadmin](https://github.com/MagicRodri/go-polyadmin)
-for Fiber. Neither depends on the other or shares runtime code — the guarantee is that the same concepts, named
-the same way, produce the same routes and the same UI in both
-languages. This document explains how the pieces fit together; for
-any one concept in depth, see the other files in this directory.
+PolyAdmin is a Django-admin-style admin framework for
+[FastAPI](https://fastapi.tiangolo.com). It owns presentation —
+routes, forms, tables, permissions checks, HTML — and owns no storage:
+your `ModelAdmin` implements the lifecycle hooks against whatever
+database or service you already have. This document explains how the
+pieces fit together; for any one concept in depth, see the other files
+in this directory.
 
 ## The four core objects
 
@@ -19,27 +19,25 @@ everything else builds on. See [`model-admin.md`](model-admin.md).
 
 **`ModelAdmin`** is one resource: which model it administers, which
 fields appear in the list/detail/form views, search/filter/ordering
-config, the CRUD lifecycle hooks (`get_queryset`/`GetQueryset`,
-`get_object`/`GetObject`, `create`/`Create`, `update`/`Update`,
-`delete`/`Delete`), and optional Actions and autocomplete relation
-fields. A `ModelAdmin` never touches your database directly — it's an
-abstract contract; your subclass implements the lifecycle hooks
+config, the CRUD lifecycle hooks (`get_queryset`, `get_object`,
+`create`, `update`, `delete`), and optional Actions and autocomplete
+relation fields. A `ModelAdmin` never touches your database directly —
+it's an abstract contract; your subclass implements the lifecycle hooks
 against whatever storage you actually have. See
 [`model-admin.md`](model-admin.md).
 
 **`Admin`** is the site: a registry of `ModelAdmin`s keyed by slug,
 plus the optional `Dashboard`, `Authenticator`, and `Authorizer` for
-the whole site, and branding (`site_title`/`SiteTitle`,
-`site_logo_url`/`SiteLogoURL`). It owns no HTTP concerns either —
-mounting it onto a real router is the adapter's job.
+the whole site, and branding (`site_title`, `site_logo_url`). It owns
+no HTTP concerns either — mounting it onto a real router is the
+adapter's job.
 
-**The adapter** (`polyadmin.fastapi` / `polyadmin/fiber`) is the only
-layer that knows about HTTP. `create_router(admin, base_path=...)` /
-`Mount(router, admin, basePath)` walks the `Admin`'s registry and
-builds routes for each viewable/creatable/updatable/deletable/
-exportable `ModelAdmin`, wires in the `Authenticator`/`Authorizer` on
-every route, and renders responses through a `Renderer`. See
-[`routing.md`](routing.md).
+**The adapter** (`polyadmin.fastapi`) is the only layer that knows
+about HTTP. `create_router(admin, base_path=...)` walks the `Admin`'s
+registry and builds routes for each
+viewable/creatable/updatable/deletable/exportable `ModelAdmin`, wires
+in the `Authenticator`/`Authorizer` on every route, and renders
+responses through a `Renderer`. See [`routing.md`](routing.md).
 
 ## Request flow
 
@@ -49,11 +47,13 @@ A request for `GET /admin/users` (list view) goes:
    (`Authenticator.authenticate` → a `Principal` or `None`) and
    authorizes it (`Authorizer.can(principal, "users.list", model_admin)`)
    before anything else runs.
-2. `ModelAdmin.get_queryset()`/`GetQueryset()` returns the resource's
-   base collection.
-3. The shared query pipeline (`core/query.py` / `core/query.go`)
-   applies search, declared `Filter`s, and ordering from the query
-   string; `Paginator`/`Paginate` slices the result.
+2. `ModelAdmin.get_queryset()` returns the resource's base collection —
+   or, if the `ModelAdmin` defines `list_page`, that resolves search,
+   filters, ordering and the page window in one go against the data
+   source itself.
+3. The query pipeline (`core/query.py`) applies search, declared
+   `Filter`s, and ordering from the query string; `paginate` slices the
+   result.
 4. Per-row/detail relation fields are resolved against the
    `Authorizer` too — a relation only renders as a clickable link if
    the principal can view the target resource, otherwise it falls back
@@ -68,23 +68,27 @@ Every other route (detail, create, edit, delete, lookup, actions,
 export) follows the same authenticate → authorize → do the thing →
 render shape.
 
-## Why two independent implementations
+## An idiomatic Python API
 
-The API in each language is idiomatic to that language rather than a
-literal port: Python uses class attributes and keyword arguments
-(`class UserAdmin(ModelAdmin): list_display = (...)`); Go uses
-functional options and struct embedding (`core.NewField(...,
-core.WithRequired())`, `BaseModelAdmin` embedded and its methods
-promoted). Field/form HTML is built inside `.html` template files in
-Python (Jinja2 autoescaping) but in plain Go functions in
-`render_helpers.go` on the Go side, for tighter control over escaping
-with `html/template`. The contract each implements — routes, template
-context shape, HTML output — is kept in lockstep by mirroring tests
-across both suites, not by sharing code.
+The API is declarative in the way Django's admin is: a `ModelAdmin`
+subclass configured with class attributes (`list_display`,
+`search_fields`, `fieldsets`), fields built with keyword arguments
+(`StringField("email", required=True)`), and lifecycle hooks you
+override only when the default won't do.
+
+Optional capabilities are duck-typed rather than forced onto every
+subclass: a `ModelAdmin` that defines `list_page` gets database-side
+pagination, one that doesn't keeps working through `get_queryset`. The
+same shape gives an audit logger an optional read side (`AuditReader`)
+and an application an optional login page (`LoginBackend`) — each a
+`Protocol` the framework checks for, never a method you must stub out.
+
+Field and form HTML is built inside the `.html` template files, where
+Jinja2's autoescaping applies.
 
 ## Frontend
 
-Both languages render server-side HTML styled with
+The admin renders server-side HTML styled with
 [shadcn/ui](https://ui.shadcn.com), hand-ported to Alpine.js + Tailwind:
 its CSS-variable token system and component markup, with Radix's
 behavior reimplemented in Alpine and no React anywhere. Colors resolve
@@ -92,8 +96,8 @@ through those variables rather than a literal palette, which is what
 makes the admin themeable and dark-mode-capable. HTMX handles
 partial-page updates (list search/filter/sort/pagination, and form
 validation redisplay). Tailwind, Alpine (plus its focus/collapse/anchor
-plugins), and HTMX are all CDN-loaded — neither implementation has a
-frontend build step.
+plugins), and HTMX are all CDN-loaded — there is no frontend build
+step.
 
 See [`components.md`](components.md) for the component reference and the
 porting rationale, and [`templates.md`](templates.md#styling) for how to

@@ -29,6 +29,7 @@ class Admin:
         site_logo_url: str | None = None,
         disable_csrf: bool = False,
         audit_logger: Any | None = None,
+        login_backend: Any | None = None,
     ) -> None:
         self.dashboard = dashboard
         self.authenticator = authenticator
@@ -43,6 +44,10 @@ class Admin:
         # and action. None means nothing is recorded -- the framework
         # does not store a log itself. See core/audit.py.
         self.audit_logger = audit_logger
+        # When set, mounts the built-in login page and makes an
+        # unauthenticated request redirect there instead of returning
+        # 401. None leaves both behaviours off -- see core/login.py.
+        self.login_backend = login_backend
         self._registry: dict[str, ModelAdmin] = {}
         self._pages: dict[str, AdminPage] = {}
         for model_admin in model_admins:

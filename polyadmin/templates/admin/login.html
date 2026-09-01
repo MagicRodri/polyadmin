@@ -1,0 +1,99 @@
+{# Login page, ported from shadcn/ui's login-04 block.
+
+   Mirrors go-polyadmin/templates/admin/login.html.
+
+   This is the one page that does NOT extend base.html, and it is the
+   reason a bare layout exists at all: base.html is a SidebarProvider
+   wrapping a nav built from the ModelAdmins the *current principal* may
+   see -- and on this page there is no principal yet. A login form framed
+   by the admin's own chrome would also be a lie about what the visitor
+   has access to. So the document is written out here in full.
+
+   It still includes admin/theme.html, which is what keeps the design
+   tokens, the dark-mode class, and the pre-paint theme script working:
+   signing in does not flash a light page at someone who chose dark.
+
+   Deliberately absent from the port: the Apple/Google/Meta buttons,
+   "Sign up", and "Forgot your password?". The framework has no route
+   behind any of them -- see polyadmin/ui.py's "login" registry entry. #}
+{% from "admin/components/csrf-field.html" import csrf_field %}
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# No hx-* on this page, so the token travels as a hidden field only --
+     but the meta tag stays for consistency with base.html. #}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Sign in &middot; {{ site_title }}</title>
+  {% include "admin/theme.html" %}
+</head>
+<body class="h-full bg-background text-foreground antialiased">
+  <div class="{{ ui('login', 'page') }}">
+    <div class="{{ ui('login', 'container') }}">
+      <div class="{{ ui('card') }} overflow-hidden">
+        <div class="{{ ui('login', 'grid') }}">
+          {# method="post" with no action: the form posts back to the
+             same URL, which carries ?next= through a failed attempt
+             without needing a second hidden field. #}
+          <form method="post" class="{{ ui('login', 'form') }}">
+            <div class="{{ ui('login', 'stack') }}">
+              <div class="{{ ui('login', 'heading') }}">
+                <h1 class="{{ ui('login', 'title') }}">Welcome back</h1>
+                <p class="{{ ui('login', 'subtitle') }}">Sign in to {{ site_title }}</p>
+              </div>
+
+              {# One message for a bad password and for no such user
+                 alike -- see core/login.py's LoginBackend on why the
+                 backend must not distinguish them either. #}
+              {% if error %}
+              <div class="{{ ui('alert', 'destructive') }}" role="alert">
+                <p class="{{ ui('alert', 'description') }}">{{ error }}</p>
+              </div>
+              {% endif %}
+              {# Not an error: what logout redirects back with. #}
+              {% if notice %}
+              <div class="{{ ui('alert') }}" role="status">
+                <p class="{{ ui('alert', 'description') }}">{{ notice }}</p>
+              </div>
+              {% endif %}
+
+              <div class="{{ ui('login', 'group') }}">
+                <label for="login-identifier" class="{{ ui('label') }}">Email</label>
+                {# The submitted value is echoed back so a typo in the
+                   password does not cost the email as well. #}
+                <input type="email" id="login-identifier" name="identifier"
+                       value="{{ identifier }}" placeholder="m@example.com"
+                       autocomplete="username" required autofocus
+                       class="{{ ui('input') }}">
+              </div>
+
+              <div class="{{ ui('login', 'group') }}">
+                <label for="login-password" class="{{ ui('label') }}">Password</label>
+                <input type="password" id="login-password" name="password"
+                       autocomplete="current-password" required
+                       class="{{ ui('input') }}">
+              </div>
+
+              {{ csrf_field(csrf_token) }}
+              <button type="submit" class="{{ ui('button') }} w-full">Sign in</button>
+            </div>
+          </form>
+
+          {# login-04's photograph column. A framework has no photo to
+             ship, so this is the site's own identity instead -- which is
+             more use to someone who administers several. #}
+          <div class="{{ ui('login', 'aside') }}">
+            <div class="{{ ui('login', 'panel') }}">
+              {% if site_logo_url %}
+              <img src="{{ site_logo_url }}" alt="" class="{{ ui('login', 'logo') }}">
+              {% endif %}
+              <span class="{{ ui('login', 'brand') }}">{{ site_title }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

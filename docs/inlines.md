@@ -15,26 +15,20 @@ class OrganizationAdmin(ModelAdmin):
     inlines = [TabularInline("users", "organization")]
 ```
 
-```go
-BaseModelAdmin{
-    DeclaredInlines: []core.Inline{core.NewTabularInline("users", "Organization")},
-}
-```
-
-`child` is the target `ModelAdmin`'s slug; `fk_field`/`FKField` is the
+`child` is the target `ModelAdmin`'s slug; `fk_field` is the
 name of the field on the *child* that points back at this parent (the
 same field a `ForeignKeyField`/`OneToOneField` + `Relation` already
 declares on the child, targeting this parent's own slug). Both are
-validated once at router-mount time (`create_router`/`Mount`), after
+validated once at `create_router` time, after
 every `ModelAdmin` is registered: a bad `fk_field` (missing, not a
 FK/OneToOne field, or targeting the wrong `ModelAdmin`) raises
-`ValueError`/returns an `error` immediately, rather than failing
-silently at request time.
+`ValueError` immediately, rather than failing silently at request
+time.
 
 ## `StackedInline` vs `TabularInline`
 
 Layout is presentation-only — both share the same routes, permissions,
-and field set, so there's one `Inline` type with a `layout`/`Layout`
+and field set, so there's one `Inline` type with a `layout`
 discriminator, not two structurally different classes:
 
 - **`StackedInline`** — each child rendered as its own bordered
@@ -46,19 +40,14 @@ discriminator, not two structurally different classes:
 from polyadmin.core.inline import StackedInline, TabularInline
 ```
 
-```go
-core.NewStackedInline(child, fkField string, opts ...core.InlineOption) core.Inline
-core.NewTabularInline(child, fkField string, opts ...core.InlineOption) core.Inline
-```
-
-Pass `label=`/`core.WithInlineLabel(...)` to override the section's
+Pass `label=` to override the section's
 heading; it otherwise defaults to the child's own verbose name,
 pluralized (`"Users"`).
 
 ## Which fields show
 
 An inline row always shows *all* of the child's own
-`form_fields`/`FormFieldNames`, minus the one `fk_field` (implied by
+`form_fields`, minus the one `fk_field` (implied by
 context — never rendered as its own input, auto-set to the parent's
 primary key on every create/update). There's no way to show a curated
 subset in this version: a subset would desync from the child's own
@@ -90,7 +79,7 @@ commits every row together with the parent form.
   422-on-validation-failure convention every other form on this
   framework already follows.
 - **Detail page** — read-only. Each child renders using its own
-  `detail_fields`/`DetailFields`, linking to that child's own detail
+  `detail_fields`, linking to that child's own detail
   page (permission-gated the same way an ordinary relation link is —
   see [`permissions.md`](permissions.md#where-its-enforced)); no
   add/edit/remove controls here.

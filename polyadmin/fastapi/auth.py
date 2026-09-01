@@ -7,29 +7,69 @@ the framework's behavior before Phase 5 existed.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, Response
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
+from polyadmin.core.login import LOGIN_PATH, NEXT_QUERY_PARAM
 from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.fastapi.responses import redirect
 
 
-def authorize(admin: Admin, request: Request, permission: str, resource: Any = None) -> tuple[Any, Response | None]:
+def authorize(
+    admin: Admin, request: Request, base_path: str, permission: str, resource: Any = None
+) -> tuple[Any, Response | None]:
     """Returns (principal, None) if the request may proceed, or
     (None, error_response) if it was rejected.
+
+    The unauthenticated case has two answers, and which one is right
+    depends entirely on whether the admin has a login page to offer.
+    With a login_backend configured, a browser is redirected there,
+    carrying where it was going; without one there is nowhere to send
+    anybody and 401 is the whole story. This is the only behavioural
+    change login_backend makes to existing routes.
+
+    Forbidden never redirects: the visitor is signed in and simply may
+    not do this, so bouncing them to a login form would invite them to
+    re-authenticate as the same person to the same refusal.
     """
     principal = None
     if admin.authenticator is not None:
         principal = admin.authenticator.authenticate(request)
         if principal is None:
-            return None, HTMLResponse("Authentication required.", status_code=401)
+            if admin.login_backend is None:
+                return None, HTMLResponse("Authentication required.", status_code=401)
+            # redirect(), not a bare 303: an expired session most often
+            # shows up mid-page on an htmx request, where a 303 would be
+            # swapped into the page as content. redirect() sends
+            # HX-Redirect for those, navigating the whole window.
+            return None, redirect(request, login_url(base_path, _requested_url(request)))
 
     if admin.authorizer is not None and not admin.authorizer.can(principal, permission, resource):
         return None, HTMLResponse("Permission denied.", status_code=403)
 
     return principal, None
+
+
+def login_url(base_path: str, next_url: str = "") -> str:
+    """The path an unauthenticated visitor is sent to, carrying where
+    they were headed so signing in resumes it."""
+    target = f"{base_path}{LOGIN_PATH}"
+    if not next_url:
+        return target
+    return f"{target}?{NEXT_QUERY_PARAM}={quote(next_url, safe='')}"
+
+
+def _requested_url(request: Request) -> str:
+    """The path (with query) the current request was for -- what a
+    redirect to login should come back to."""
+    target = request.url.path
+    if request.url.query:
+        target += f"?{request.url.query}"
+    return target
 
 
 def authorize_object(admin: Admin, principal: Any, permission: str, obj: Any) -> bool:

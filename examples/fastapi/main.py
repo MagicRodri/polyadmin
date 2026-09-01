@@ -8,8 +8,6 @@ then open http://127.0.0.1:8000/admin
 """
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.auth import AllowAllAuthenticator, Principal
-from polyadmin.core.authorization import SuperuserAuthorizer
 from polyadmin.core.dashboard import Dashboard
 from polyadmin.core.widget import Chart, Donut, Metric, Stat, Table, Tabs, Timeline
 from polyadmin.fastapi.router import create_router
@@ -18,6 +16,7 @@ from models import OrganizationRepository, RoleRepository, UserRepository, seed
 from organization_admin import OrganizationAdmin
 from pages import register_pages
 from role_admin import RoleAdmin
+from session import CookieSessionBackend, ReadOnlyForNonSuperusers
 from user_admin import UserAdmin
 
 users = UserRepository()
@@ -98,15 +97,25 @@ dashboard = Dashboard(
     ],
 )
 
-# Stand-ins for a real app's own session/IAM integration:
-# swap these for something that reads your actual auth state.
+sessions = CookieSessionBackend()
 admin = Admin(
     model_admins=[UserAdmin(users, organizations, roles), OrganizationAdmin(organizations), RoleAdmin(roles)],
     dashboard=dashboard,
-    authenticator=AllowAllAuthenticator(
-        Principal(id="demo", display_name="Demo Admin", is_superuser=True)
-    ),
-    authorizer=SuperuserAuthorizer(),
+    # Cookie sessions over an in-memory user table (session.py). One
+    # object serves as both halves: login_backend is what mounts the
+    # admin's login page and makes an unauthenticated request redirect to
+    # it, and authenticator is what reads the session back on every
+    # subsequent request.
+    #
+    # This replaced an AllowAllAuthenticator hardcoded to a superuser,
+    # which meant nothing below -- SuperuserAuthorizer, per-object
+    # permissions, the audit log's principal -- was ever exercised
+    # against an identity anyone actually proved.
+    authenticator=sessions,
+    login_backend=sessions,
+    # Not SuperuserAuthorizer: that would deny the viewer account every
+    # permission, dashboard included. See session.py.
+    authorizer=ReadOnlyForNonSuperusers(),
 )
 register_pages(admin, users)
 

@@ -23,7 +23,11 @@
 
    Included (not a macro) from base.html, sharing its ambient context
    (base_path, site_logo_url, site_title, model_admin, nav_items,
-   principal) -- same reasoning as components/ui/table.html. #}
+   principal, can_sign_out) -- same reasoning as
+   components/ui/table.html. `icon` rides in on that context too, but
+   csrf_field does not (base.html has no form of its own), so the
+   sign-out form imports it here. #}
+{% from "admin/components/csrf-field.html" import csrf_field %}
 <aside x-cloak
        :class="[
          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
@@ -142,9 +146,22 @@
           </span>
         </div>
         <div class="{{ ui('dropdown', 'separator') }}"></div>
-        <a href="{{ base_path }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
-          {{ icon("home", "size-4 shrink-0") }}<span class="truncate">Dashboard</span>
-        </a>
+        {# No Dashboard entry here: SidebarContent above already opens
+           with one, and a second link to the same place inside the user
+           menu was this template's one drift from the Go mirror. #}
+        {# Only when there is a session to end -- see base_context's
+           can_sign_out. A form, not a link: a logout reachable by GET is
+           one any <img src> on the internet can fire at a signed-in
+           admin, so it posts and carries the CSRF token. #}
+        {% if can_sign_out %}
+        <form method="post" action="{{ base_path }}/logout">
+          {{ csrf_field(csrf_token) }}
+          <button type="submit" role="menuitem" class="{{ ui('dropdown', 'item') }} w-full">
+            {{ icon("logout", "size-4") }}
+            <span>Sign out</span>
+          </button>
+        </form>
+        {% endif %}
       </div>
     </div>
   </div>

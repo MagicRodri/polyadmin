@@ -203,5 +203,7 @@ def test_registry_matches_the_go_implementation_key_for_key():
         "fieldset",
         # audit history panel
         "history",
+        # login page (shadcn's login-04 block)
+        "login",
     }
     assert set(UI_REGISTRY) == expected_components

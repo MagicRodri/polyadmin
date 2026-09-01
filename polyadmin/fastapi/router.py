@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import DASHBOARD_VIEW
 from polyadmin.core.exporter import CSVExporter, XLSXExporter
+from polyadmin.core.login import LOGIN_PATH, LOGOUT_PATH
 from polyadmin.fastapi.auth import authorize
 from polyadmin.fastapi.csrf import make_csrf_route
 from polyadmin.fastapi.handlers import (
@@ -31,6 +32,7 @@ from polyadmin.fastapi.handlers import (
     build_lookup_handler,
 )
 from polyadmin.fastapi.inlines import validate_inlines
+from polyadmin.fastapi.login import build_login_handlers, build_logout_handler
 from polyadmin.fastapi.pages import build_page_handler
 from polyadmin.fastapi.responses import clear_flash, pop_flash
 from polyadmin.fastapi.static import mount_static
@@ -53,9 +55,27 @@ def create_router(
 
     mount_static(router, static_dir=static_dir)
 
+    # The login routes go on before anything else, and only when the
+    # application supplied a backend to make them work. They are the
+    # routes that do not authenticate -- requiring a session to reach the
+    # page that creates one is a loop -- so they are also the ones that
+    # must not be shadowed by a ModelAdmin whose slug happens to be
+    # "login". Registering them first is what makes that collision
+    # visible rather than a silently unreachable login page.
+    if admin.login_backend is not None:
+        login_get, login_post = build_login_handlers(admin, renderer, base_path)
+        router.add_api_route(LOGIN_PATH, login_get, methods=["GET"], include_in_schema=False)
+        router.add_api_route(LOGIN_PATH, login_post, methods=["POST"], include_in_schema=False)
+        router.add_api_route(
+            LOGOUT_PATH,
+            build_logout_handler(admin, base_path),
+            methods=["POST"],
+            include_in_schema=False,
+        )
+
     @router.get("", include_in_schema=False)
     async def index(request: Request) -> HTMLResponse:
-        principal, error = authorize(admin, request, DASHBOARD_VIEW)
+        principal, error = authorize(admin, request, base_path, DASHBOARD_VIEW)
         if error:
             return error
 

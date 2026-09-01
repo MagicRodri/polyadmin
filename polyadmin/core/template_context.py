@@ -248,6 +248,10 @@ def base_context(
         # the same reason: base.html renders it as a meta tag and every
         # no-JS form renders it as a hidden field.
         "csrf_token": csrf_token,
+        # Whether a login_backend is configured -- i.e. whether there is
+        # a session to end. Without one the admin has no logout route,
+        # so offering the control would be a dead button.
+        "can_sign_out": admin.login_backend is not None,
     }
 
 

@@ -1,13 +1,8 @@
-# PolyAdmin (Python)
+# PolyAdmin
 
-Python implementation of PolyAdmin, the cross-language server-rendered
-admin framework. See [`docs/`](docs/) for reference documentation.
-
-The Go/Fiber implementation is a separate repository:
-[MagicRodri/go-polyadmin](https://github.com/MagicRodri/go-polyadmin).
-The two share no runtime code — they're the same design implemented
-twice, at feature parity. The `docs/` here cover both, so most pages
-show Python and Go side by side.
+A Django-admin-style, server-rendered admin framework for
+[FastAPI](https://fastapi.tiangolo.com). See [`docs/`](docs/) for
+reference documentation.
 
 ## What you get from declaring a `ModelAdmin`
 

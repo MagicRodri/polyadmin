@@ -119,7 +119,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
     slug = model_admin.get_slug()
 
     async def list_view(request: Request) -> HTMLResponse:
-        principal, error = authorize(admin, request, resource_permission(slug, "list"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "list"), model_admin)
         if error:
             return error
         # None: a list page is about the model, not one record.
@@ -170,7 +170,7 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
     slug = model_admin.get_slug()
 
     async def detail_view(request: Request, pk: str) -> HTMLResponse:
-        principal, error = authorize(admin, request, resource_permission(slug, "view"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "view"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -207,7 +207,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     slug = model_admin.get_slug()
 
     async def create_get(request: Request) -> HTMLResponse:
-        principal, error = authorize(admin, request, resource_permission(slug, "create"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "create"), model_admin)
         if error:
             return error
         relation_options = compute_relation_options(admin, model_admin)
@@ -222,7 +222,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         return HTMLResponse(html)
 
     async def create_post(request: Request):
-        principal, error = authorize(admin, request, resource_permission(slug, "create"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "create"), model_admin)
         if error:
             return error
         form = await request.form()
@@ -270,7 +270,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
     slug = model_admin.get_slug()
 
     async def edit_get(request: Request, pk: str) -> HTMLResponse:
-        principal, error = authorize(admin, request, resource_permission(slug, "update"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "update"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -291,7 +291,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         return HTMLResponse(html)
 
     async def edit_post(request: Request, pk: str):
-        principal, error = authorize(admin, request, resource_permission(slug, "update"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "update"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -345,7 +345,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     slug = model_admin.get_slug()
 
     async def delete_get(request: Request, pk: str) -> HTMLResponse:
-        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -364,7 +364,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         return HTMLResponse(html)
 
     async def delete_post(request: Request, pk: str):
-        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -382,7 +382,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         just that row (empty response, `hx-swap="outerHTML"` on the
         `<tr>` makes it vanish) instead of redirecting anywhere.
         """
-        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
@@ -406,7 +406,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
     slug = model_admin.get_slug()
 
     async def action_view(request: Request, action_name: str):
-        _, error = authorize(admin, request, resource_permission(slug, "view"), model_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(slug, "view"), model_admin)
         if error:
             return error
         action = model_admin.get_action(action_name)
@@ -477,7 +477,7 @@ def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
     slug = model_admin.get_slug()
 
     async def lookup_view(request: Request) -> HTMLResponse:
-        _, error = authorize(admin, request, resource_permission(slug, "view"), model_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(slug, "view"), model_admin)
         if error:
             return error
         query = request.query_params.get("q", "")
@@ -510,7 +510,7 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
     slug = model_admin.get_slug()
 
     async def export_view(request: Request):
-        _, error = authorize(admin, request, resource_permission(slug, "export"), model_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(slug, "export"), model_admin)
         if error:
             return error
         # unlimited: an export of a filtered set is the whole set, not
@@ -547,14 +547,14 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         inline = _get_inline(child_slug)
         if inline is None:
             return HTMLResponse("Not found", status_code=404)
-        principal, error = authorize(admin, request, resource_permission(parent_slug, "update"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
             return HTMLResponse("Not found", status_code=404)
         child_admin = admin.get_model_admin(inline.child)
-        _, error = authorize(admin, request, resource_permission(inline.child, "create"), child_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(inline.child, "create"), child_admin)
         if error:
             return error
 
@@ -582,14 +582,14 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         inline = _get_inline(child_slug)
         if inline is None:
             return HTMLResponse("Not found", status_code=404)
-        principal, error = authorize(admin, request, resource_permission(parent_slug, "update"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
             return HTMLResponse("Not found", status_code=404)
         child_admin = admin.get_model_admin(inline.child)
-        _, error = authorize(admin, request, resource_permission(inline.child, "update"), child_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(inline.child, "update"), child_admin)
         if error:
             return error
         child_obj = child_admin.get_object(child_pk)
@@ -620,14 +620,14 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         inline = _get_inline(child_slug)
         if inline is None:
             return HTMLResponse("Not found", status_code=404)
-        principal, error = authorize(admin, request, resource_permission(parent_slug, "update"), model_admin)
+        principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
             return HTMLResponse("Not found", status_code=404)
         child_admin = admin.get_model_admin(inline.child)
-        _, error = authorize(admin, request, resource_permission(inline.child, "delete"), child_admin)
+        _, error = authorize(admin, request, base_path, resource_permission(inline.child, "delete"), child_admin)
         if error:
             return error
         child_obj = child_admin.get_object(child_pk)

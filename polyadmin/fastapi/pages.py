@@ -79,7 +79,7 @@ class PageContext:
 
 def build_page_handler(admin: Admin, page: AdminPage, renderer: Renderer, base_path: str):
     async def handler(request: Request):
-        principal, error = authorize(admin, request, page.permission, page)
+        principal, error = authorize(admin, request, base_path, page.permission, page)
         if error:
             return error
         ctx = PageContext(
