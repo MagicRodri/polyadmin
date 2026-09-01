@@ -123,7 +123,7 @@ says otherwise.
 | `select` | sizes `size-default/sm/auto` | The base class list, now used only as the trigger *button* of the styled Selects — `ui/select.html` for a single value and `ui/multi-select.html` (`size-auto`, so it grows as chips wrap) for a many-to-many. The native `<select>` it was named for survives only in the compact tabular-inline cells. |
 | `label` | — | |
 | `checkbox`, `radio` | — | Native, tinted with `accent-primary`. A custom listbox gains nothing over the native control here (no multi-item list, no search), so these stay native. |
-| `switch` | parts `track`, `on`, `off`, `thumb`, `thumb-on`, `thumb-off` | A real Alpine port: `<button role="switch">` plus a hidden input so it still posts. **Custom pages only** — generated boolean fields use a checkbox. |
+| `switch` | parts `input`, `track`, `thumb` | A native checkbox styled as shadcn's Switch: `sr-only` input plus sibling track/thumb driven by `peer-checked:`, so it toggles with no JavaScript and posts like any checkbox. Used by generated boolean fields (inline with the label) and by custom pages via the `switch` wrapper. |
 | `badge` | variants `default`, `secondary`, `destructive`, `outline` | Available; not yet used by a framework view. |
 | `card` | parts `header`, `title`, `description`, `content`, `footer` | |
 | `alert` | variants `default`, `destructive`; parts `title`, `description` | The form's non-field-error summary. |

@@ -473,3 +473,31 @@ def test_readonly_field_renders_as_a_value_not_an_input(readonly_client):
     assert 'name="name"' not in page, "a read-only field must not render a posting input"
     assert "Ship it" in page, "expected the read-only field's value to still be shown"
     assert 'name="priority"' in page, "writable fields must still render inputs"
+
+
+# -- boolean fields render as an inline switch ---------------------------
+
+
+def test_boolean_field_renders_as_a_switch_inline_with_its_label():
+    # Django Unfold's treatment: a toggle beside its name, not a
+    # checkbox stacked under a label.
+    from tests.fastapi.test_actions import make_client as make_action_client
+
+    client, _ = make_action_client()
+    page = client.get("/admin/users/create").text
+
+    assert ui("field", "row") in page, (
+        "expected the boolean field to lay its label and control on one row"
+    )
+    assert 'role="switch"' in page, "expected a switch, not a bare checkbox"
+    # The control is still a native checkbox underneath, which is what
+    # keeps it working with no JavaScript and posting like before.
+    assert 'type="checkbox" id="field-is_active" name="is_active" value="true"' in page, (
+        "the switch must still be a native checkbox posting the field's own name"
+    )
+
+
+def test_non_boolean_fields_keep_the_stacked_layout(task_client):
+    # The inline row is specific to booleans.
+    page = task_client.get("/admin/tasks/create").text
+    assert ui("field", "row") not in page

@@ -156,14 +156,19 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
     # and "thumb-on"/"thumb-off" are applied *alongside* "track"/"thumb"
     # by an Alpine :class binding, which is why neither carries a
     # background or a size of its own.
+    # Switch, ported from shadcn/ui (Radix Switch), built on a native
+    # checkbox rather than a button: it toggles with no JavaScript at
+    # all, and posts exactly like the checkbox it replaces.
+    #
+    # track and thumb are both siblings of the input, not nested, so
+    # Tailwind's peer-checked: variant reaches both -- `peer` compiles to
+    # a sibling combinator and would not cross into a child.
     "switch": {
+        "base": "relative inline-flex shrink-0 cursor-pointer items-center",
         "parts": {
-            "track": "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-            "on": "bg-primary",
-            "off": "bg-input",
-            "thumb": "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-            "thumb-on": "translate-x-4",
-            "thumb-off": "translate-x-0",
+            "input": "peer sr-only",
+            "track": "h-5 w-9 rounded-full border-2 border-transparent bg-input transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+            "thumb": "pointer-events-none absolute left-0.5 block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform peer-checked:translate-x-4",
         },
     },
 
@@ -546,6 +551,11 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "control": "mt-1.5",
             "description": "mt-1.5 text-xs text-muted-foreground",
             "message": "mt-1.5 text-xs font-medium text-destructive",
+            # A boolean field puts its control on the same row as its
+            # name (Django Unfold's treatment): a toggle reads as a
+            # setting, and a setting's name belongs beside it.
+            "row": "flex items-center justify-between gap-4",
+            "row-text": "min-w-0 flex-1",
             # A read-only field's value, shown instead of a control.
             # Deliberately not input-shaped: a disabled-looking box
             # invites clicking at it, a plain value does not.

@@ -1,3 +1,4 @@
+{% from "admin/components/ui/switch.html" import switch_control %}
 {# Context-aware form input for a field. Default renderer, overridable
    by replacing this template. Mirrors
    go-polyadmin/templates/admin/components/ui/field.html.
@@ -32,11 +33,22 @@
   "datetime": "datetime-local",
   "password": "password",
 } %}
-<div class="{{ ui('field') }}">
+{# A boolean renders as a switch on the same row as its name, the way
+   Django Unfold does it: a toggle reads as a setting, and a setting's
+   name belongs beside it rather than stacked above it. Every other type
+   keeps the label-above-control layout. #}
+{% set inline = field.field_type == "boolean" and not readonly_field %}
+<div class="{{ ui('field') }}{% if inline %} {{ ui('field', 'row') }}{% endif %}">
+  <span class="{% if inline %}{{ ui('field', 'row-text') }}{% else %}contents{% endif %}">
   <label for="field-{{ field.name }}" class="{{ ui('field', 'label') }}">
     {{ field.label }}{% if field.required %}<span class="{{ ui('field', 'required') }}" aria-hidden="true">*</span>{% endif %}
   </label>
-  <div class="{{ ui('field', 'control') }}">
+  {% if inline %}
+  {% if field.help_text %}<p class="{{ ui('field', 'description') }}">{{ field.help_text }}</p>{% endif %}
+  {% for error in errors or [] %}<p class="{{ ui('field', 'message') }}">{{ error }}</p>{% endfor %}
+  {% endif %}
+  </span>
+  <div class="{% if inline %}shrink-0{% else %}{{ ui('field', 'control') }}{% endif %}">
   {# Read-only wins over every type branch below: the field renders as
      its value with no control at all, and posts nothing. The handler
      refuses the name too (see _parse_form_data) -- omitting the input
@@ -50,10 +62,9 @@
             {% if field.disabled %}disabled{% endif %}
             class="{{ ui('textarea') }}">{{ value or "" }}</textarea>
   {% elif field.field_type == "boolean" %}
-  <input type="checkbox" id="field-{{ field.name }}" name="{{ field.name }}" value="true" autocomplete="off"
-         {% if value %}checked{% endif %}
-         {% if field.disabled %}disabled{% endif %}
-         class="{{ ui('checkbox') }}">
+  {# Rendered inline with the field name by the wrapper above -- see the
+     "boolean" note there. #}
+  {{ switch_control(field.name, "field-" ~ field.name, value, field.disabled) }}
   {% elif field.field_type == "date" %}
   {# DatePicker: a native date input (which already posts YYYY-MM-DD
      with no JS and gets the platform picker on mobile) plus the shadcn
@@ -155,11 +166,13 @@
          class="{{ ui('input') }}">
   {% endif %}
   </div>
+  {% if not inline %}
   {% if field.help_text %}
   <p class="{{ ui('field', 'description') }}">{{ field.help_text }}</p>
   {% endif %}
   {% for error in errors or [] %}
   <p class="{{ ui('field', 'message') }}">{{ error }}</p>
   {% endfor %}
+  {% endif %}
 </div>
 {% endmacro %}
