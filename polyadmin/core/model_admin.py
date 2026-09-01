@@ -60,6 +60,11 @@ class ModelAdmin:
     # there is one source of truth for what the form renders and what
     # the handler parses. `form_fields` is then unused.
     fieldsets: ClassVar[Sequence["Fieldset"]] = ()
+    # Shown on the form as values rather than inputs, and refused if
+    # posted anyway -- see the adapter's parse_form_data. Override
+    # get_readonly_fields to vary by object, which is how "editable on
+    # create, frozen afterwards" is expressed.
+    readonly_fields: ClassVar[Sequence[str]] = ()
     search_fields: ClassVar[Sequence[str]] = ()
     detail_fields: ClassVar[Sequence[str] | None] = None
     filters: ClassVar[Sequence[Any]] = ()
@@ -152,6 +157,18 @@ class ModelAdmin:
         for fieldset in self.fieldsets:
             names.extend(fieldset.fields)
         return names
+
+    def get_readonly_fields(self, obj: Any = None) -> list[str]:
+        """Fields that must render as values rather than inputs for this
+        object. `obj` is None on the create form, so an override can
+        distinguish creating from editing -- the declarative default
+        applies to both.
+        """
+        return list(self.readonly_fields)
+
+    def is_readonly(self, name: str, obj: Any = None) -> bool:
+        """The question every call site actually asks."""
+        return name in self.get_readonly_fields(obj)
 
     def get_fieldsets(self) -> list["Fieldset"]:
         """Always at least one group: the form template renders groups

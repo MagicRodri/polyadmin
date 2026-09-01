@@ -534,6 +534,10 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "control": "mt-1.5",
             "description": "mt-1.5 text-xs text-muted-foreground",
             "message": "mt-1.5 text-xs font-medium text-destructive",
+            # A read-only field's value, shown instead of a control.
+            # Deliberately not input-shaped: a disabled-looking box
+            # invites clicking at it, a plain value does not.
+            "readonly": "py-1.5 text-sm text-foreground",
         },
     },
 

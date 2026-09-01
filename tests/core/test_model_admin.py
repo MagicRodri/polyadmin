@@ -187,3 +187,37 @@ def test_collapsed_fieldset_is_opt_in():
     sets = A().get_fieldsets()
     assert sets[0].collapsed is True
     assert sets[1].collapsed is False
+
+
+# -- read-only fields -----------------------------------------------------
+
+
+def test_readonly_fields_default_to_none():
+    class A(ModelAdmin):
+        model = object
+        form_fields = ["email"]
+
+    assert A().get_readonly_fields() == []
+
+
+def test_readonly_fields_are_reported_for_both_create_and_edit():
+    # The obj parameter exists so an admin can override for the common
+    # "editable on create, frozen afterwards" case; the declarative
+    # default ignores it and applies to both.
+    class A(ModelAdmin):
+        model = object
+        readonly_fields = ["created_at"]
+
+    admin = A()
+    for obj in (None, object()):
+        assert admin.get_readonly_fields(obj) == ["created_at"]
+
+
+def test_is_readonly_checks_the_name_against_the_list():
+    class A(ModelAdmin):
+        model = object
+        readonly_fields = ["created_at", "slug"]
+
+    admin = A()
+    assert admin.is_readonly("slug")
+    assert not admin.is_readonly("email")

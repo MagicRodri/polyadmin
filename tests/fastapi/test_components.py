@@ -8,6 +8,7 @@ from polyadmin.core.field import DateField, EnumField, StringField
 from polyadmin.core.model_admin import Fieldset, ModelAdmin
 from polyadmin.fastapi.router import create_router
 from polyadmin.ui import ui
+from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin
 
 
@@ -418,3 +419,57 @@ def test_undeclared_fieldsets_render_no_group_chrome(task_client):
         "a form with no declared fieldsets must render no fieldset chrome"
     )
     assert 'name="name"' in page, "the flat form still has to render its fields"
+
+
+# -- read-only fields -----------------------------------------------------
+
+
+class ReadOnlyTaskAdmin(TaskAdmin):
+    readonly_fields = ["name"]
+
+    def update(self, obj, data):
+        # Deliberately writes whatever it is handed: the protection has
+        # to come from the framework not passing the value, not from the
+        # application remembering to ignore it.
+        if "name" in data:
+            obj.name = data["name"]
+        if "priority" in data:
+            obj.priority = data["priority"]
+        return obj
+
+
+@pytest.fixture
+def readonly_client():
+    ma = ReadOnlyTaskAdmin()
+    admin = Admin(model_admins=[ma])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), ma
+
+
+def test_readonly_field_is_refused_even_when_posted(readonly_client):
+    # The one that matters: omitting the input is presentation, not
+    # enforcement. A crafted POST must not be able to write the field.
+    client, ma = readonly_client
+    before = ma._item.name
+
+    response = client.post(
+        "/admin/tasks/1/edit",
+        data={"name": "hacked", "due_date": "2026-03-14", "priority": "High"},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert response.status_code < 400, f"expected the save to succeed, got {response.status_code}"
+    assert ma._item.name == before, "a read-only field was written by a posted value"
+    # The writable field on the same form must still save, or this is
+    # just a broken form rather than a protected field.
+    assert ma._item.priority == "High"
+
+
+def test_readonly_field_renders_as_a_value_not_an_input(readonly_client):
+    client, _ = readonly_client
+    page = client.get("/admin/tasks/1/edit").text
+
+    assert 'name="name"' not in page, "a read-only field must not render a posting input"
+    assert "Ship it" in page, "expected the read-only field's value to still be shown"
+    assert 'name="priority"' in page, "writable fields must still render inputs"

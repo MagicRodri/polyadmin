@@ -172,6 +172,42 @@ Three rules are worth knowing:
 - **A titled group is always collapsible.** `Collapsed`/`collapsed` only
   decides whether it *starts* closed; the reader can always open it.
 
+## Read-only fields
+
+A field can be shown on the form as a value rather than a control:
+
+```go
+ReadOnlyFieldNames: []string{"CreatedAt"},
+```
+```python
+readonly_fields = ["created_at"]
+```
+
+**This is enforced, not just presented.** The field renders with no
+input, and the handler skips the name when reading the posted form — so
+a crafted POST naming it cannot write it. (A `required` read-only field
+is also excluded from validation, since the form never sends it.)
+
+For the common "editable when created, frozen afterwards" case, override
+the resolver instead of the list — it receives the object being edited,
+and `nil`/`None` when creating:
+
+```go
+func (a *UserAdmin) ReadOnlyFields(obj any) []string {
+    if obj == nil {
+        return nil          // free to set at creation
+    }
+    return []string{"Email"}
+}
+```
+```python
+def get_readonly_fields(self, obj=None):
+    return [] if obj is None else ["email"]
+```
+
+Note this is a different thing from a `Field`'s own `ReadOnly`/`readonly`
+option, which marks a native input `readonly` but still posts its value.
+
 ## The CRUD lifecycle
 
 Five hooks, all of which you implement against your own storage —

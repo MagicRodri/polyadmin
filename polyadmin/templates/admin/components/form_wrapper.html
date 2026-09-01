@@ -57,7 +57,8 @@
           {% for name in fieldset.fields %}
           {% set field = model_admin.get_field(name) %}
           {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
-          {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+          {{ render_form_input(field, value, errors.get(name), relation_options.get(name),
+                               model_admin.is_readonly(name, object)) }}
           {% endfor %}
         </div>
       </div>
@@ -65,7 +66,8 @@
       {% for name in fieldset.fields %}
       {% set field = model_admin.get_field(name) %}
       {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
-      {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+      {{ render_form_input(field, value, errors.get(name), relation_options.get(name),
+                           model_admin.is_readonly(name, object)) }}
       {% endfor %}
       {% endif %}
       {% endfor %}

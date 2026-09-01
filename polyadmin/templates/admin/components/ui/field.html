@@ -23,7 +23,7 @@
 {% from "admin/components/ui/calendar.html" import date_picker %}
 {% from "admin/components/ui/select.html" import select %}
 {% from "admin/components/ui/multi-select.html" import multi_select %}
-{% macro render_form_input(field, value, errors, relation=none) %}
+{% macro render_form_input(field, value, errors, relation=none, readonly_field=false) %}
 {% set input_types = {
   "integer": "number",
   "decimal": "number",
@@ -37,7 +37,13 @@
     {{ field.label }}{% if field.required %}<span class="{{ ui('field', 'required') }}" aria-hidden="true">*</span>{% endif %}
   </label>
   <div class="{{ ui('field', 'control') }}">
-  {% if field.field_type == "text" %}
+  {# Read-only wins over every type branch below: the field renders as
+     its value with no control at all, and posts nothing. The handler
+     refuses the name too (see _parse_form_data) -- omitting the input
+     here is presentation, not protection. #}
+  {% if readonly_field %}
+  <p class="{{ ui('field', 'readonly') }}">{{ value if value not in (none, "") else "&mdash;" | safe }}</p>
+  {% elif field.field_type == "text" %}
   <textarea id="field-{{ field.name }}" name="{{ field.name }}" placeholder="{{ field.placeholder }}" autocomplete="off"
             {% if field.required %}required{% endif %}
             {% if field.readonly %}readonly{% endif %}

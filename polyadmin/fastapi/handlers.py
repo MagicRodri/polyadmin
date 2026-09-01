@@ -47,9 +47,33 @@ def _parse_list_request(query_params: Any) -> ListRequest:
     )
 
 
-def _parse_form_data(model_admin: ModelAdmin, form: Any) -> dict[str, Any]:
+def _validate_writable(model_admin: ModelAdmin, data: dict[str, Any], obj: Any = None) -> dict[str, list[str]]:
+    """Run the ModelAdmin's own validation, then drop any complaint about
+    a read-only field.
+
+    Such a field is never posted (see _parse_form_data), so a `required`
+    read-only field would otherwise fail validation on every save -- the
+    value is not missing, it is simply not the form's to send. Wrapping
+    rather than changing validate() keeps the ModelAdmin contract as it
+    was, so an application's own validate override is unaffected.
+    """
+    errors = model_admin.validate(data)
+    return {name: errs for name, errs in errors.items() if not model_admin.is_readonly(name, obj)}
+
+
+def _parse_form_data(model_admin: ModelAdmin, form: Any, obj: Any = None) -> dict[str, Any]:
+    """Read the posted form into a data map.
+
+    `obj` is the record being edited (None when creating), and is passed
+    only so read-only fields can be resolved: a read-only field is
+    skipped entirely, so a crafted POST naming it cannot write it.
+    Omitting the input from the form is presentation; this is the
+    enforcement.
+    """
     data: dict[str, Any] = {}
     for name in model_admin.get_form_fields():
+        if model_admin.is_readonly(name, obj):
+            continue
         field = model_admin.get_field(name)
         if field.field_type == "boolean":
             data[name] = name in form
@@ -167,7 +191,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return error
         form = await request.form()
         data = _parse_form_data(model_admin, form)
-        errors = model_admin.validate(data)
+        errors = _validate_writable(model_admin, data)
         if errors:
             relation_options = compute_relation_options(admin, model_admin)
             if is_htmx_request(request):
@@ -235,8 +259,8 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
         form = await request.form()
-        data = _parse_form_data(model_admin, form)
-        errors = model_admin.validate(data)
+        data = _parse_form_data(model_admin, form, obj)
+        errors = _validate_writable(model_admin, data, obj)
         if errors:
             relation_options = compute_relation_options(admin, model_admin, obj=obj)
             if is_htmx_request(request):
