@@ -32,7 +32,25 @@ def authorize(admin: Admin, request: Request, permission: str, resource: Any = N
     return principal, None
 
 
-def compute_permissions(admin: Admin, principal: Any, model_admin: ModelAdmin) -> dict[str, bool]:
+def authorize_object(admin: Admin, principal: Any, permission: str, obj: Any) -> bool:
+    """Re-run a permission check with the loaded record as the resource,
+    so an Authorizer can answer "may this principal touch *this* record"
+    and not only "may they touch this model at all".
+
+    It is the second, narrower gate: the coarse check has already run
+    (before the record was fetched, so an unauthorized principal never
+    costs a lookup), and this one runs once there is an object to judge.
+    With no authorizer configured it permits, like every other check
+    here.
+    """
+    if admin.authorizer is None:
+        return True
+    return admin.authorizer.can(principal, permission, obj)
+
+
+def compute_permissions(
+    admin: Admin, principal: Any, model_admin: ModelAdmin, obj: Any = None
+) -> dict[str, bool]:
     """What the current principal may do with this resource, combining
     the ModelAdmin's static can_* capability toggles with the
     Authorizer's per-request decision. Used to decide
@@ -47,7 +65,11 @@ def compute_permissions(admin: Admin, principal: Any, model_admin: ModelAdmin) -
             return False
         if admin.authorizer is None:
             return True
-        return admin.authorizer.can(principal, resource_permission(slug, action), model_admin)
+        # obj is the record in view, or None on a list/create page. When
+        # present it is what the authorizer is asked about, so per-object
+        # rules decide which controls a record's own pages show.
+        resource = model_admin if obj is None else obj
+        return admin.authorizer.can(principal, resource_permission(slug, action), resource)
 
     # Keys are "can_view" etc -- see default_permissions in
     # template_context.py for why "update" alone is unsafe here.

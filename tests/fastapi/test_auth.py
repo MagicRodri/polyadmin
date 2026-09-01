@@ -118,3 +118,82 @@ def test_edit_route_still_enforced_even_if_hidden():
         == 403
     )
     assert user.email == "john@example.com"
+
+
+# -- per-object permissions ----------------------------------------------
+
+
+class OwnRecordsOnly:
+    """The archetypal per-object rule: a principal may change only the
+    record whose email matches their own. It answers on the *resource*
+    it is handed, which is a ModelAdmin for a coarse check and the
+    record itself for the narrow one.
+    """
+
+    def __init__(self, email):
+        self.email = email
+
+    def can(self, principal, permission, resource=None):
+        if not hasattr(resource, "email"):
+            # Coarse check: no object in hand, so this cannot decide --
+            # let it through and judge again once the record is loaded.
+            return True
+        return resource.email == self.email
+
+
+def _object_perm_client():
+    user_admin = InMemoryUserAdmin()
+    mine = user_admin.create({"email": "me@example.com"})
+    theirs = user_admin.create({"email": "someone-else@example.com"})
+    admin = Admin(
+        model_admins=[user_admin],
+        authenticator=AllowAllAuthenticator(),
+        authorizer=OwnRecordsOnly("me@example.com"),
+    )
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), user_admin, mine, theirs
+
+
+def test_per_object_permission_gates_the_edit_form():
+    client, _, mine, theirs = _object_perm_client()
+    assert client.get(f"/admin/users/{mine.id}/edit").status_code == 200
+    assert client.get(f"/admin/users/{theirs.id}/edit").status_code == 403
+
+
+def test_per_object_permission_gates_the_edit_post():
+    # The gate has to hold on the write, not only on the form that leads
+    # to it -- a denied principal can post straight to the route.
+    client, user_admin, _, theirs = _object_perm_client()
+    before = theirs.email
+
+    response = client.post(
+        f"/admin/users/{theirs.id}/edit",
+        data={"email": "hacked@example.com"},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+    assert user_admin.get_object(theirs.id).email == before, (
+        "the record was modified despite the denial"
+    )
+
+
+def test_per_object_permission_gates_deletion():
+    client, user_admin, _, theirs = _object_perm_client()
+    response = client.request(
+        "DELETE", f"/admin/users/{theirs.id}/delete", headers=csrf(client)
+    )
+    assert response.status_code == 403
+    assert user_admin.get_object(theirs.id) is not None, (
+        "the record was deleted despite the denial"
+    )
+
+
+def test_per_object_permission_hides_controls_on_the_detail_page():
+    client, _, mine, theirs = _object_perm_client()
+    own = client.get(f"/admin/users/{mine.id}").text
+    assert "/edit" in own, "own record should offer Edit"
+    # Viewing someone else's record is refused outright by this rule,
+    # which is itself the per-object view check doing its job.
+    assert client.get(f"/admin/users/{theirs.id}").status_code == 403

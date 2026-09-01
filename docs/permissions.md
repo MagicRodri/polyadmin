@@ -59,6 +59,46 @@ has `{target_slug}.view` — otherwise it falls back to plain,
 unlinked text. This is checked against the *target* `ModelAdmin`'s
 permissions, not the resource currently being viewed.
 
+## Per-object permissions
+
+The `resource` argument an `Authorizer` receives is **either the
+ModelAdmin or the record itself**, depending on how much is known when
+the question is asked:
+
+1. Before a record is fetched, the check is coarse — "may this principal
+   update Users at all?" — and `resource` is the ModelAdmin. Rejecting
+   here means an unauthorized request never costs a lookup.
+2. Once the record is loaded, the same permission is asked again with
+   `resource` set to that record — "may they update *this* user?"
+
+So a rule like "you may edit only your own record" is expressed by
+inspecting what you were handed:
+
+```go
+func (a OwnRecordsOnly) Can(principal *core.Principal, permission string, resource any) bool {
+    user, ok := resource.(*User)
+    if !ok {
+        return true    // coarse check: nothing to judge yet, decide later
+    }
+    return user.Email == principal.Email
+}
+```
+```python
+def can(self, principal, permission, resource=None):
+    if not isinstance(resource, User):
+        return True    # coarse check: nothing to judge yet, decide later
+    return resource.email == principal.email
+```
+
+Returning `True` for the coarse case is the important half: denying
+there would block the route before the record — and therefore the real
+decision — was ever reached.
+
+The narrow check runs on the detail page, the edit form, the edit POST,
+and all three delete routes. The same answer also drives the controls a
+record's own pages show, so a record you may view but not change simply
+has no Edit button.
+
 ## Built-in implementations
 
 Same caveat as [`authentication.md`](authentication.md)'s built-in

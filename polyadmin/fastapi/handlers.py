@@ -19,7 +19,7 @@ from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import paginate
 from polyadmin.core.query import ListRequest, execute_list_query
-from polyadmin.fastapi.auth import authorize, compute_permissions
+from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.relations import compute_relation_options, compute_relation_permissions
 from polyadmin.fastapi.responses import clear_flash, is_htmx_request, pop_flash, redirect, set_flash
 from polyadmin.templating import Renderer
@@ -91,7 +91,8 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         principal, error = authorize(admin, request, resource_permission(slug, "list"), model_admin)
         if error:
             return error
-        permissions = compute_permissions(admin, principal, model_admin)
+        # None: a list page is about the model, not one record.
+        permissions = compute_permissions(admin, principal, model_admin, None)
         relation_permissions = compute_relation_permissions(
             admin, principal, model_admin, list(model_admin.list_display)
         )
@@ -144,7 +145,11 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
-        permissions = compute_permissions(admin, principal, model_admin)
+        # The record's own page: per-object rules decide whether it
+        # offers Edit/Delete at all.
+        if not authorize_object(admin, principal, resource_permission(slug, "view"), obj):
+            return HTMLResponse("Permission denied.", status_code=403)
+        permissions = compute_permissions(admin, principal, model_admin, obj)
         relation_permissions = compute_relation_permissions(
             admin, principal, model_admin, model_admin.get_detail_fields()
         )
@@ -239,6 +244,8 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
+        if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
+            return HTMLResponse("Permission denied.", status_code=403)
         relation_options = compute_relation_options(admin, model_admin, obj=obj)
         html = renderer.render_form(
             admin,
@@ -258,6 +265,8 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
+        if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
+            return HTMLResponse("Permission denied.", status_code=403)
         form = await request.form()
         data = _parse_form_data(model_admin, form, obj)
         errors = _validate_writable(model_admin, data, obj)
@@ -309,6 +318,8 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         obj = model_admin.get_object(pk)
         if obj is None:
             return HTMLResponse("Not found", status_code=404)
+        if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
+            return HTMLResponse("Permission denied.", status_code=403)
         html = renderer.render_delete(
             admin,
             model_admin,
@@ -320,11 +331,13 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         return HTMLResponse(html)
 
     async def delete_post(request: Request, pk: str):
-        _, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
         if obj is not None:
+            if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
+                return HTMLResponse("Permission denied.", status_code=403)
             model_admin.delete(obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
         set_flash(response, "success", f"{model_admin.get_verbose_name()} deleted.")
@@ -335,11 +348,13 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         just that row (empty response, `hx-swap="outerHTML"` on the
         `<tr>` makes it vanish) instead of redirecting anywhere.
         """
-        _, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
+        principal, error = authorize(admin, request, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
         obj = model_admin.get_object(pk)
         if obj is not None:
+            if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
+                return HTMLResponse("Permission denied.", status_code=403)
             model_admin.delete(obj)
         return HTMLResponse("")
 
