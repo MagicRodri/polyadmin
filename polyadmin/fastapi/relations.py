@@ -9,6 +9,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
 from polyadmin.core.field import Field
 from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.query import ListRequest, list_objects
 from polyadmin.core.relation import Relation
 
 
@@ -95,9 +96,14 @@ def compute_relation_options(
             }
             continue
 
+        # unlimited: a non-autocomplete relation renders every choice
+        # inline, which is exactly what this widget is for. Going through
+        # list_objects means a list_page target answers this from its own
+        # data source like every other list query.
+        related_objects, _ = list_objects(target_admin, ListRequest(unlimited=True))
         options = [
             (target_admin.get_pk(related), display_field.get_value(related))
-            for related in target_admin.get_queryset()
+            for related in related_objects
         ]
         if field.field_type == "manytomany":
             selected_pks = [target_admin.get_pk(related) for related in (current or [])]

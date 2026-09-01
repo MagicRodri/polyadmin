@@ -134,6 +134,54 @@ Common options (Python keyword args / Go `With*` functional options):
 `disabled`/`WithDisabled()`, `default=`/`WithDefault(v)`,
 `help_text=`/`WithHelpText(s)`, `placeholder=`/`WithPlaceholder(s)`.
 
+## Scaling the list: resolving the query yourself
+
+By default `GetQueryset`/`get_queryset` returns **everything**, and the
+framework applies search, filters, ordering and pagination in memory
+over that result. That is the right trade for a small collection and the
+reason getting started needs one method — but it means page 40 of a
+million rows costs the same as page 1, and filters make it worse rather
+than better, since they run after the whole set has been loaded.
+
+A ModelAdmin backed by a real data source can take over the whole query
+by implementing one optional method:
+
+```go
+func (a *UserAdmin) ListPage(ctx context.Context, req core.ListRequest) ([]any, int, error) {
+    offset, limit := req.Window()          // limit 0 means "no limit"
+    // ... one query: WHERE from req.Search/req.Filters,
+    //     ORDER BY from req.Ordering, LIMIT/OFFSET from the window
+    return rows, total, nil
+}
+```
+```python
+def list_page(self, list_request):
+    offset, limit = list_request.window()   # limit 0 means "no limit"
+    ...
+    return rows, total
+```
+
+Return the rows for the requested window, and the **total matching rows
+before it** — that count is what pagination displays.
+
+Three things are worth knowing:
+
+- **It is all-or-nothing.** When this method exists the framework
+  applies nothing further: it cannot tell what you already did, and
+  re-applying would filter twice. Honour every part of the request, or
+  the UI will show controls that do nothing.
+- **It serves every list query, not just the list page.** Both exports,
+  the autocomplete lookup and non-autocomplete relation option lists all
+  go through it. They are distinguished purely by the window: the list
+  view asks for one page, the lookup for a capped page, and an export
+  or an option list sets `Unlimited`/`unlimited`, which yields a limit
+  of 0. If you ignore the window, an export still works but the
+  autocomplete will return your whole table.
+- **`GetQueryset` is not called at all** for such an admin. It can stay
+  as-is for other callers, or become a stub.
+
+Not implementing it changes nothing: the in-memory path is unchanged.
+
 ## Grouping the form: fieldsets
 
 By default a form is one flat column in `FormFieldNames`/`form_fields`

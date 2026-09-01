@@ -17,8 +17,8 @@ from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
-from polyadmin.core.pagination import paginate
-from polyadmin.core.query import ListRequest, execute_list_query
+from polyadmin.core.pagination import page_of, paginate
+from polyadmin.core.query import ListRequest, list_objects
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.relations import compute_relation_options, compute_relation_permissions
 from polyadmin.fastapi.responses import clear_flash, is_htmx_request, pop_flash, redirect, set_flash
@@ -45,6 +45,12 @@ def _parse_list_request(query_params: Any) -> ListRequest:
         page=page,
         page_size=page_size,
     )
+
+
+# The autocomplete caps its suggestions. The control is a search box,
+# not a browser -- past a screenful the answer is "type more", not
+# "scroll".
+LOOKUP_LIMIT = 20
 
 
 def _validate_writable(model_admin: ModelAdmin, data: dict[str, Any], obj: Any = None) -> dict[str, list[str]]:
@@ -98,8 +104,8 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         )
 
         list_request = _parse_list_request(request.query_params)
-        objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)
-        page = paginate(objects, page=list_request.page, page_size=list_request.page_size)
+        objects, total = list_objects(model_admin, list_request)
+        page = page_of(objects, total, list_request)
 
         if is_htmx_request(request):
             html = renderer.render_list_fragment(
@@ -431,8 +437,11 @@ def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
         )
         display_field = model_admin.get_field(display_name) if display_name else None
 
-        list_request = ListRequest(search=query or None)
-        objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)[:20]
+        # The cap rides in as the page window rather than a slice
+        # afterwards, so a list_page applies it in its own query instead
+        # of returning the whole table for us to trim.
+        list_request = ListRequest(search=query or None, page=1, page_size=LOOKUP_LIMIT)
+        objects, _ = list_objects(model_admin, list_request)
         options = [
             (model_admin.get_pk(obj), display_field.get_value(obj) if display_field else model_admin.get_pk(obj))
             for obj in objects
@@ -455,8 +464,11 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
         _, error = authorize(admin, request, resource_permission(slug, "export"), model_admin)
         if error:
             return error
+        # unlimited: an export of a filtered set is the whole set, not
+        # whichever page the user happened to be looking at.
         list_request = _parse_list_request(request.query_params)
-        objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)
+        list_request.unlimited = True
+        objects, _ = list_objects(model_admin, list_request)
         columns = list(model_admin.list_display)
         filename = f"{slug}.{exporter.file_extension()}"
         return StreamingResponse(

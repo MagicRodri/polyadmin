@@ -43,6 +43,20 @@ class Page:
         return self.number + 1 if self.has_next else None
 
 
+def page_of(items: Sequence[Any], total: int, list_request: Any) -> Page:
+    """Build the result shape around an already-windowed slice -- for a
+    data source that did its own LIMIT/OFFSET and reported the total
+    separately. `paginate` is the in-memory equivalent, which slices and
+    counts for you.
+    """
+    page = max(list_request.page or 1, 1)
+    page_size = list_request.page_size if (list_request.page_size or 0) >= 1 else 25
+    if getattr(list_request, "unlimited", False):
+        # One page holding everything, so num_pages/has_next stay honest.
+        page, page_size = 1, max(total, 1)
+    return Page(items=list(items), number=page, page_size=page_size, total_count=total)
+
+
 def paginate(items: Sequence[Any], *, page: int = 1, page_size: int = 25) -> Page:
     page = max(page, 1)
     page_size = max(page_size, 1)
