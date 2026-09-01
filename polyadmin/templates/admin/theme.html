@@ -214,6 +214,23 @@
   /* Alpine's x-collapse animates height; without this the accordion
      content jumps its scrollbar in during the transition. */
   [x-collapse] { overflow: hidden; }
+
+  /* Checkbox check glyph (lucide Check, the icon shadcn/ui's Checkbox
+     uses). It lives here rather than in ui("checkbox") for two reasons:
+     a native <input> cannot carry a ::before/::after reliably, so the
+     mark has to be a background image; and its colour is
+     --primary-foreground, which flips with the theme and cannot be
+     interpolated into a Tailwind arbitrary value. Hence one rule per
+     theme, matching the two token values in this file. */
+  .ui-checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+    background-size: 0.7rem;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .dark .ui-checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  }
 </style>
 
 <script>

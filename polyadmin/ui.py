@@ -136,8 +136,15 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
     # Native checkbox/radio tinted with `accent-primary` (CSS
     # accent-color) rather than shadcn's Radix Checkbox, for the same
     # no-JS-form reason as select above.
+    # Checkbox, ported from shadcn/ui. appearance-none is what makes the
+    # rest of this apply at all: a native checkbox draws itself and
+    # ignores border/radius/background, which is why the previous
+    # version was really just accent-color on an OS control.
+    #
+    # The check glyph is a background image set in theme.html rather
+    # than a class here -- see the .ui-checkbox rule there for why.
     "checkbox": {
-        "base": "h-4 w-4 shrink-0 rounded-sm border-input bg-background accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        "base": "ui-checkbox peer size-4 shrink-0 appearance-none rounded-[4px] border border-input bg-background shadow-sm outline-none transition-shadow checked:border-primary checked:bg-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
     },
 
     "radio": {
