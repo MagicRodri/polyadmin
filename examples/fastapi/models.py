@@ -69,6 +69,11 @@ class User:
     id: int
     email: str
     is_active: bool = True
+    # A plain choice field, so the reference app exercises ui/select
+    # (the shadcn Select port). Every other choice-shaped field here is
+    # a relation, which renders one of the two combobox widgets
+    # instead -- without this, ui/select appeared nowhere in the app.
+    plan: str = "Free"
     organization: Organization | None = None
     roles: list[Role] = field(default_factory=list)
 
@@ -89,6 +94,7 @@ class UserRepository:
         *,
         email: str,
         is_active: bool = True,
+        plan: str = "Free",
         organization: Organization | None = None,
         roles: list[Role] | None = None,
     ) -> User:
@@ -96,6 +102,7 @@ class UserRepository:
             id=next(self._ids),
             email=email,
             is_active=is_active,
+            plan=plan,
             organization=organization,
             roles=list(roles or []),
         )
@@ -108,13 +115,16 @@ class UserRepository:
         *,
         email: str | None,
         is_active: bool | None,
-        organization: Organization | None,
+        plan: str | None = None,
+        organization: Organization | None = None,
         roles: list[Role] | None = None,
     ) -> User:
         if email is not None:
             user.email = email
         if is_active is not None:
             user.is_active = is_active
+        if plan is not None:
+            user.plan = plan
         user.organization = organization
         user.roles = list(roles or [])
         return user
@@ -145,10 +155,10 @@ def seed(
     roles.create(name="Read Only")
     security = roles.create(name="Security Officer")
 
-    users.create(email="admin@example.com", is_active=True, organization=acme, roles=[administrator, security])
-    users.create(email="jane@example.com", is_active=True, organization=acme, roles=[billing])
-    users.create(email="john@example.com", is_active=False, organization=widgets)
-    users.create(email="mary@example.com", is_active=True, organization=widgets, roles=[support, billing])
-    users.create(email="peter@example.com", is_active=True, organization=globex, roles=[support])
-    users.create(email="samir@example.com", is_active=True, organization=initech)
-    users.create(email="milton@example.com", is_active=False, organization=None)
+    users.create(email="admin@example.com", is_active=True, plan="Enterprise", organization=acme, roles=[administrator, security])
+    users.create(email="jane@example.com", is_active=True, plan="Pro", organization=acme, roles=[billing])
+    users.create(email="john@example.com", is_active=False, plan="Free", organization=widgets)
+    users.create(email="mary@example.com", is_active=True, plan="Pro", organization=widgets, roles=[support, billing])
+    users.create(email="peter@example.com", is_active=True, plan="Enterprise", organization=globex, roles=[support])
+    users.create(email="samir@example.com", is_active=True, plan="Free", organization=initech)
+    users.create(email="milton@example.com", is_active=False, plan="Free", organization=None)

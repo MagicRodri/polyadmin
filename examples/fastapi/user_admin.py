@@ -6,7 +6,7 @@ the installed `admin` package on sys.path.
 
 from __future__ import annotations
 
-from polyadmin import BooleanField, EmailField, ModelAdmin
+from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
 from polyadmin.core.action import Action
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
 from polyadmin.core.filter import BooleanFilter
@@ -48,12 +48,12 @@ class UserAdmin(ModelAdmin):
     # docs/routing.md's "Sidebar categories" section.
     category = "Directory"
 
-    list_display = ["id", "email", "is_active", "organization"]
-    detail_fields = ["id", "email", "is_active", "organization", "roles"]
+    list_display = ["id", "email", "is_active", "plan", "organization"]
+    detail_fields = ["id", "email", "is_active", "plan", "organization", "roles"]
     # roles is on the form but not in list_display: a many-to-many
     # column costs a lookup per row and reads as noise in a table, which
     # is why Django keeps it off list_display too.
-    form_fields = ["email", "is_active", "organization", "roles"]
+    form_fields = ["email", "is_active", "plan", "organization", "roles"]
     search_fields = ["email"]
     filters = [BooleanFilter("is_active")]
     # Routes the "organization" relation through the /lookup endpoint
@@ -68,6 +68,9 @@ class UserAdmin(ModelAdmin):
     fields = [
         EmailField("email", required=True),
         BooleanField("is_active", default=True),
+        # Enum + choices renders as ui/select: a hidden input carries the
+        # value, so it posts like a native <select>.
+        EnumField("plan", choices=["Free", "Pro", "Enterprise"], default="Free"),
         ForeignKeyField("organization", relation=ORGANIZATION_RELATION),
         # Renders as the searchable multi-select
         # (components/ui/multi-select.html) -- the whole point of
@@ -122,6 +125,7 @@ class UserAdmin(ModelAdmin):
         return self.repository.create(
             email=data["email"],
             is_active=bool(data.get("is_active")),
+            plan=data.get("plan") or "Free",
             organization=self._resolve_organization(data),
             roles=self._resolve_roles(data),
         )
@@ -131,6 +135,7 @@ class UserAdmin(ModelAdmin):
             obj,
             email=data.get("email"),
             is_active=data.get("is_active"),
+            plan=data.get("plan"),
             organization=self._resolve_organization(data),
             roles=self._resolve_roles(data),
         )
