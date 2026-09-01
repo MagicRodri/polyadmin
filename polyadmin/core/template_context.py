@@ -394,7 +394,11 @@ def form_context(
         "data": data,
         "errors": errors or {},
         "non_field_errors": non_field_errors or [],
-        "form_fields": list(model_admin.form_fields),
+        "form_fields": model_admin.get_form_fields(),
+        # Always at least one group (see ModelAdmin.get_fieldsets), so
+        # the template has a single path for the declared and the
+        # undeclared case.
+        "fieldsets": model_admin.get_fieldsets(),
         "form_action": form_action,
         "relation_options": relation_options or {},
         # The edit form offers Delete in its action bar, so it needs the

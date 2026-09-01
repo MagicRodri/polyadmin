@@ -1,7 +1,7 @@
 import pytest
 
 from polyadmin.core.field import BooleanField, StringField
-from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.model_admin import Fieldset, ModelAdmin
 
 
 class User:
@@ -136,3 +136,54 @@ def test_validate_required_field():
     admin = InMemoryUserAdmin()
     errors = admin.validate({"email": ""})
     assert "email" in errors
+
+
+# -- fieldsets ------------------------------------------------------------
+
+
+def test_fieldsets_default_to_one_unnamed_group_over_form_fields():
+    # Undeclared is the common case, and the form template renders
+    # fieldsets unconditionally -- so "no fieldsets" has to mean one
+    # group holding everything, not zero groups holding nothing.
+    class A(ModelAdmin):
+        model = object
+        form_fields = ["email", "is_active"]
+
+    sets = A().get_fieldsets()
+    assert len(sets) == 1
+    assert sets[0].title is None, "the default group must be unnamed"
+    assert sets[0].fields == ["email", "is_active"]
+
+
+def test_declared_fieldsets_become_the_forms_field_list():
+    # One source of truth: with fieldsets declared they define which
+    # fields the form has and in what order, so get_form_fields() reports
+    # the flattened list and handlers parse exactly what is rendered.
+    class A(ModelAdmin):
+        model = object
+        form_fields = ["ignored"]
+        fieldsets = [
+            Fieldset(fields=["email"]),
+            Fieldset(title="Access", description="Who they are inside the app.",
+                     fields=["is_active", "plan"]),
+        ]
+
+    admin = A()
+    assert admin.get_form_fields() == ["email", "is_active", "plan"]
+    sets = admin.get_fieldsets()
+    assert len(sets) == 2
+    assert sets[1].title == "Access"
+    assert sets[1].description
+
+
+def test_collapsed_fieldset_is_opt_in():
+    class A(ModelAdmin):
+        model = object
+        fieldsets = [
+            Fieldset(title="Advanced", fields=["x"], collapsed=True),
+            Fieldset(title="Basic", fields=["y"]),
+        ]
+
+    sets = A().get_fieldsets()
+    assert sets[0].collapsed is True
+    assert sets[1].collapsed is False

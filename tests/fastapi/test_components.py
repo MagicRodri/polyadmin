@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.field import DateField, EnumField, StringField
-from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.model_admin import Fieldset, ModelAdmin
 from polyadmin.fastapi.router import create_router
 from polyadmin.ui import ui
 from tests.core.test_model_admin import InMemoryUserAdmin
@@ -374,3 +374,47 @@ def test_filter_drawer_traps_focus():
     assert 'x-trap="open"' in _filterable_page(), (
         "the filter drawer declares aria-modal but does not trap focus"
     )
+
+
+# -- fieldsets ------------------------------------------------------------
+
+
+class FieldsetTaskAdmin(TaskAdmin):
+    fieldsets = [
+        Fieldset(fields=["name"]),
+        Fieldset(title="Scheduling", description="When it is due.", fields=["due_date"]),
+        Fieldset(title="Advanced", fields=["priority"], collapsed=True),
+    ]
+
+
+@pytest.fixture
+def fieldset_client():
+    admin = Admin(model_admins=[FieldsetTaskAdmin()])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app)
+
+
+def test_declared_fieldsets_render_as_titled_groups(fieldset_client):
+    page = fieldset_client.get("/admin/tasks/1/edit").text
+    for want in ("Scheduling", "When it is due.", "Advanced"):
+        assert want in page, f"expected {want!r} in the form"
+    # Every field still renders -- grouping must not drop any.
+    for name in ('name="name"', 'name="due_date"', 'name="priority"'):
+        assert name in page, f"field {name} went missing when grouped"
+
+
+def test_collapsed_fieldset_starts_closed_and_others_open(fieldset_client):
+    page = fieldset_client.get("/admin/tasks/1/edit").text
+    assert 'x-data="{ open: false }"' in page, "expected the collapsed group to start closed"
+    assert 'x-data="{ open: true }"' in page, "expected the uncollapsed titled group to start open"
+
+
+def test_undeclared_fieldsets_render_no_group_chrome(task_client):
+    # The default case must not gain a wrapper: an admin that declares no
+    # fieldsets should render exactly the flat form it always did.
+    page = task_client.get("/admin/tasks/1/edit").text
+    assert ui("fieldset") not in page, (
+        "a form with no declared fieldsets must render no fieldset chrome"
+    )
+    assert 'name="name"' in page, "the flat form still has to render its fields"

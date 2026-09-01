@@ -94,7 +94,7 @@ def build_inline_context(
             continue
 
         child_perms = compute_permissions(admin, principal, child_admin)
-        field_names = [name for name in child_admin.form_fields if name != inline.fk_field]
+        field_names = [name for name in child_admin.get_form_fields() if name != inline.fk_field]
         detail_field_names = [name for name in child_admin.get_detail_fields() if name != inline.fk_field]
 
         rows: list[dict[str, Any]] = []

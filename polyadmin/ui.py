@@ -616,6 +616,21 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         },
     },
 
+    # Form fieldset (Django's `fieldsets`): a titled, collapsible group
+    # of fields inside the record form. A group with no title renders
+    # bare -- no header, no border -- so the default single-group case
+    # looks exactly like the flat form it replaces.
+    "fieldset": {
+        "base": "mb-6 last:mb-0 rounded-lg border border-border bg-muted/20",
+        "parts": {
+            "trigger": "flex w-full items-center justify-between gap-2 rounded-t-lg px-4 py-3 text-left transition-colors hover:bg-muted/40",
+            "title": "text-sm font-semibold text-foreground",
+            "description": "px-4 pb-2 text-sm text-muted-foreground",
+            "body": "border-t border-border p-4",
+            "icon": "size-4 shrink-0 text-muted-foreground transition-transform",
+        },
+    },
+
     "panel": {
         "base": "rounded-lg border border-border bg-card p-4 text-card-foreground",
         "parts": {

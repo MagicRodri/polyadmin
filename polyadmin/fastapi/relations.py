@@ -66,7 +66,7 @@ def compute_relation_options(
     autocomplete_names = set(model_admin.autocomplete_fields)
     result: dict[str, dict[str, Any]] = {}
     for name, field, relation in _relation_fields(
-        model_admin, list(model_admin.form_fields)
+        model_admin, model_admin.get_form_fields()
     ):
         try:
             target_admin = admin.get_model_admin(relation.target)

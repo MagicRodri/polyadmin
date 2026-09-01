@@ -9,10 +9,32 @@ template resolution all live here.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from polyadmin.core.field import Field
 from polyadmin.core.inline import Inline
+
+
+@dataclass
+class Fieldset:
+    """One titled group of form fields -- Django's `fieldsets`.
+
+    A title of None renders the group with no header, which is how the
+    default (undeclared) case renders as a plain flat form.
+
+    `collapsed` only seeds the initial state; the group can always be
+    opened. It is for the sections a form has to carry but rarely needs,
+    which is exactly when a flat form starts to hurt.
+    """
+
+    fields: Sequence[str] = ()
+    title: str | None = None
+    description: str = ""
+    collapsed: bool = False
+
+    def __post_init__(self) -> None:
+        self.fields = list(self.fields)
 
 
 class ModelAdmin:
@@ -33,6 +55,11 @@ class ModelAdmin:
 
     list_display: ClassVar[Sequence[str]] = ()
     form_fields: ClassVar[Sequence[str]] = ()
+    # When set, `fieldsets` defines both the grouping and the form's
+    # field list -- get_form_fields() reports the flattened result, so
+    # there is one source of truth for what the form renders and what
+    # the handler parses. `form_fields` is then unused.
+    fieldsets: ClassVar[Sequence["Fieldset"]] = ()
     search_fields: ClassVar[Sequence[str]] = ()
     detail_fields: ClassVar[Sequence[str] | None] = None
     filters: ClassVar[Sequence[Any]] = ()
@@ -91,7 +118,7 @@ class ModelAdmin:
         declared = {field.name: field for field in self.fields}
         implied_names = [
             *self.list_display,
-            *self.form_fields,
+            *self.get_form_fields(),
             *self.search_fields,
         ]
         for name in implied_names:
@@ -118,10 +145,27 @@ class ModelAdmin:
         """Return the primary key used to build this object's URL."""
         return getattr(obj, "id", None)
 
+    def get_form_fields(self) -> list[str]:
+        if not self.fieldsets:
+            return list(self.form_fields)
+        names: list[str] = []
+        for fieldset in self.fieldsets:
+            names.extend(fieldset.fields)
+        return names
+
+    def get_fieldsets(self) -> list["Fieldset"]:
+        """Always at least one group: the form template renders groups
+        unconditionally, so "none declared" means one unnamed group
+        holding every form field, not zero groups holding nothing.
+        """
+        if not self.fieldsets:
+            return [Fieldset(fields=list(self.form_fields))]
+        return list(self.fieldsets)
+
     def get_detail_fields(self) -> list[str]:
         if self.detail_fields is not None:
             return list(self.detail_fields)
-        return list(dict.fromkeys([*self.list_display, *self.form_fields]))
+        return list(dict.fromkeys([*self.list_display, *self.get_form_fields()]))
 
     def get_action(self, name: str) -> Any | None:
         for action in self.actions:
@@ -173,7 +217,7 @@ class ModelAdmin:
     def validate(self, data: dict[str, Any]) -> dict[str, list[str]]:
         """Run field-level validation over form data. Returns name -> errors."""
         errors: dict[str, list[str]] = {}
-        for name in self.form_fields:
+        for name in self.get_form_fields():
             field_errors = self.get_field(name).validate(data.get(name))
             if field_errors:
                 errors[name] = field_errors

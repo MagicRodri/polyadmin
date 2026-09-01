@@ -35,10 +35,39 @@
         </div>
       </div>
       {% endif %}
-      {% for name in form_fields %}
+      {# Fieldsets (Django's `fieldsets`). An untitled group renders
+         bare -- no header, no border -- so a form that declares none is
+         visually identical to the flat form this replaced. A titled
+         group is always collapsible; `collapsed` only decides whether
+         it starts closed. #}
+      {% for fieldset in fieldsets %}
+      {% if fieldset.title %}
+      <div class="{{ ui('fieldset') }}" x-data="{ open: {{ 'false' if fieldset.collapsed else 'true' }} }"
+           x-id="['fieldset-body']">
+        <button type="button" @click="open = !open"
+                :aria-expanded="open ? 'true' : 'false'" :aria-controls="$id('fieldset-body')"
+                class="{{ ui('fieldset', 'trigger') }}">
+          <span class="{{ ui('fieldset', 'title') }}">{{ fieldset.title }}</span>
+          {{ icon("chevron-down", ui('fieldset', 'icon')) }}
+        </button>
+        {% if fieldset.description %}
+        <p class="{{ ui('fieldset', 'description') }}">{{ fieldset.description }}</p>
+        {% endif %}
+        <div x-show="open" x-collapse :id="$id('fieldset-body')" class="{{ ui('fieldset', 'body') }}">
+          {% for name in fieldset.fields %}
+          {% set field = model_admin.get_field(name) %}
+          {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
+          {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      {% for name in fieldset.fields %}
       {% set field = model_admin.get_field(name) %}
       {% set value = data.get(name) if data is not none else (field.get_value(object) if object is not none else none) %}
       {{ render_form_input(field, value, errors.get(name), relation_options.get(name)) }}
+      {% endfor %}
+      {% endif %}
       {% endfor %}
     </form>
     {# Inline sections carry their own <form> elements, so they have to

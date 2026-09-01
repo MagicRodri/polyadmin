@@ -10,6 +10,7 @@ from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
 from polyadmin.core.action import Action
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
 from polyadmin.core.filter import BooleanFilter
+from polyadmin.core.model_admin import Fieldset
 from polyadmin.core.relation import Relation
 from models import OrganizationRepository, RoleRepository, User, UserRepository
 
@@ -53,7 +54,18 @@ class UserAdmin(ModelAdmin):
     # roles is on the form but not in list_display: a many-to-many
     # column costs a lookup per row and reads as noise in a table, which
     # is why Django keeps it off list_display too.
-    form_fields = ["email", "is_active", "plan", "organization", "roles"]
+    # Grouped rather than flat, to exercise fieldsets -- the other
+    # admins in this app stay flat, so both paths have example coverage.
+    # Declaring these replaces form_fields: the groups are the form's
+    # field list.
+    fieldsets = [
+        Fieldset(fields=["email", "is_active"]),
+        Fieldset(
+            title="Membership",
+            description="Where this user belongs and what they may do.",
+            fields=["plan", "organization", "roles"],
+        ),
+    ]
     search_fields = ["email"]
     filters = [BooleanFilter("is_active")]
     # Routes the "organization" relation through the /lookup endpoint

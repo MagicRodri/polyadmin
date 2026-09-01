@@ -49,7 +49,7 @@ def _parse_list_request(query_params: Any) -> ListRequest:
 
 def _parse_form_data(model_admin: ModelAdmin, form: Any) -> dict[str, Any]:
     data: dict[str, Any] = {}
-    for name in model_admin.form_fields:
+    for name in model_admin.get_form_fields():
         field = model_admin.get_field(name)
         if field.field_type == "boolean":
             data[name] = name in form

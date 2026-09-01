@@ -134,6 +134,44 @@ Common options (Python keyword args / Go `With*` functional options):
 `disabled`/`WithDisabled()`, `default=`/`WithDefault(v)`,
 `help_text=`/`WithHelpText(s)`, `placeholder=`/`WithPlaceholder(s)`.
 
+## Grouping the form: fieldsets
+
+By default a form is one flat column in `FormFieldNames`/`form_fields`
+order. Past about eight fields that stops being readable, so fields can
+be grouped into titled sections — Django's `fieldsets`:
+
+```go
+DeclaredFieldsets: []core.Fieldset{
+    {Fields: []string{"Email", "IsActive"}},
+    {Title: "Membership", Description: "Where this user belongs.",
+        Fields: []string{"Plan", "Organization"}},
+    {Title: "Advanced", Fields: []string{"APIKey"}, Collapsed: true},
+},
+```
+
+```python
+fieldsets = [
+    Fieldset(fields=["email", "is_active"]),
+    Fieldset(title="Membership", description="Where this user belongs.",
+             fields=["plan", "organization"]),
+    Fieldset(title="Advanced", fields=["api_key"], collapsed=True),
+]
+```
+
+Three rules are worth knowing:
+
+- **Declaring fieldsets replaces the flat field list.** The groups *are*
+  the form's fields, in the order given, so `FormFields()` /
+  `get_form_fields()` reports the flattened result and the handler
+  parses exactly what was rendered. `FormFieldNames`/`form_fields` is
+  ignored once fieldsets are set — one source of truth, not two.
+- **A group with no title renders bare** — no header, no border. That is
+  what makes the default case (no fieldsets declared, one implicit
+  unnamed group) identical to the flat form, and it lets you keep a few
+  lead fields ungrouped above the titled sections.
+- **A titled group is always collapsible.** `Collapsed`/`collapsed` only
+  decides whether it *starts* closed; the reader can always open it.
+
 ## The CRUD lifecycle
 
 Five hooks, all of which you implement against your own storage —
