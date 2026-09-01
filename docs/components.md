@@ -122,7 +122,8 @@ says otherwise.
 | `textarea` | size `size-default` | Native. |
 | `select` | sizes `size-default/sm/auto` | The base class list, now used only as the trigger *button* of the styled Selects — `ui/select.html` for a single value and `ui/multi-select.html` (`size-auto`, so it grows as chips wrap) for a many-to-many. The native `<select>` it was named for survives only in the compact tabular-inline cells. |
 | `label` | — | |
-| `checkbox`, `radio` | — | Native, tinted with `accent-primary`. A custom listbox gains nothing over the native control here (no multi-item list, no search), so these stay native. |
+| `checkbox` | — | A native `<input>` with `appearance-none`, restyled to shadcn's Checkbox: the box comes from these classes and the check glyph from a `.ui-checkbox:checked` rule in `theme.html` (see there for why it is not a class). Used for row selection in the list table. |
+| `radio` | — | Native, tinted with `accent-primary`. A custom control gains nothing over the native one here, so it stays native. |
 | `switch` | parts `input`, `track`, `thumb` | A native checkbox styled as shadcn's Switch: `sr-only` input plus sibling track/thumb driven by `peer-checked:`, so it toggles with no JavaScript and posts like any checkbox. Used by generated boolean fields (inline with the label) and by custom pages via the `switch` wrapper. |
 | `badge` | variants `default`, `secondary`, `destructive`, `outline` | Available; not yet used by a framework view. |
 | `card` | parts `header`, `title`, `description`, `content`, `footer` | |

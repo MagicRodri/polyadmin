@@ -20,6 +20,9 @@
       {% for name in detail_fields %}
       {% set field = model_admin.get_field(name) %}
       <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
+        {# A field's help_text deliberately does not appear here: it
+           explains how to fill a field in, which is a question the form
+           answers and this page does not ask. See ui/field.html. #}
         <dt class="text-sm font-medium text-muted-foreground">{{ field.label }}</dt>
         <dd class="text-sm text-foreground sm:col-span-2">{{ render_field_value(field, field.get_value(object)) }}</dd>
       </div>

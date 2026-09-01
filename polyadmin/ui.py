@@ -554,8 +554,14 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             # A boolean field puts its control on the same row as its
             # name (Django Unfold's treatment): a toggle reads as a
             # setting, and a setting's name belongs beside it.
-            "row": "flex items-center justify-between gap-4",
-            "row-text": "min-w-0 flex-1",
+            # items-start, not items-center: with a description the text
+            # block is two lines, and centring the control against it
+            # leaves it sitting low next to the name. row-label gives the
+            # label a 20px line box to match the switch's height, so
+            # top-aligning them reads as centred either way.
+            "row": "flex items-start gap-2",
+            "row-text": "min-w-0",
+            "row-label": "leading-5",
             # A read-only field's value, shown instead of a control.
             # Deliberately not input-shaped: a disabled-looking box
             # invites clicking at it, a plain value does not.

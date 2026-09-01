@@ -78,11 +78,17 @@ class UserAdmin(ModelAdmin):
         Action("deactivate", _deactivate, label="Deactivate", confirm="Deactivate the selected users?"),
     ]
     fields = [
-        EmailField("email", required=True),
-        BooleanField("is_active", default=True),
+        # help_text is where an ORM/DB column comment lands. It shows
+        # under the control on the form and under the label on the
+        # detail page.
+        EmailField("email", required=True,
+                   help_text="Used to sign in, and the address notifications go to."),
+        BooleanField("is_active", default=True,
+                     help_text="Inactive users keep their data but cannot sign in."),
         # Enum + choices renders as ui/select: a hidden input carries the
         # value, so it posts like a native <select>.
-        EnumField("plan", choices=["Free", "Pro", "Enterprise"], default="Free"),
+        EnumField("plan", choices=["Free", "Pro", "Enterprise"], default="Free",
+                  help_text="Determines feature limits and billing tier."),
         ForeignKeyField("organization", relation=ORGANIZATION_RELATION),
         # Renders as the searchable multi-select
         # (components/ui/multi-select.html) -- the whole point of

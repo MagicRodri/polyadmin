@@ -495,9 +495,52 @@ def test_boolean_field_renders_as_a_switch_inline_with_its_label():
     assert 'type="checkbox" id="field-is_active" name="is_active" value="true"' in page, (
         "the switch must still be a native checkbox posting the field's own name"
     )
+    # Order matters and the assertions above would pass either way: the
+    # switch sits to the left of the name it belongs to.
+    assert page.index('id="field-is_active"') < page.index('for="field-is_active"'), (
+        "expected the switch before its label, not after it"
+    )
 
 
 def test_non_boolean_fields_keep_the_stacked_layout(task_client):
     # The inline row is specific to booleans.
     page = task_client.get("/admin/tasks/create").text
     assert ui("field", "row") not in page
+
+
+# -- field descriptions ---------------------------------------------------
+
+
+class DescribedTaskAdmin(TaskAdmin):
+    fields = [
+        StringField("name", required=True, help_text="What the task is called."),
+        DateField("due_date"),
+        EnumField("priority", choices=["Low", "Medium", "High"]),
+    ]
+
+
+@pytest.fixture
+def described_client():
+    admin = Admin(model_admins=[DescribedTaskAdmin()])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app)
+
+
+# A field's help text is where an ORM/DB column comment lands. It
+# belongs to the form, which is where someone is being asked to fill the
+# field in.
+def test_field_description_shows_on_the_form(described_client):
+    assert "What the task is called." in described_client.get("/admin/tasks/1/edit").text
+
+
+# The detail page asks nothing, so it shows no help text -- it would be
+# instructions next to a value nobody is editing.
+def test_field_description_does_not_show_on_the_detail_page(described_client):
+    assert "What the task is called." not in described_client.get("/admin/tasks/1").text
+
+
+def test_field_without_a_description_renders_none(described_client):
+    # Three fields, one of which has help text.
+    page = described_client.get("/admin/tasks/1/edit").text
+    assert page.count(ui("field", "description")) == 1

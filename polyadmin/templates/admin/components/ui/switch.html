@@ -32,10 +32,10 @@
 
 {% macro switch(name, label, checked=false, help=none) %}
 <div class="mb-4 {{ ui('field', 'row') }}">
+  {{ switch_control(name, "switch-" ~ name, checked) }}
   <span class="{{ ui('field', 'row-text') }}">
     <label for="switch-{{ name }}" class="{{ ui('label') }}">{{ label }}</label>
     {% if help %}<p class="{{ ui('field', 'description') }}">{{ help }}</p>{% endif %}
   </span>
-  {{ switch_control(name, "switch-" ~ name, checked) }}
 </div>
 {% endmacro %}
