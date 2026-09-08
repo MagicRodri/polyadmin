@@ -1,18 +1,14 @@
-{# Toast notifications, adapted from PinesUI's Toast component
-   (devdojo.com/pines/docs/toast), restyled onto the shadcn tokens
-   (shadcn's own toast is Sonner, the same shape). Pines' own implementation includes
-   an elaborate peek-stack/hover-expand animation tuned for many
-   concurrent toasts; this framework only ever shows the handful of
-   short-lived flash messages left by a redirect, so that
-   choreography is trimmed to a plain vertical stack -- everything else
-   (per-type icon/color, slide transition, auto-dismiss, dismiss
-   button, the global `toast()` trigger function) is kept.
+{# Toast notifications, adapted from PinesUI's Toast and restyled onto
+   the shadcn tokens. Its own peek-stack/hover-expand animation is tuned
+   for many concurrent toasts; this framework only ever shows the
+   handful of short-lived flash messages a redirect leaves, so that
+   choreography is trimmed to a plain vertical stack. Everything else --
+   per-type icon, slide transition, auto-dismiss, the global `toast()`
+   trigger -- is kept.
 
-   Flash messages come in as plain data (`messages`, a list of
-   {level, text} dicts) rather than a JS call, so they're relayed into
-   `toast()` via a hidden data-* element read by a tiny script below --
-   the same safe pattern components/ui/field.html's combobox uses, so a
-   message containing quotes can never break out of an interpolated JS
+   Flash messages arrive as plain data rather than a JS call, and are
+   relayed into `toast()` through a hidden data-* element, so a message
+   containing quotes can never break out of an interpolated JS
    string. #}
 {% if messages %}
 <div id="flash-messages" class="hidden" aria-hidden="true">
@@ -37,11 +33,9 @@
           x-init="setTimeout(() => show = true, 10);
                   setTimeout(() => { show = false; setTimeout(() => toasts.splice(toasts.indexOf(toast), 1), 200) }, 4000)"
           x-show="show"
-          {# Rises from below and leaves to the right, matching
-              shadcn's bottom-right viewport (slide-in-from-bottom /
-              slide-out-to-right). The old -translate-y-2 dropped it
-              from above, which reads backwards from a corner it now
-              sits in. #}
+          {# Rises from below and leaves to the right, matching the
+             bottom-right viewport: dropping it from above reads
+             backwards from the corner it sits in. #}
           x-transition:enter="transition ease-out duration-300"
           x-transition:enter-start="opacity-0 translate-y-2"
           x-transition:enter-end="opacity-100 translate-y-0"

@@ -1,9 +1,6 @@
-{# Search bar. Auto-submits via HTMX, swapping just
-   #resource-list -- carries the current filters/sort along as hidden
-   fields so searching never clears them. Filters live in their own
-   component (components/ui/filter-panel.html), a right-hand drawer
-   behind a single toolbar trigger, rather than <select> options in
-   this same form. #}
+{# Search bar. Auto-submits via HTMX, swapping just #resource-list, and
+   carries the current filters and sort as hidden fields so searching
+   never clears them. #}
 <form class="{{ ui('toolbar', 'item') }}"
   hx-get="{{ base_path }}/{{ model_admin.get_slug() }}"
   hx-target="#resource-list"

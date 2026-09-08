@@ -1,4 +1,4 @@
-"""The login page's handlers. Mirrors go-polyadmin/fiber/login.go."""
+"""The login page's handlers."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             # response, while Starlette has no "current response" to
             # reach for -- see core/login.py.
             admin.login_backend.begin_session(request, principal, response)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 -- see below
             # The credentials were right but the session could not be
             # stored, so the visitor is not signed in and must not be
             # told they are. Logged for the operator, generic on screen.
@@ -96,7 +96,7 @@ def build_logout_handler(admin: Admin, base_path: str):
         response = redirect(request, f"{base_path}/login?signedout=1")
         try:
             admin.login_backend.end_session(request, response)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 -- see below
             # Nothing useful to offer the visitor here: they asked to
             # leave, and the most likely reason this failed is that there
             # was nothing to clear.

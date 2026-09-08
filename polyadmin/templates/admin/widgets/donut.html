@@ -1,13 +1,11 @@
-{# Donut/pie breakdown widget, adapted from Flowbite's admin-dashboard
-   "Traffic by device" card into a PinesUI-styled, dependency-free SVG
-   ring (same "no charting-library" stance as widgets/chart.html) -- a
-   handful of stacked <circle> arcs plus a legend.
+{# Share-of-total breakdown as a dependency-free SVG ring -- stacked
+   <circle> arcs plus a legend, the same no-charting-library stance as
+   widgets/chart.html.
 
-   Hovering either a slice or its legend row highlights both and swaps
-   the ring's center label to that slice's share. `active` is compared
-   against a plain loop index, never a label, so nothing dynamic ever
-   has to be interpolated into the Alpine expression itself -- labels
-   only ever appear as ordinary (auto-escaped) HTML text. #}
+   Hovering a slice or its legend row highlights both and swaps the
+   ring's centre label. `active` is compared against a plain loop index,
+   never a label, so nothing dynamic is interpolated into the Alpine
+   expression. #}
 <div x-data="{ active: null }" class="flex flex-col items-center gap-6 sm:flex-row">
   <div class="relative h-36 w-36 shrink-0">
     <svg viewBox="0 0 36 36" class="h-36 w-36">

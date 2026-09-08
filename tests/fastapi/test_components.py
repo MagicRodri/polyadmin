@@ -1,4 +1,4 @@
-"""Phase B/D component rendering -- mirrors go-polyadmin/fiber/components_test.go."""
+"""Phase B/D component rendering."""
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -10,9 +10,6 @@ from polyadmin.fastapi.router import create_router
 from polyadmin.ui import ui
 from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin
-
-
-# -- date picker (Phase D) ----------------------------------------------
 
 
 class Task:
@@ -111,9 +108,6 @@ def _filterable_page(query: str = "") -> str:
     return TestClient(app).get("/admin/users" + query).text
 
 
-# Filtering is one drawer behind one toolbar trigger (Django admin's
-# filter column, in Unfold's drawer form), not a dropdown per filter --
-# so a ModelAdmin's filter count costs the toolbar nothing.
 def test_filters_render_as_one_drawer_behind_one_trigger():
     page = _filterable_page()
 
@@ -124,8 +118,6 @@ def test_filters_render_as_one_drawer_behind_one_trigger():
     assert ui("sheet", "side-right") in page, "expected the drawer to come in from the right"
 
 
-# The trigger carries a count so the drawer says how much it's hiding
-# without being opened -- and only once something is applied.
 def test_filter_trigger_counts_only_applied_filters():
     count = ui("filter-panel", "count")
     assert count not in _filterable_page(), "expected no count badge while nothing is filtered"
@@ -133,19 +125,12 @@ def test_filter_trigger_counts_only_applied_filters():
     assert count in applied, "expected a count badge once a filter is applied"
 
 
-# Reset clears search *and* every filter, so it lives with the things it
-# clears -- in the drawer's footer -- which is also what keeps the
-# stacked mobile toolbar to its five controls.
 def test_reset_lives_in_the_drawer_and_only_when_something_is_applied():
     assert "Clear all" not in _filterable_page(), "expected no Reset while nothing is applied"
     applied = _filterable_page("?filter[is_active]=true")
     assert "Clear all" in applied, "expected Reset in the drawer once a filter is applied"
 
 
-# Every toolbar control fills its own line while the toolbar is a single
-# stacked column below sm. The ones wrapped in a <form> or a positioning
-# <div> can't inherit that from the flex row, so each carries
-# ui('toolbar', 'item') itself.
 def test_toolbar_controls_fill_their_line_while_stacked():
     item = ui("toolbar", "item")
     page = _filterable_page()
@@ -156,9 +141,6 @@ def test_toolbar_controls_fill_their_line_while_stacked():
     )
 
 
-# A stacked toolbar control is a full-width bar, so its label goes hard
-# left and its icon hard right rather than sitting centred. Every control
-# that has both carries the pair.
 def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
     label = ui("toolbar", "item-label")
     icon_class = ui("toolbar", "item-icon")
@@ -177,10 +159,6 @@ def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
     )
 
 
-# A label is arbitrary application text, so it reaches Alpine as a data
-# attribute the browser decodes -- never quoted into the x-data
-# expression, where one stray quote closes the attribute and every select
-# on the page fails to initialise. tojson did exactly that.
 def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
     page = task_client.get("/admin/tasks/1/edit").text
 
@@ -199,9 +177,6 @@ def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
     # precise form of the same guarantee.)
 
 
-# -- booleans as icons ----------------------------------------------------
-
-
 def _boolean_client():
     user_admin = InMemoryUserAdmin()
     admin = Admin(model_admins=[user_admin])
@@ -210,9 +185,6 @@ def _boolean_client():
     return TestClient(app), user_admin
 
 
-# A column of booleans is scannable as glyphs and not as two
-# similar-length words, so list cells render a check or a cross. The word
-# stays as an sr-only label, so nothing depends on the icon alone.
 def test_boolean_cells_render_as_icons_with_an_accessible_label():
     client, user_admin = _boolean_client()
     user_admin.create({"email": "yes@example.com", "is_active": True})
@@ -230,9 +202,6 @@ def test_boolean_cells_render_as_icons_with_an_accessible_label():
     assert 'dark:text-emerald-400">Yes<' not in page
 
 
-# Exports stringify through core/exporter.py, never through
-# render_field_value, so a CSV still carries a readable value rather
-# than an SVG.
 def test_boolean_export_is_unaffected_by_the_icon_rendering():
     client, user_admin = _boolean_client()
     user_admin.create({"email": "yes@example.com", "is_active": True})
@@ -240,9 +209,6 @@ def test_boolean_export_is_unaffected_by_the_icon_rendering():
     csv = client.get("/admin/users/export/csv").text
     assert "<svg" not in csv and "sr-only" not in csv, f"export leaked list markup: {csv}"
     assert "True" in csv or "true" in csv, f"expected the boolean as text in the export, got {csv}"
-
-
-# -- shadcn Select for plain choice fields -------------------------------
 
 
 def test_enum_field_renders_shadcn_select_not_native_options(task_client):
@@ -259,9 +225,6 @@ def test_enum_field_select_lists_all_choices_as_options(task_client):
         assert want in page, f"expected choice {want!r} as a listbox option"
 
 
-# -- export dropdown (Phase B) ------------------------------------------
-
-
 def test_list_renders_export_dropdown_rather_than_one_button_per_format():
     admin = Admin(model_admins=[InMemoryUserAdmin()])
     app = FastAPI()
@@ -272,9 +235,6 @@ def test_list_renders_export_dropdown_rather_than_one_button_per_format():
     assert "/admin/users/export/csv" in page
     assert "/admin/users/export/xlsx" in page
     assert 'role="menuitem"' in page
-
-
-# -- list-view reordering ------------------------------------------------
 
 
 def test_list_shows_drag_handle_only_when_reorderable():
@@ -312,9 +272,6 @@ def test_list_row_actions_render_as_one_dropdown_menu():
     assert 'title="Delete"' not in page
 
 
-# -- combobox (Phase D) -------------------------------------------------
-
-
 def test_combobox_uses_token_classes():
     # The autocomplete relation field is the one genuinely Alpine-driven
     # form control; its panel/active-item classes must come from the
@@ -347,9 +304,6 @@ def test_toast_viewport_sits_bottom_right_and_does_not_block_clicks():
     assert viewport in page
 
 
-# The listbox-ish components declare ARIA roles, which is a promise to
-# assistive tech that the keyboard works. These pin the mechanics that
-# make the promise true; the behaviour itself is exercised in a browser.
 def test_select_is_keyboard_operable(task_client):
     page = task_client.get("/admin/tasks/1/edit").text
 
@@ -375,9 +329,6 @@ def test_filter_drawer_traps_focus():
     assert 'x-trap="open"' in _filterable_page(), (
         "the filter drawer declares aria-modal but does not trap focus"
     )
-
-
-# -- fieldsets ------------------------------------------------------------
 
 
 class FieldsetTaskAdmin(TaskAdmin):
@@ -419,9 +370,6 @@ def test_undeclared_fieldsets_render_no_group_chrome(task_client):
         "a form with no declared fieldsets must render no fieldset chrome"
     )
     assert 'name="name"' in page, "the flat form still has to render its fields"
-
-
-# -- read-only fields -----------------------------------------------------
 
 
 class ReadOnlyTaskAdmin(TaskAdmin):
@@ -475,9 +423,6 @@ def test_readonly_field_renders_as_a_value_not_an_input(readonly_client):
     assert 'name="priority"' in page, "writable fields must still render inputs"
 
 
-# -- boolean fields render as an inline switch ---------------------------
-
-
 def test_boolean_field_renders_as_a_switch_inline_with_its_label():
     # Django Unfold's treatment: a toggle beside its name, not a
     # checkbox stacked under a label.
@@ -508,9 +453,6 @@ def test_non_boolean_fields_keep_the_stacked_layout(task_client):
     assert ui("field", "row") not in page
 
 
-# -- field descriptions ---------------------------------------------------
-
-
 class DescribedTaskAdmin(TaskAdmin):
     fields = [
         StringField("name", required=True, help_text="What the task is called."),
@@ -527,15 +469,10 @@ def described_client():
     return TestClient(app)
 
 
-# A field's help text is where an ORM/DB column comment lands. It
-# belongs to the form, which is where someone is being asked to fill the
-# field in.
 def test_field_description_shows_on_the_form(described_client):
     assert "What the task is called." in described_client.get("/admin/tasks/1/edit").text
 
 
-# The detail page asks nothing, so it shows no help text -- it would be
-# instructions next to a value nobody is editing.
 def test_field_description_does_not_show_on_the_detail_page(described_client):
     assert "What the task is called." not in described_client.get("/admin/tasks/1").text
 

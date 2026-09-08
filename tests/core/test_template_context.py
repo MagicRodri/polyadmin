@@ -1,7 +1,13 @@
 from polyadmin.core.admin import Admin
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import paginate
-from polyadmin.core.template_context import GROUP_ICON, build_nav, category_breadcrumb, dashboard_context, list_context
+from polyadmin.core.template_context import (
+    GROUP_ICON,
+    build_nav,
+    category_breadcrumb,
+    dashboard_context,
+    list_context,
+)
 
 
 class User:

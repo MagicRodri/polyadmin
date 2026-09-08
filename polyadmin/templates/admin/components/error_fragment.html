@@ -1,0 +1,6 @@
+{# The same failure as admin/error.html, for an htmx request. A whole
+   document swapped into a table cell would be nonsense, so this is just the
+   alert -- htmx puts it where the failed interaction was. #}
+<div role="alert" class="{{ ui('alert', 'destructive') }}">
+  <p class="{{ ui('alert', 'description') }}">{{ message }}</p>
+</div>

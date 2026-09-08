@@ -22,22 +22,14 @@
   {{ multi_select_script() }}
   {% block extra_head %}{% endblock %}
 </head>
-{# bg-background/text-foreground rather than a literal palette: these
-   resolve through the CSS variables in theme.html, so the whole admin
-   follows the active theme (and dark mode) without a single template
-   knowing which one is active. #}
-{# SidebarProvider, from shadcn/ui's sidebar-07 block. Its three pieces
-   of state live here on <body> so every descendant can read them:
-
-     collapsed  -- desktop icon-rail mode. Seeded from the sidebar_state
-                   cookie (the same name shadcn's own provider uses) so
-                   the choice survives a reload, and written back on
-                   every toggle.
-     sidebarOpen -- the mobile sheet, which is a separate axis: a phone
-                   has no icon rail, it has an overlay.
-
-   The block's Cmd/Ctrl+B shortcut is wired on <body> too, since it has
-   to work wherever focus happens to be. #}
+{# These resolve through theme.html's variables, so the admin follows
+   the active theme without a template knowing which one it is. #}
+{# SidebarProvider, from shadcn's sidebar-07 block. Its state lives on
+   <body> so every descendant can read it: `collapsed` is the desktop
+   icon-rail mode, seeded from the sidebar_state cookie so the choice
+   survives a reload; `sidebarOpen` is the mobile sheet, a separate
+   axis, because a phone has an overlay rather than a rail. Cmd/Ctrl+B
+   is wired here too, so it works wherever focus is. #}
 <body class="h-full bg-background text-foreground antialiased"
       x-data="{
         sidebarOpen: false,
@@ -53,11 +45,10 @@
   {% include "admin/components/toasts.html" %}
   {% include "admin/components/action_confirm_modal.html" %}
   <div class="flex h-full">
-    {# Sheet, ported from shadcn/ui (Radix Dialog with a slide
-       transition): below md the sidebar *is* a sheet -- overlay plus
-       off-canvas panel -- and at md and up it becomes the static,
-       collapsible column. One element does both jobs, so there's no
-       duplicate nav markup to keep in sync. #}
+    {# Below md the sidebar *is* a sheet -- overlay plus off-canvas
+       panel -- and from md up it becomes the static collapsible
+       column. One element does both jobs, so there is no duplicate nav
+       markup to keep in sync. #}
     <div x-cloak x-show="sidebarOpen" x-transition.opacity.duration.300ms=""
          @click="sidebarOpen = false" class="{{ ui('sheet', 'overlay') }} md:hidden"></div>
 
@@ -82,12 +73,11 @@
         </div>
         {{ theme_toggle() }}
       </header>
-      {# overflow-y-auto is explicit rather than inherited from the
-         overflow-x-hidden shorthand's side effect (a visible axis
-         paired with a clipped one computes to auto): record pages
-         resolve min-h-full against this element and pin their action
-         bar to it with position:sticky, so it has to be the scroll
-         container on purpose, not by accident. #}
+      {# overflow-y-auto is explicit, not inherited from
+         overflow-x-hidden's side effect: record pages resolve
+         min-h-full against this element and pin their action bar to it
+         with position:sticky, so it has to be the scroll container on
+         purpose. #}
       <main class="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4">
         {% block content %}{% endblock %}
       </main>

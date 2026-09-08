@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.fastapi.router import create_router
-from tests.core.test_model_admin import InMemoryUserAdmin
 from tests.conftest import csrf
+from tests.core.test_model_admin import InMemoryUserAdmin
 
 
 def make_client():

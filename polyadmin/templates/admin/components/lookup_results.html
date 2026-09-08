@@ -1,16 +1,12 @@
-{# HTML fragment returned by GET /{slug}/lookup?q=...,
-   swapped into the relation command's results panel
-   (components/ui/field.html). `selectItem` is defined on the ancestor
-   command widget's Alpine x-data -- Alpine's mutation observer binds
-   @click on these items once htmx swaps them in, same as any other
-   dynamically-inserted content. pk/label flow through data-* attributes
-   rather than an interpolated JS expression, so a label containing
-   quotes or backslashes can never break the handler.
+{# The fragment returned by GET /{slug}/lookup?q=..., swapped into the
+   relation combobox's results panel. `selectItem` lives on the
+   ancestor's x-data: Alpine's mutation observer binds @click on these
+   items once htmx swaps them in. pk and label ride in on data-*
+   attributes, so a label containing quotes cannot break the handler.
 
-   role="option" is what makes the results panel an actual listbox for
-   assistive tech -- the panel itself carries role="listbox" and the
-   search input names the highlighted item through aria-activedescendant
-   (see components/ui/field.html). #}
+   role="option" is what makes the panel a real listbox for assistive
+   tech, alongside the panel's role="listbox" and the search input's
+   aria-activedescendant. #}
 {% for pk, label in options %}
 <div role="option" data-pk="{{ pk }}" data-label="{{ label }}"
      @click="selectItem($el.dataset.pk, $el.dataset.label)"

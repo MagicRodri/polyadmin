@@ -56,7 +56,7 @@ class TabularInline(Inline):
 
 
 def filter_inline_children(
-    child_admin: "ModelAdmin", fk_field: str, parent_admin: "ModelAdmin", parent_pk: Any
+    child_admin: ModelAdmin, fk_field: str, parent_admin: ModelAdmin, parent_pk: Any
 ) -> list[Any]:
     """Children of `child_admin` whose `fk_field` points at the object
     identified by `parent_pk` on `parent_admin` -- filters
@@ -76,3 +76,10 @@ def filter_inline_children(
         if str(parent_admin.get_pk(related)) == parent_pk_str:
             result.append(obj)
     return result
+
+
+# How many options a tabular inline's many-to-many listbox shows before
+# it scrolls. Four keeps the row close to the height of the single-line
+# controls beside it, which is what makes the table read as rows rather
+# than as stacked blocks.
+INLINE_MULTISELECT_ROWS = 4

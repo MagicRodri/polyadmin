@@ -1,8 +1,6 @@
-{# Inline related records (Django-admin StackedInline/TabularInline
-   style) -- see docs/inlines.md. One entry in the `inlines` context
-   list per ModelAdmin.inlines declaration; render_inline_section
-   dispatches on .mode (placeholder/readonly/edit) and .layout
-   (stacked/tabular). #}
+{# Inline related records -- see docs/inlines.md. One entry in the
+   `inlines` context list per ModelAdmin.inlines declaration;
+   render_inline_section dispatches on .mode and .layout. #}
 {% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/icons.html" import icon %}
@@ -70,31 +68,42 @@
 {% endif %}
 {% endmacro %}
 
-{# -- tabular, editable ------------------------------------------------
-   No <form> element -- HTML forbids <form> as a table row/cell
-   descendant. Save uses hx-post + hx-include="closest tr" (htmx's
-   documented extended-selector syntax) since there's no enclosing
-   <form> to submit. #}
+{# No <form> element: HTML forbids one as a table row or cell
+   descendant. Save uses hx-post plus hx-include="closest tr", since
+   there is no enclosing <form> to submit. #}
 {% macro render_inline_table_cell_input(field, value, errors, relation) %}
-{% set field_classes = "{{ ui('input', 'size-sm') }}" %}
+{# Called, not quoted. This was a string literal containing Jinja
+   delimiters -- Jinja never re-renders a value, so the raw text landed
+   in the class attribute and every control in an inline edit row
+   rendered unstyled: white on white in dark mode. #}
+{% set field_classes = ui('input', 'size-sm') %}
+{% set select_classes = ui('select', 'cell') %}
 {% if field.field_type == "boolean" %}
 <input type="checkbox" name="{{ field.name }}" value="true" autocomplete="off" {% if value %}checked{% endif %}
        class="{{ ui('checkbox') }}">
 {% elif field.field_type in ("foreignkey", "onetoone") %}
-<select name="{{ field.name }}" autocomplete="off" class="{{ field_classes }}">
+<select name="{{ field.name }}" autocomplete="off" class="{{ select_classes }}">
   <option value="">&mdash;</option>
   {% for pk, label in (relation.options if relation else []) %}
   <option value="{{ pk }}" {% if relation and pk == relation.selected_pk %}selected{% endif %}>{{ label }}</option>
   {% endfor %}
 </select>
 {% elif field.field_type == "manytomany" %}
-<select multiple name="{{ field.name }}" autocomplete="off" size="{{ [(relation.options|length if relation else 1), 1] | max }}" class="{{ field_classes }} h-auto">
+{# Capped, and the cap is the whole point: sizing the listbox to the
+   option count made every row as tall as the longest option list --
+   eight roles gave a 195px row, and three such rows filled the
+   viewport. Past the cap a native <select multiple> scrolls internally,
+   which is the ScrollArea behaviour here; the scroll-area classes only
+   restyle that scrollbar onto the theme. #}
+<select multiple name="{{ field.name }}" autocomplete="off"
+        size="{{ [[(relation.options|length if relation else 1), 1] | max, INLINE_MULTISELECT_ROWS] | min }}"
+        class="{{ ui('select', 'cell-multi') }} {{ ui('scroll-area', 'y') }}">
   {% for pk, label in (relation.options if relation else []) %}
   <option value="{{ pk }}" {% if relation and pk in relation.selected_pks %}selected{% endif %}>{{ label }}</option>
   {% endfor %}
 </select>
 {% elif field.field_type == "enum" %}
-<select name="{{ field.name }}" autocomplete="off" class="{{ field_classes }}">
+<select name="{{ field.name }}" autocomplete="off" class="{{ select_classes }}">
   {% for choice in field.choices %}
   <option value="{{ choice }}" {% if choice == value %}selected{% endif %}>{{ choice }}</option>
   {% endfor %}
@@ -109,6 +118,10 @@
 
 {% macro render_inline_editable_table(inline) %}
 <div class="{{ ui('table', 'wrapper') }}">
+{# The wrapper is overflow-hidden (it owns the rounded border), so
+   without this the table is clipped at the card's edge and the row's own
+   actions become unreachable. #}
+<div class="{{ ui('table', 'scroll') }}">
 <table class="min-w-full divide-y divide-border">
   <thead class="bg-muted/50"><tr>
     {% for name in inline.field_names %}
@@ -160,6 +173,9 @@
     {% endif %}
   </tbody>
 </table>
+</div>
+{# The empty state sits outside the scroller: there is nothing to
+   scroll, and a centred message inside a scrolling box drifts. #}
 {% if not inline.rows and not inline.add_row %}
 <p class="{{ ui('table', 'empty') }}">No {{ inline.label|lower }}.</p>
 {% endif %}
@@ -176,7 +192,7 @@
     {% set field = inline.child_admin.get_field(name) %}
     <div class="flex justify-between gap-4 py-1 text-sm">
       <dt class="text-muted-foreground">{{ field.label }}</dt>
-      <dd class="text-right">{{ render_field_value(field, field.get_value(row.obj)) }}</dd>
+      <dd class="text-right">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</dd>
     </div>
     {% endfor %}
   </dl>
@@ -187,6 +203,10 @@
 
 {% macro render_inline_readonly_table(inline) %}
 <div class="{{ ui('table', 'wrapper') }}">
+{# The wrapper is overflow-hidden (it owns the rounded border), so
+   without this the table is clipped at the card's edge and the row's own
+   actions become unreachable. #}
+<div class="{{ ui('table', 'scroll') }}">
 <table class="min-w-full divide-y divide-border">
   <thead class="bg-muted/50"><tr>
     {% for name in inline.detail_field_names %}
@@ -199,14 +219,20 @@
       {% for name in inline.detail_field_names %}
       {% set field = inline.child_admin.get_field(name) %}
       <td class="px-3 py-2 text-sm">
-        {% if loop.first %}<a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ render_field_value(field, field.get_value(row.obj)) }}</a>
-        {% else %}{{ render_field_value(field, field.get_value(row.obj)) }}{% endif %}
+        {% if loop.first %}<a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</a>
+        {# A relation with several targets renders as a comma-joined run
+           of links, and in a table cell that wraps: one record with
+           three of them made the row three lines tall and widened the
+           column enough to push the row's own actions off the card. #}
+        {% elif field.field_type == "manytomany" %}<span class="{{ ui('scroll-area', 'x') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</span>
+        {% else %}{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}{% endif %}
       </td>
       {% endfor %}
     </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% if not inline.rows %}<p class="{{ ui('table', 'empty') }}">No {{ inline.label|lower }}.</p>{% endif %}
 </div>
 {% endmacro %}

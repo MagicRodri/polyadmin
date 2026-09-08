@@ -5,23 +5,18 @@
    instead of stacked above the table -- row checkboxes still reference
    the form it renders via the HTML `form=` attribute (see
    ui/table.html), so the form itself never has to wrap the table.
-   Mirrors go-polyadmin/templates/admin/components/ui/table.html's
-   "ui/bulk-actions" define block.
 
-   Picking an action from the listbox submits immediately -- there is
-   no separate "Apply" step -- by writing the chosen action's route
-   onto the form's own `action` and calling requestSubmit() (not
-   .submit(), which would skip the onsubmit handler that runs the
-   confirm-or-not decision below).
+   Picking an action submits immediately, with no separate "Apply"
+   step: it writes the chosen route onto the form's `action` and calls
+   requestSubmit(), not .submit(), which would skip the onsubmit
+   handler running the confirm decision below.
 
-   The route and confirmation text both ride in as data-url/
-   data-confirm on the clicked item, read back out through $el.dataset
-   rather than interpolated into the @click expression -- same
-   reasoning as action_confirm_modal.html's doc comment: neither value
-   should have to survive being embedded in a JS string.
+   The route and confirmation text ride in as data-url/data-confirm on
+   the clicked item and are read back through $el.dataset, so neither
+   has to survive being embedded in a JS string.
 
-   Included (not a macro) from components/list_content.html, sharing
-   its ambient context (actions, base_path, model_admin). #}
+   Included, not a macro, so it shares list_content.html's ambient
+   context (actions, base_path, model_admin). #}
 {% if actions %}
 <form id="bulk-actions-form" method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/"
       onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)"

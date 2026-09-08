@@ -18,13 +18,29 @@ from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
-from polyadmin.core.pagination import page_of, paginate
-from polyadmin.core.query import ListRequest, list_objects
+from polyadmin.core.pagination import page_of
+from polyadmin.core.query import ListRequest, apply_defaults, list_objects
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
-from polyadmin.fastapi.relations import compute_relation_options, compute_relation_permissions
-from polyadmin.fastapi.responses import clear_flash, is_htmx_request, pop_flash, redirect, set_flash
+from polyadmin.fastapi.errors import forbidden, not_found
+from polyadmin.fastapi.relations import (
+    compute_relation_options,
+    compute_relation_permissions,
+)
+from polyadmin.fastapi.responses import (
+    clear_flash,
+    is_htmx_request,
+    pop_flash,
+    redirect,
+    set_flash,
+)
 from polyadmin.templating import Renderer
+
+# The submit buttons meaning something other than "save and show me the
+# record". An unclicked submit button's name never reaches the server, so
+# the handler reads presence rather than a value.
+SAVE_CONTINUE_FIELD = "_continue"
+SAVE_ADD_ANOTHER_FIELD = "_addanother"
 
 _FILTER_KEY = re.compile(r"^filter\[(\w+)\]$")
 
@@ -35,11 +51,14 @@ def _parse_list_request(query_params: Any) -> ListRequest:
         match = _FILTER_KEY.match(key)
         if match:
             filters[match.group(1)] = value
+    # page_size defaults to 0, not 25: an unset value has to reach
+    # apply_defaults so the ModelAdmin's own list_per_page is consulted
+    # first.
     try:
         page = int(query_params.get("page", 1))
-        page_size = int(query_params.get("page_size", 25))
+        page_size = int(query_params.get("page_size", 0))
     except ValueError:
-        page, page_size = 1, 25
+        page, page_size = 1, 0
     return ListRequest(
         search=query_params.get("search") or None,
         filters=filters,
@@ -49,9 +68,8 @@ def _parse_list_request(query_params: Any) -> ListRequest:
     )
 
 
-# The autocomplete caps its suggestions. The control is a search box,
-# not a browser -- past a screenful the answer is "type more", not
-# "scroll".
+# The autocomplete caps its suggestions: it is a search box, not a
+# browser, and past a screenful the answer is "type more".
 LOOKUP_LIMIT = 20
 
 # The hidden flag the bulk-actions form sets when the user chose "select
@@ -60,11 +78,9 @@ SELECT_ALL_FIELD = "_select_all"
 
 
 def _parse_list_request_from_form(form: Any) -> ListRequest:
-    """Rebuild the list query from the *posted* form rather than the URL.
-
-    A bulk action posts to its own route, so the filters the user was
-    looking at arrive as form fields; reading them from the query string
-    would silently act on the unfiltered set.
+    """Rebuild the list query from the posted form, not the URL: a bulk action
+    posts to its own route, so reading the query string would silently act on
+    the unfiltered set.
     """
     filters = {
         match.group(1): value
@@ -79,14 +95,13 @@ def _parse_list_request_from_form(form: Any) -> ListRequest:
 
 
 def _validate_writable(model_admin: ModelAdmin, data: dict[str, Any], obj: Any = None) -> dict[str, list[str]]:
-    """Run the ModelAdmin's own validation, then drop any complaint about
-    a read-only field.
+    """Run the ModelAdmin's validation, then drop complaints about read-only
+    fields.
 
-    Such a field is never posted (see _parse_form_data), so a `required`
-    read-only field would otherwise fail validation on every save -- the
-    value is not missing, it is simply not the form's to send. Wrapping
-    rather than changing validate() keeps the ModelAdmin contract as it
-    was, so an application's own validate override is unaffected.
+    Such a field is never posted, so a required one would otherwise fail every
+    save: the value is not missing, it is simply not the form's to send.
+    Wrapping rather than changing validate() leaves an application's own
+    override unaffected.
     """
     errors = model_admin.validate(data)
     return {name: errs for name, errs in errors.items() if not model_admin.is_readonly(name, obj)}
@@ -95,11 +110,10 @@ def _validate_writable(model_admin: ModelAdmin, data: dict[str, Any], obj: Any =
 def _parse_form_data(model_admin: ModelAdmin, form: Any, obj: Any = None) -> dict[str, Any]:
     """Read the posted form into a data map.
 
-    `obj` is the record being edited (None when creating), and is passed
-    only so read-only fields can be resolved: a read-only field is
-    skipped entirely, so a crafted POST naming it cannot write it.
-    Omitting the input from the form is presentation; this is the
-    enforcement.
+    `obj` is the record being edited, None when creating, and is passed only to
+    resolve read-only fields: such a field is skipped entirely, so a crafted
+    POST naming it cannot write it. Omitting the input is presentation; this is
+    the enforcement.
     """
     data: dict[str, Any] = {}
     for name in model_admin.get_form_fields():
@@ -128,7 +142,10 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
             admin, principal, model_admin, list(model_admin.list_display)
         )
 
-        list_request = _parse_list_request(request.query_params)
+        # Resolved once and handed to both the query and the pager:
+        # otherwise page_of would size the control from the raw request
+        # and disagree with the rows fetched.
+        list_request = apply_defaults(model_admin, _parse_list_request(request.query_params))
         objects, total = list_objects(model_admin, list_request)
         page = page_of(objects, total, list_request)
 
@@ -175,11 +192,11 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             return error
         obj = model_admin.get_object(pk)
         if obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         # The record's own page: per-object rules decide whether it
         # offers Edit/Delete at all.
         if not authorize_object(admin, principal, resource_permission(slug, "view"), obj):
-            return HTMLResponse("Permission denied.", status_code=403)
+            return forbidden(request, admin, base_path)
         permissions = compute_permissions(admin, principal, model_admin, obj)
         relation_permissions = compute_relation_permissions(
             admin, principal, model_admin, model_admin.get_detail_fields()
@@ -255,9 +272,15 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return HTMLResponse(html, status_code=422)
         obj = model_admin.create(data)
         record_audit(admin, principal, model_admin, AUDIT_CREATE, obj)
+        # "Save and add another" goes back to an empty form, checked
+        # before building the record's URL since it never uses one.
+        if form.get(SAVE_ADD_ANOTHER_FIELD):
+            response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
+            set_flash(response, "success", f"{model_admin.get_verbose_name()} created.")
+            return response
         pk = model_admin.get_pk(obj)
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
-        if form.get("_continue"):
+        if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
         response = redirect(request, target)
         set_flash(response, "success", f"{model_admin.get_verbose_name()} created.")
@@ -275,9 +298,9 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return error
         obj = model_admin.get_object(pk)
         if obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
-            return HTMLResponse("Permission denied.", status_code=403)
+            return forbidden(request, admin, base_path)
         relation_options = compute_relation_options(admin, model_admin, obj=obj)
         html = renderer.render_form(
             admin,
@@ -296,9 +319,9 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return error
         obj = model_admin.get_object(pk)
         if obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
-            return HTMLResponse("Permission denied.", status_code=403)
+            return forbidden(request, admin, base_path)
         form = await request.form()
         data = _parse_form_data(model_admin, form, obj)
         errors = _validate_writable(model_admin, data, obj)
@@ -331,8 +354,12 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return HTMLResponse(html, status_code=422)
         model_admin.update(obj, data)
         record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
+        if form.get(SAVE_ADD_ANOTHER_FIELD):
+            response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
+            set_flash(response, "success", f"{model_admin.get_verbose_name()} updated.")
+            return response
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
-        if form.get("_continue"):
+        if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
         response = redirect(request, target)
         set_flash(response, "success", f"{model_admin.get_verbose_name()} updated.")
@@ -350,9 +377,9 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return error
         obj = model_admin.get_object(pk)
         if obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
-            return HTMLResponse("Permission denied.", status_code=403)
+            return forbidden(request, admin, base_path)
         html = renderer.render_delete(
             admin,
             model_admin,
@@ -370,7 +397,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         obj = model_admin.get_object(pk)
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
-                return HTMLResponse("Permission denied.", status_code=403)
+                return forbidden(request, admin, base_path)
             model_admin.delete(obj)
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
@@ -378,9 +405,9 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         return response
 
     async def delete_htmx(request: Request, pk: str) -> HTMLResponse:
-        """Row-level delete for the list view's Delete button: removes
-        just that row (empty response, `hx-swap="outerHTML"` on the
-        `<tr>` makes it vanish) instead of redirecting anywhere.
+        """Row-level delete for the list view's Delete button: removes just that
+        row (an empty response, with `hx-swap="outerHTML"` on the `<tr>`)
+        instead of redirecting anywhere.
         """
         principal, error = authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
@@ -388,7 +415,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         obj = model_admin.get_object(pk)
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
-                return HTMLResponse("Permission denied.", status_code=403)
+                return forbidden(request, admin, base_path)
             model_admin.delete(obj)
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         return HTMLResponse("")
@@ -397,11 +424,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
 
 
 def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
-    """POST /{slug}/actions/{action_name} -- runs a ModelAdmin Action
-    over the objects named by the `pks` form field. Serves
-    both entry points with the same route: the list view's bulk-select
-    form posts every checked row's pk, the detail page's per-record
-    action buttons post a single-item `pks`.
+    """POST /{slug}/actions/{action_name}, running an Action over the objects
+    named by the `pks` form field. One route for both entry points: the list's
+    bulk-select form posts every checked row, a detail page's action button
+    posts a single-item `pks`.
     """
     slug = model_admin.get_slug()
 
@@ -411,34 +437,35 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             return error
         action = model_admin.get_action(action_name)
         if action is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
 
         principal = None
         if admin.authenticator is not None:
             principal = admin.authenticator.authenticate(request)
-        if action.permission and admin.authorizer is not None:
-            if not admin.authorizer.can(principal, resource_permission(slug, action.permission), model_admin):
-                return HTMLResponse("Permission denied.", status_code=403)
+        if (
+            action.permission
+            and admin.authorizer is not None
+            and not admin.authorizer.can(
+                principal, resource_permission(slug, action.permission), model_admin
+            )
+        ):
+            return forbidden(request, admin, base_path)
 
         form = await request.form()
         pks = form.getlist("pks")
-        # Back to wherever the bulk-action form was submitted from
-        # (preserving the current search/filter/sort/page), falling
-        # back to the bare list URL if there's no Referer to work with.
-        #
-        # The Referer is attacker-controlled, so it is validated before
-        # being used as a redirect target -- see safe_redirect_path.
+        # Back to wherever the form was submitted from, preserving
+        # search/filter/sort/page, or the bare list URL if there is no
+        # Referer. The Referer is attacker-controlled, so it is validated
+        # first -- see safe_redirect_path.
         redirect_to = safe_redirect_path(
             request.headers.get("referer"),
             request.url.netloc,
             base_path,
             f"{base_path}/{slug}",
         )
-        # "Select all N matching" posts the filters instead of the pks:
-        # a checkbox can only reach the rows on screen, so acting on a
-        # filtered set of 500 from a 25-row page was impossible to
-        # express. The set is resolved server-side from the same query
-        # the list was showing.
+        # "Select all N matching" posts the filters instead of the pks: a
+        # checkbox only reaches the rows on screen. The set is resolved
+        # server-side from the same query the list was showing.
         select_all = bool(form.get(SELECT_ALL_FIELD))
         if not select_all and not pks:
             response = redirect(request, redirect_to)
@@ -456,7 +483,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             set_flash(response, "warning", "No items selected.")
             return response
         message = action.handler(model_admin, objects, principal)
-        # One entry per record, not one per action: the log's question is
+        # One entry per record, not per action: the log's question is
         # "what happened to this record", and a bulk run over 500 rows is
         # 500 answers to it.
         for obj in objects:
@@ -469,10 +496,9 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
 
 
 def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
-    """GET /{slug}/lookup?q=... -- an HTML fragment of matching options
-    for this resource, meant to be consumed by another resource's
-    relation selector. Gated on *this* resource's own
-    `.view` permission, since that's what's actually being browsed.
+    """GET /{slug}/lookup?q=..., an HTML fragment of matching options consumed by
+    another resource's relation selector. Gated on this resource's own `.view`
+    permission, since that is what is being browsed.
     """
     slug = model_admin.get_slug()
 
@@ -488,7 +514,7 @@ def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
 
         # The cap rides in as the page window rather than a slice
         # afterwards, so a list_page applies it in its own query instead
-        # of returning the whole table for us to trim.
+        # of returning the whole table to trim.
         list_request = ListRequest(search=query or None, page=1, page_size=LOOKUP_LIMIT)
         objects, _ = list_objects(model_admin, list_request)
         options = [
@@ -501,11 +527,9 @@ def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
 
 
 def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Exporter, base_path: str):
-    """GET /{slug}/export/{exporter.format} -- exports the *same*
-    filtered/ordered dataset the list view would show for the given
-    search/filter/sort query params, respecting
-    `list_display` as the column set. Gated on the resource's `.export`
-    permission, independent of `.view`.
+    """GET /{slug}/export/{exporter.format}, exporting the same filtered and
+    ordered dataset the list view would show, with `list_display` as the column
+    set. Gated on `.export`, independently of `.view`.
     """
     slug = model_admin.get_slug()
 
@@ -530,13 +554,9 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
 
 
 def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
-    """POST {slug}/{pk}/inlines/{child_slug}[/{child_pk}] and
-    DELETE {slug}/{pk}/inlines/{child_slug}/{child_pk} -- create/update/
-    delete one inline child row (see core/inline.py, docs/inlines.md).
-    Every response carries just the freshly rebuilt whole inline
-    section (full-region-swap, matching render_list_fragment/
-    render_form_fragment's existing idiom), never a redirect and never
-    the whole parent page.
+    """The inline create/update/delete routes. Every response carries the rebuilt
+    inline section alone -- never a redirect, never the whole parent page --
+    matching the other fragment routes.
     """
     parent_slug = model_admin.get_slug()
 
@@ -546,13 +566,13 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     async def inline_create(request: Request, pk: str, child_slug: str) -> HTMLResponse:
         inline = _get_inline(child_slug)
         if inline is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
         _, error = authorize(admin, request, base_path, resource_permission(inline.child, "create"), child_admin)
         if error:
@@ -581,20 +601,20 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     async def inline_update(request: Request, pk: str, child_slug: str, child_pk: str) -> HTMLResponse:
         inline = _get_inline(child_slug)
         if inline is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
         _, error = authorize(admin, request, base_path, resource_permission(inline.child, "update"), child_admin)
         if error:
             return error
         child_obj = child_admin.get_object(child_pk)
         if child_obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
 
         form = await request.form()
         data = _parse_form_data(child_admin, form)
@@ -619,13 +639,13 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     async def inline_delete(request: Request, pk: str, child_slug: str, child_pk: str) -> HTMLResponse:
         inline = _get_inline(child_slug)
         if inline is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         principal, error = authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
         parent_obj = model_admin.get_object(pk)
         if parent_obj is None:
-            return HTMLResponse("Not found", status_code=404)
+            return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
         _, error = authorize(admin, request, base_path, resource_permission(inline.child, "delete"), child_admin)
         if error:

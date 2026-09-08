@@ -1,28 +1,17 @@
 {% from "admin/components/icons.html" import icon %}
-{# Select, ported from shadcn/ui (Radix Select) -- a styled trigger +
-   listbox for a plain, static choice list, the shadcn-equivalent of a
-   native <select>. Mirrors go-polyadmin/.../components/ui/select.html
-   and reuses the same trigger+listbox mechanics as
-   ui/bulk-actions.html, generalized into a value-holding form control:
-   a hidden input carries the posted value (matching ui/field.html's
-   relation combobox, which does the same for the same reason --
-   the model layer never has to know a value came from anything but a
-   plain <select>), and Alpine owns only open/close and which option
-   is currently shown as the label.
+{# Select, ported from shadcn/ui -- a styled trigger and listbox for a
+   static choice list. A hidden input carries the posted value, so the
+   model layer never has to know it came from anything but a plain
+   <select>; Alpine owns only open/close and which option is shown as
+   the label.
 
-   Not used for <select multiple> (manytomany): a multi-value combobox
-   is a different control (shadcn ships no base component for it
-   either), so that field type keeps its native <select multiple> for
-   now.
+   Not used for manytomany, which keeps its native <select multiple>.
 
    Args:
      name         form field name
      options      [(value, label), ...]
      selected     the currently selected value, compared with `==`
-                  against each option's value (native Jinja/Python
-                  equality -- unlike the Go port, nothing here needs
-                  precomputing, since Jinja's `==` has none of
-                  html/template's typed-value sharp edges)
+                  against each option's value
      placeholder  shown when nothing is selected
      disabled     bool #}
 {% macro select(name, options, selected=none, placeholder="Select…", disabled=false) %}
@@ -31,19 +20,15 @@
 {% if value == selected %}{% set selected_label.value = label %}{% endif %}
 {% endfor %}
 {# The initial label rides in as a data attribute and is read back with
-   $el.dataset in x-init, never interpolated into the x-data expression.
-   tojson emits a raw double quote, which inside this double-quoted
-   attribute closed it early and left Alpine parsing "{ open: false,
-   label: " -- every select on the page then failed to initialise. A
-   data attribute is escaped by the template engine and decoded by the
-   browser, so an apostrophe or a quote in a label is a non-event. #}
-{# Keyboard model: focus stays on the trigger and the arrow keys move a
-   highlight, which the trigger reports via aria-activedescendant --
-   rather than moving real DOM focus into the list. That matches the
-   relation combobox in ui/field.html (the codebase's existing keyboard
-   listbox) and means one focusable element instead of one per option;
-   the options are therefore tabindex="-1", so Tab leaves the control
-   instead of walking through every choice. #}
+   $el.dataset, never interpolated into the x-data expression: tojson
+   emits a raw double quote, which closed this attribute early and left
+   Alpine parsing a truncated expression, so every select on the page
+   failed to initialise. #}
+{# Focus stays on the trigger and the arrow keys move a highlight it
+   reports through aria-activedescendant, rather than moving real focus
+   into the list. That means one focusable element instead of one per
+   option, so the options are tabindex="-1" and Tab leaves the control
+   rather than walking every choice. #}
 <div class="{{ ui('combobox') }}" data-label="{{ selected_label.value or placeholder }}"
      x-data="adminSelect()" x-init="hydrate()" x-id="['select-option', 'select-listbox']"
      @keydown.escape="closeToTrigger()" @click.outside="close()">

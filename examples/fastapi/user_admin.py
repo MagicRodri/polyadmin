@@ -6,13 +6,14 @@ the installed `admin` package on sys.path.
 
 from __future__ import annotations
 
+from models import OrganizationRepository, RoleRepository, User, UserRepository
+
 from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
 from polyadmin.core.action import Action
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.model_admin import Fieldset
 from polyadmin.core.relation import Relation
-from models import OrganizationRepository, RoleRepository, User, UserRepository
 
 ORGANIZATION_RELATION = Relation(
     "organization", target="organizations", display_field="name"
@@ -25,7 +26,7 @@ ROLES_RELATION = Relation(
 )
 
 
-def _set_active(model_admin: "UserAdmin", objects, active: bool) -> str:
+def _set_active(model_admin: UserAdmin, objects, active: bool) -> str:
     # In-memory repositories store the objects themselves, so mutating
     # in place is enough to persist -- no separate update() call needed.
     for obj in objects:

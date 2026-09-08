@@ -11,9 +11,7 @@ fastapi = [
     "fastapi>=0.110",
     "python-multipart>=0.0.9",
 ]
-export-xlsx = [
-    "openpyxl>=3.1",
-]
+export-xlsx = ["openpyxl>=3.1"]
 
 [dependency-groups]
 dev = [
@@ -22,6 +20,8 @@ dev = [
     "python-multipart>=0.0.9",
     "httpx>=0.27",
     "openpyxl>=3.1",
+    "playwright>=1.40",
+    "pytest-playwright>=0.4",
 ]
 
 [build-system]
@@ -32,4 +32,13 @@ build-backend = "hatchling.build"
 packages = ["polyadmin"]
 
 [tool.pytest.ini_options]
+# browsertests/ is excluded: it drives a real browser against a running
+# example app, so it is run on its own rather than in the unit loop.
 testpaths = ["tests"]
+
+[tool.ruff.lint]
+# A ModelAdmin subclass declares list_display, search_fields and friends
+# as plain class-level lists. That is the framework's public API, so
+# demanding ClassVar on every one of them is not a style the codebase can
+# adopt.
+ignore = ["RUF012"]

@@ -1,18 +1,13 @@
-"""A reference LoginBackend: cookie sessions over an in-memory user
-table. Mirrors go-polyadmin/examples/fiber/session.go.
+"""A reference LoginBackend: cookie sessions over an in-memory user table.
 
-The admin owns the login *page* -- the form, the failure message, the
-redirect back to where you were headed. It does not own the session,
-which is why this file lives in the example rather than in the
-framework: where a session lives is an application decision, and the
-framework never needing a signing secret is what keeps it out of key
-management. Swap this for whatever your app already has (a session
-store, a JWT, an upstream IdP) and the admin's login page keeps working
-unchanged.
+The admin owns the login page but not the session, which is why this lives in
+the example rather than the framework: where a session lives is an application
+decision, and never needing a signing secret is what keeps the framework out of
+key management. Swap it for whatever the app already has and the login page
+keeps working.
 
-One class implements both halves on purpose: LoginBackend writes the
-session, Authenticator reads it back. They have to agree on the format,
-so they belong together.
+One class implements both halves on purpose -- LoginBackend writes the session,
+Authenticator reads it back, and they have to agree on the format.
 """
 
 from __future__ import annotations
@@ -45,19 +40,17 @@ class DemoAccount:
     """One row of what would be a users table."""
 
     email: str
-    # salt and hash, never the password. Derived at import time here only
-    # because a runnable demo has to document its own credentials -- a
-    # real table stores these and has never seen the plaintext.
+    # Salt and hash, never the password. Derived at import time only
+    # because a runnable demo has to document its own credentials; a real
+    # table stores these and has never seen the plaintext.
     salt: bytes
     hash: bytes
     display_name: str
     is_superuser: bool
 
 
-# The example's two accounts. Two, not one, so the difference between a
-# superuser and an ordinary signed-in user is visible in the admin --
-# sign in as viewer@example.com and SuperuserAuthorizer starts refusing
-# things.
+# Two accounts, not one, so the difference between a superuser and an
+# ordinary signed-in user is visible in the admin.
 DEMO_CREDENTIALS = [
     ("admin@example.com", "polyadmin", "Demo Admin", True),
     ("viewer@example.com", "polyadmin", "Demo Viewer", False),
@@ -69,11 +62,9 @@ def _derive(password: str, salt: bytes) -> bytes:
 
 
 def _session_secret() -> bytes:
-    """Keys the cookie signature. From the environment when set;
-    otherwise a fresh random one, which means sessions do not survive a
-    restart and would not be shared across replicas. That is the right
-    default for a demo and the wrong one for anything else, hence the
-    warning.
+    """Keys the cookie signature: from the environment when set, otherwise a fresh
+    random one, so sessions do not survive a restart and are not shared across
+    replicas. Right for a demo, wrong for anything else, hence the warning.
     """
     from_env = os.environ.get("ADMIN_SESSION_SECRET")
     if from_env:
@@ -86,21 +77,16 @@ def _session_secret() -> bytes:
 
 
 class ReadOnlyForNonSuperusers:
-    """The example's Authorizer.
+    """Grants reads to anyone signed in and reserves writes for superusers.
 
-    SuperuserAuthorizer would be the obvious choice and is the wrong one
-    here: it is all-or-nothing, so a signed-in non-superuser is refused
-    every permission -- including dashboard.view -- and sees a bare
-    "Permission denied." on every page. That makes the second demo
-    account useless, and makes the admin look broken rather than
-    permissioned.
-
-    This grants reads to anyone signed in and reserves writes for
-    superusers, which is the smallest rule that actually shows the
-    permission system working: sign in as viewer@example.com and the
-    list's Add button, the row edit/delete controls and the custom Tools
-    page all disappear, because compute_permissions asks this same
-    Authorizer which controls to render.
+    SuperuserAuthorizer is the obvious choice and the wrong one here: being
+    all-or-nothing, it refuses a signed-in non-superuser every permission
+    including dashboard.view, so the second demo account sees "Permission
+    denied." everywhere and the admin looks broken rather than permissioned.
+    This is the smallest rule that shows the permission system working -- as
+    viewer@example.com the Add button, the row controls and the Tools page all
+    disappear, because compute_permissions asks this same Authorizer which
+    controls to render.
     """
 
     def can(self, principal: Any, permission: str, resource: Any = None) -> bool:
@@ -111,15 +97,14 @@ class ReadOnlyForNonSuperusers:
         if permission == DASHBOARD_VIEW:
             return True
         # "{slug}.{action}" -- see core.authorization.resource_permission.
-        # Reads only; create/update/delete and the custom pages
-        # ("page.tools.broadcast", which sends messages) fall through.
+        # Reads only; writes and the custom pages fall through.
         return permission.endswith((".view", ".list", ".export"))
 
 
 class CookieSessionBackend:
-    """Signs a cookie holding the account's email and an expiry. Nothing
-    else is stored: the cookie is the session, which is the smallest
-    thing that can honestly be called one.
+    """Signs a cookie holding the account's email and an expiry. Nothing else is
+    stored: the cookie is the session, which is the smallest thing that can
+    honestly be called one.
     """
 
     def __init__(self) -> None:
@@ -135,20 +120,16 @@ class CookieSessionBackend:
                 is_superuser=is_superuser,
             )
 
-    # -- LoginBackend -----------------------------------------------------
-
     def verify_credentials(self, request: Any, identifier: str, password: str) -> Principal | None:
-        """Answers "are these good?" and nothing else -- it does not
-        touch the response. Establishing the session is begin_session's
-        job, which is what lets the admin refuse to sign someone in when
-        the session store is broken.
+        """Answers "are these good?" and does not touch the response. Establishing
+        the session is begin_session's job, which is what lets the admin refuse
+        to sign someone in when the store is broken.
         """
         account = self._accounts.get(identifier.strip().lower())
         if account is None:
-            # Hash anyway. Returning early here would make "no such
-            # account" measurably faster than "wrong password", which is
-            # exactly the distinction LoginBackend asks implementations
-            # not to leak.
+            # Hash anyway: returning early would make "no such account"
+            # measurably faster than "wrong password", the distinction
+            # LoginBackend asks implementations not to leak.
             _derive(password, b"\x00" * 16)
             return None
         if not hmac.compare_digest(_derive(password, account.salt), account.hash):
@@ -163,8 +144,8 @@ class CookieSessionBackend:
             path="/",
             httponly=True,
             samesite="lax",
-            # Secure only over TLS: a Secure cookie is not sent over
-            # plain HTTP, which would break running the example on a LAN
+            # Secure only over TLS: a Secure cookie is not sent over plain
+            # HTTP, which would break running the example on a LAN
             # address.
             secure=request.url.scheme == "https",
         )
@@ -172,24 +153,20 @@ class CookieSessionBackend:
     def end_session(self, request: Any, response: Any) -> None:
         response.delete_cookie(SESSION_COOKIE_NAME, path="/")
 
-    # -- Authenticator ----------------------------------------------------
-
     def authenticate(self, request: Any) -> Principal | None:
-        """The read side, and the reason this class implements both
-        interfaces: it has to parse exactly what begin_session wrote.
+        """The read side, and the reason this class implements both interfaces: it
+        has to parse exactly what begin_session wrote.
         """
         subject = self._verify(request.cookies.get(SESSION_COOKIE_NAME, ""))
         if subject is None:
             return None
         account = self._accounts.get(subject)
         if account is None:
-            # The signature was good but the account is gone -- deleted
-            # since the cookie was issued. A valid signature over a stale
-            # subject is still not an authenticated request.
+            # The signature was good but the account is gone. A valid
+            # signature over a stale subject is still not an authenticated
+            # request.
             return None
         return self._principal(account)
-
-    # -- internals --------------------------------------------------------
 
     def _principal(self, account: DemoAccount) -> Principal:
         return Principal(
@@ -199,10 +176,9 @@ class CookieSessionBackend:
         )
 
     def _sign(self, subject: str, expires_at: int) -> str:
-        """Renders "<subject>|<expiry>|<mac>". The MAC covers the subject
-        and the expiry together, so neither can be edited independently
-        -- signing only the subject would let anyone extend their own
-        session indefinitely.
+        """Renders "<subject>|<expiry>|<mac>". The MAC covers both together, so
+        neither can be edited alone: signing only the subject would let anyone
+        extend their own session indefinitely.
         """
         payload = f"{subject}|{expires_at}"
         return f"{payload}|{self._mac(payload)}"
@@ -210,9 +186,9 @@ class CookieSessionBackend:
     def _verify(self, cookie: str) -> str | None:
         if not cookie:
             return None
-        # Exactly three fields, or nothing: a subject containing "|"
-        # would otherwise shift the expiry and MAC along and be checked
-        # against the wrong values. This fails closed instead.
+        # Exactly three fields, or nothing: a subject containing "|" would
+        # shift the expiry and MAC along and be checked against the wrong
+        # values.
         parts = cookie.split("|")
         if len(parts) != 3:
             return None

@@ -1,23 +1,18 @@
-{# Switch, ported from shadcn/ui (Radix Switch).
+{# Switch, ported from shadcn/ui.
 
-   Mirrors go-polyadmin/templates/admin/components/ui/switch.html.
+   Radix renders a <button role="switch"> with a hidden input kept in
+   sync. This is a native checkbox instead, visually identical: the
+   input is sr-only and the track and thumb are its siblings, driven
+   entirely by peer-checked:, so the switch toggles with no JavaScript
+   at all.
 
-   Radix renders a <button role="switch"> and keeps a hidden input in
-   sync so the control still posts. This is a native checkbox instead,
-   visually identical: the input is sr-only and the track and thumb are
-   its siblings, driven entirely by peer-checked:. That means the switch
-   toggles with no JavaScript at all -- an earlier Alpine version only
-   degraded to "whatever the server rendered" without it.
+   It posts exactly like a checkbox -- the field's name with value
+   "true" when on, nothing when off -- and is read as `== "true"`, so
+   absent reads as false.
 
-   It posts exactly like a checkbox: the field's name with value "true"
-   when on, nothing when off. Both the generated form fields and the
-   example custom pages read it as `== "true"`, so absent reads as
-   false, which is the ordinary HTML convention.
-
-   The generated boolean form field renders this same control inline
-   with its label (see components/ui/field.html); this wrapper is for
-   custom admin pages (docs/routing.md), which want the label and help
-   text laid out for them. #}
+   The generated boolean field renders this control inline with its
+   label; this wrapper is for custom pages, which want the label and
+   help text laid out for them. #}
 {% macro switch_control(name, id, checked=false, disabled=false) %}
 <label class="{{ ui('switch') }}">
   <input type="checkbox" id="{{ id }}" name="{{ name }}" value="true" autocomplete="off"

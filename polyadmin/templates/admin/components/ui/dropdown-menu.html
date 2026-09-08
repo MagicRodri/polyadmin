@@ -1,18 +1,8 @@
-{# DropdownMenu, ported from shadcn/ui (Radix DropdownMenu).
-
-   Mirrors go-polyadmin/templates/admin/components/ui/dropdown-menu.html.
-
-   Radix -> Alpine, per plan/shadcnui-usage.md §6:
-     Portal            -> not needed; the panel is absolutely
-                          positioned inside a `relative` wrapper, which
-                          keeps it in the same stacking context as its
-                          trigger.
-     Floating UI       -> x-anchor (Alpine's anchor plugin), so the
-                          panel stays put when the header scrolls.
-     Escape / outside  -> @keydown.escape + @click.outside.
-     Roving tabindex   -> the items are real <button>/<a> elements, so
-                          Tab already walks them in order, and
-                          @keydown.escape returns focus to the trigger.
+{# DropdownMenu, ported from shadcn/ui. Radix's Portal is not needed
+   (the panel is absolutely positioned inside a `relative` wrapper, so
+   it shares its trigger's stacking context), Floating UI becomes
+   x-anchor, and no roving tabindex is needed because the items are real
+   <button>/<a> elements Tab already walks.
 
    `items` is a list of dicts -- data, not markup -- so nothing here has
    to trust an application-supplied HTML string:
@@ -21,26 +11,21 @@
      {"label": ...}                             a section label
 
    The panel always anchors bottom-end; a start-aligned variant belongs
-   in its own macro rather than a flag here, to keep parity with the Go
-   side (where the alignment is baked into an x-anchor *attribute name*,
-   which html/template cannot build dynamically). #}
+   in its own macro rather than a flag here. #}
 {% from "admin/components/icons.html" import icon %}
 {% macro dropdown_menu(label, icon_name="dots", text=none, variant=none, items=(), full_width=false) %}
-{# full_width makes the trigger fill its line while a stacked
-   toolbar is one column, then shrink back to its content at lg --
-   the wrapper needs it too, since the button can only fill a box
-   that is itself full width. See ui.py's "toolbar" for why lg. #}
+{# full_width makes the trigger fill its line while the toolbar is
+   stacked, then shrink to its content at lg. The wrapper needs it too:
+   a button can only fill a box that is itself full width. #}
 <div class="relative {% if full_width %}flex w-full lg:inline-flex lg:w-auto{% else %}inline-flex{% endif %}"
      x-data="{ open: false }"
      @keydown.escape="open = false; $refs.trigger.focus()"
      @click.outside="open = false">
   {% if text %}
-  {# Under full_width the label goes hard left and both icons -- the
-     leading one and the chevron -- go hard right, so a stacked
-     full-width trigger reads like the rest of the toolbar rather than
-     floating its content in the middle. Giving them the same
-     order-last keeps their relative order (icon, then chevron); the
-     label's flex-1 is what pushes them there. #}
+  {# Under full_width the label goes hard left and both icons hard
+     right, so a stacked trigger reads like the rest of the toolbar
+     instead of floating its content mid-line. The shared order-last
+     keeps icon-then-chevron order; the label's flex-1 pushes them. #}
   <button type="button" x-ref="trigger" @click="open = !open"
           :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
           class="{{ ui('button', variant or 'outline', 'size-default') }}{% if full_width %} w-full lg:w-auto{% endif %}">

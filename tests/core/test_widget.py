@@ -1,4 +1,13 @@
-from polyadmin.core.widget import Activity, Chart, Metric, Progress, Stat, Table, Tabs, Timeline
+from polyadmin.core.widget import (
+    Activity,
+    Chart,
+    Metric,
+    Progress,
+    Stat,
+    Table,
+    Tabs,
+    Timeline,
+)
 
 
 def test_metric_static_value():

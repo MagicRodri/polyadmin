@@ -1,7 +1,12 @@
+from polyadmin.core.field import StringField
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.model_admin import ModelAdmin
-from polyadmin.core.field import StringField
-from polyadmin.core.query import DEFAULT_PAGE_SIZE, ListRequest, execute_list_query, list_objects
+from polyadmin.core.query import (
+    DEFAULT_PAGE_SIZE,
+    ListRequest,
+    execute_list_query,
+    list_objects,
+)
 from tests.core.test_model_admin import InMemoryUserAdmin
 
 
@@ -70,9 +75,6 @@ def test_search_filter_ordering_compose():
     assert result == [match2, match1]
 
 
-# -- the ListQuerier capability ------------------------------------------
-
-
 def test_list_window_derives_offset_and_limit_from_the_page():
     cases = [
         (ListRequest(page=1, page_size=25), (0, 25)),
@@ -91,9 +93,6 @@ def test_unlimited_window_ignores_the_page_number():
     # export of a filtered set is the whole set, whichever page the user
     # happened to be looking at when they clicked Export.
     assert ListRequest(page=5, page_size=10, unlimited=True).window() == (0, 0)
-
-
-# -- default ordering -----------------------------------------------------
 
 
 class _Row:

@@ -3,16 +3,24 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.auth import AllowAllAuthenticator, Principal
-from polyadmin.core.authorization import SuperuserAuthorizer
-from polyadmin.core.field import BooleanField, ForeignKeyField, StringField
+from polyadmin.core.auth import AllowAllAuthenticator
+from polyadmin.core.field import (
+    BooleanField,
+    ForeignKeyField,
+    ManyToManyField,
+    StringField,
+)
 from polyadmin.core.inline import StackedInline, TabularInline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
+from polyadmin.ui import ui
 from tests.conftest import csrf
 
 ORG_RELATION = Relation("organization", target="organizations", display_field="name")
+# Reuses the organizations admin as its target: the widget only cares
+# that a relation resolves to (pk, label) pairs.
+TEAMS_RELATION = Relation("teams", target="organizations", display_field="name")
 
 
 class Organization:
@@ -22,11 +30,14 @@ class Organization:
 
 
 class User:
-    def __init__(self, id, email, is_active=True, organization=None):
+    def __init__(self, id, email, is_active=True, organization=None, teams=()):
         self.id = id
         self.email = email
         self.is_active = is_active
         self.organization = organization
+        # A many-to-many so the tabular inline is exercised with a
+        # multi-valued cell -- the case the ScrollArea exists for.
+        self.teams = list(teams)
 
 
 def make_organization_admin(*, inline_layout="tabular"):
@@ -65,12 +76,13 @@ class UserAdmin(ModelAdmin):
     model = User
     slug = "users"
     list_display = ["id", "email", "is_active", "organization"]
-    detail_fields = ["id", "email", "is_active", "organization"]
-    form_fields = ["email", "is_active", "organization"]
+    detail_fields = ["id", "email", "is_active", "organization", "teams"]
+    form_fields = ["email", "is_active", "organization", "teams"]
     fields = [
         StringField("email", required=True),
         BooleanField("is_active", default=True),
         ForeignKeyField("organization", relation=ORG_RELATION),
+        ManyToManyField("teams", relation=TEAMS_RELATION),
     ]
 
     def __init__(self, store, org_store):
@@ -133,8 +145,8 @@ def seed_org_with_users(org_admin, user_admin, *emails):
 
 def test_inline_section_renders_on_edit_page():
     client, org_admin, user_admin = make_client()
-    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
-    other_org, other_users = seed_org_with_users(org_admin, user_admin, "outsider@example.com")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+    seed_org_with_users(org_admin, user_admin, "outsider@example.com")
 
     response = client.get(f"/admin/organizations/{org.id}/edit")
     assert response.status_code == 200
@@ -144,7 +156,7 @@ def test_inline_section_renders_on_edit_page():
 
 
 def test_inline_section_placeholder_on_create_page():
-    client, org_admin, user_admin = make_client()
+    client, _, _ = make_client()
 
     response = client.get("/admin/organizations/create")
     assert response.status_code == 200
@@ -154,13 +166,20 @@ def test_inline_section_placeholder_on_create_page():
 
 def test_inline_section_readonly_on_detail_page():
     client, org_admin, user_admin = make_client()
-    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
     response = client.get(f"/admin/organizations/{org.id}")
     assert response.status_code == 200
     assert 'id="inline-users"' in response.text
     assert "a@example.com" in response.text
-    assert "<input" not in response.text.split('id="inline-users"')[1]
+    # Bounded at the page's own action bar, not just "everything after
+    # the marker": the parent's record-action forms render further down
+    # the same page and carry hidden inputs of their own, which would
+    # make the assertion below fail for a reason that has nothing to do
+    # with the inline section.
+    section = response.text.split('id="inline-users"')[1]
+    section = section.split(ui("page", "actions"))[0]
+    assert "<input" not in section
 
 
 def test_inline_create_adds_row_and_returns_section_fragment():
@@ -310,7 +329,7 @@ def test_inline_section_hidden_without_child_view_permission():
 
 def test_stacked_inline_renders_form_per_row():
     client, org_admin, user_admin = make_client(inline_layout="stacked")
-    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
     response = client.get(f"/admin/organizations/{org.id}/edit")
     section = response.text.split('id="inline-users"')[1]
@@ -320,7 +339,7 @@ def test_stacked_inline_renders_form_per_row():
 
 def test_tabular_inline_renders_table():
     client, org_admin, user_admin = make_client(inline_layout="tabular")
-    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
     response = client.get(f"/admin/organizations/{org.id}/edit")
     section = response.text.split('id="inline-users"')[1]

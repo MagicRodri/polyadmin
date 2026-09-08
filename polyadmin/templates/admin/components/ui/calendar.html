@@ -1,37 +1,30 @@
-{# Calendar + DatePicker, ported from shadcn/ui (which wraps
-   react-day-picker in a Popover).
+{# Calendar + DatePicker, ported from shadcn/ui.
 
-   Mirrors go-polyadmin/templates/admin/components/ui/calendar.html --
-   the `adminCalendar` factory below is copied from it verbatim, so the
-   two implementations cannot drift on the date maths.
-
-   There is no react-day-picker here, so the month grid is computed in
-   Alpine by that factory -- always six weeks, so the popover never
-   changes height as you page through months, which is what
-   react-day-picker's `fixedWeeks` does too.
+   There is no react-day-picker here, so the month grid is computed by
+   the `adminCalendar` factory -- always six weeks, so the popover never
+   changes height as you page through months.
 
    Three macros:
 
-     calendar()          just the month grid. Must be called inside an
+     calendar()          the month grid alone. Must be called inside an
                          element whose x-data is adminCalendar(), and
-                         expects an x-ref="dateInput" in the same scope
-                         -- the grid never holds the value itself, it
-                         only writes to that input, so whatever the
-                         input posts stays the single source of truth.
+                         expects an x-ref="dateInput" in the same scope:
+                         the grid never holds the value, it only writes
+                         to that input, which stays the single source of
+                         truth.
 
-     date_picker(...)    the whole control: a native <input type="date">
-                         with a calendar button that opens the grid in a
-                         popover.
+     date_picker(...)    the whole control -- a native
+                         <input type="date"> with a button that opens
+                         the grid in a popover.
 
-     calendar_script()   the shared Alpine factory; included once by
+     calendar_script()   the shared Alpine factory, included once by
                          admin/base.html.
 
-   Why the native input stays underneath: it already posts YYYY-MM-DD
-   with no JS, gets the platform picker on mobile, and is what the
-   generated `date` form fields render (components/ui/field.html). The
-   popover is a progressive enhancement over it, not a replacement -- so
-   a date field keeps working identically with Alpine absent, and the
-   server-side parsing never has to care which one was used. #}
+   The native input stays underneath because it already posts
+   YYYY-MM-DD with no JS and gets the platform picker on mobile. The
+   popover is an enhancement over it, not a replacement, so a date field
+   works identically with Alpine absent and the server never has to care
+   which one was used. #}
 {% from "admin/components/icons.html" import icon %}
 
 {% macro calendar() %}

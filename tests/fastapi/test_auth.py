@@ -3,10 +3,13 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator, DenyAllAuthenticator, Principal
-from polyadmin.core.authorization import AllowAllAuthorizer, DenyAllAuthorizer, SuperuserAuthorizer
+from polyadmin.core.authorization import (
+    DenyAllAuthorizer,
+    SuperuserAuthorizer,
+)
 from polyadmin.fastapi.router import create_router
-from tests.core.test_model_admin import InMemoryUserAdmin
 from tests.conftest import csrf
+from tests.core.test_model_admin import InMemoryUserAdmin
 
 
 def make_client(*, authenticator=None, authorizer=None):
@@ -81,7 +84,7 @@ def test_deny_all_authorizer_still_requires_authentication_first():
 def test_edit_and_delete_controls_hidden_without_permission():
     class ViewOnlyAuthorizer:
         def can(self, principal, permission, resource=None):
-            return permission.endswith(".list") or permission.endswith(".view")
+            return permission.endswith((".list", ".view"))
 
     client, user_admin = make_client(
         authenticator=AllowAllAuthenticator(), authorizer=ViewOnlyAuthorizer()
@@ -101,7 +104,7 @@ def test_edit_and_delete_controls_hidden_without_permission():
 def test_edit_route_still_enforced_even_if_hidden():
     class ViewOnlyAuthorizer:
         def can(self, principal, permission, resource=None):
-            return permission.endswith(".list") or permission.endswith(".view")
+            return permission.endswith((".list", ".view"))
 
     client, user_admin = make_client(
         authenticator=AllowAllAuthenticator(), authorizer=ViewOnlyAuthorizer()
@@ -118,9 +121,6 @@ def test_edit_route_still_enforced_even_if_hidden():
         == 403
     )
     assert user.email == "john@example.com"
-
-
-# -- per-object permissions ----------------------------------------------
 
 
 class OwnRecordsOnly:

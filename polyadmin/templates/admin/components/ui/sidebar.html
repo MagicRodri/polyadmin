@@ -1,32 +1,21 @@
-{# Sidebar, ported from shadcn/ui's sidebar-07 block ("a sidebar that
-   collapses to icons"). Mirrors
-   go-polyadmin/templates/admin/components/ui/sidebar.html.
-
-   Three regions, exactly as the block has them:
-     SidebarHeader  -- the brand, styled as the block's team-switcher
-                       button (square logo + two stacked lines).
-     SidebarContent -- one SidebarGroup of SidebarMenu items; a grouped
-                       category becomes a Collapsible with a
-                       SidebarMenuSub, matching the block's NavMain.
-     SidebarFooter  -- NavUser: avatar + name/email, opening a dropdown.
-   Plus SidebarRail, the hairline on the outer edge that toggles it.
+{# Sidebar, ported from shadcn/ui's sidebar-07 block. Three regions, as
+   the block has them: the brand header, one group of menu items (a
+   category becomes a Collapsible with a sub-menu), and a footer showing
+   who is signed in. Plus the rail on the outer edge.
 
    `collapsed` (the desktop icon rail) and `sidebarOpen` (the mobile
-   sheet) both come from base.html's SidebarProvider x-data. They are
-   separate axes on purpose: a phone gets the overlay, never the rail.
+   sheet) both come from base.html's provider, and are separate axes on
+   purpose: a phone gets the overlay, never the rail.
 
-   Collapsing is done by hiding labels rather than by re-templating the
-   markup, so there is exactly one copy of the nav. Every label sits in
-   an `x-show="!collapsed"` span while the icon stays put -- nav-item's
-   p-2 plus a size-4 icon is precisely the 3rem collapsed width, so
-   nothing slides sideways as the width animates.
+   Collapsing hides labels rather than re-templating, so there is one
+   copy of the nav. Each label sits in an `x-show="!collapsed"` span
+   while the icon stays put -- nav-item's p-2 plus a size-4 icon is
+   exactly the 3rem collapsed width, so nothing slides sideways as the
+   width animates.
 
-   Included (not a macro) from base.html, sharing its ambient context
-   (base_path, site_logo_url, site_title, model_admin, nav_items,
-   principal, can_sign_out) -- same reasoning as
-   components/ui/table.html. `icon` rides in on that context too, but
-   csrf_field does not (base.html has no form of its own), so the
-   sign-out form imports it here. #}
+   Included, not a macro, so it shares base.html's ambient context.
+   `icon` rides in on that context; csrf_field does not, since base.html
+   has no form of its own, so the sign-out form imports it here. #}
 {% from "admin/components/csrf-field.html" import csrf_field %}
 <aside x-cloak
        :class="[
@@ -71,11 +60,9 @@
             <span x-show="!collapsed" class="truncate">{{ entry.label }}</span>
           </a>
           {% else %}
-          {# Collapsible + SidebarMenuSub, per the block's NavMain. The
-             chevron rotates 90deg on open, as there. Collapsed to the
-             icon rail there's nowhere to put a sub-menu, so the group
-             behaves as a plain link to its first child instead of
-             expanding into nothing. #}
+          {# Collapsed to the icon rail there is nowhere to put a
+             sub-menu, so the group behaves as a plain link to its first
+             child rather than expanding into nothing. #}
           <div x-data="{ open: {{ entry.active | tojson }} }">
             <a x-show="collapsed" href="{{ entry.links[0].url if entry.links else base_path }}"
                :title="'{{ entry.label }}'"
@@ -146,13 +133,13 @@
           </span>
         </div>
         <div class="{{ ui('dropdown', 'separator') }}"></div>
-        {# No Dashboard entry here: SidebarContent above already opens
-           with one, and a second link to the same place inside the user
-           menu was this template's one drift from the Go mirror. #}
-        {# Only when there is a session to end -- see base_context's
-           can_sign_out. A form, not a link: a logout reachable by GET is
-           one any <img src> on the internet can fire at a signed-in
-           admin, so it posts and carries the CSRF token. #}
+        {# No Dashboard entry here: the nav above already opens with
+           one, and a second link to the same place inside the user menu
+           is just noise. #}
+        {# Only when there is a session to end. A form, not a link: a
+           logout reachable by GET is one any <img src> on the internet
+           can fire at a signed-in admin, so it posts and carries the
+           CSRF token. #}
         {% if can_sign_out %}
         <form method="post" action="{{ base_path }}/logout">
           {{ csrf_field(csrf_token) }}

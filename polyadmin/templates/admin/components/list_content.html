@@ -1,22 +1,14 @@
 {# The interactive region of a list page: toolbar + table + footer.
-   Rendered both inside the full page (resource/list.html) and directly
-   as an HTMX fragment (Renderer.render_list_fragment) -- same markup
-   either way, so search/filter/sort/pagination never disagree between
-   a fresh load and a partial swap.
+   Rendered both inside the full page and directly as an HTMX fragment
+   -- same markup either way, so search, filter, sort and pagination
+   never disagree between a load and a partial swap.
 
-   One full-width column, no side panel. The toolbar holds search, the
-   Filters trigger and bulk actions on the left, the page's own actions
-   on the right; then the table, then DataTablePagination. Filtering
-   lives in a right-hand drawer (components/ui/filter-panel.html), so a
-   ModelAdmin with six filters costs the toolbar one trigger rather
-   than six.
-
-   Button placement: everything that *narrows* the table is on the
-   left, everything that *acts on* it is on the right, so the two never
-   interleave. Below sm the whole toolbar becomes one stacked
-   full-width column -- search, Filters, the action select, Export,
-   New, one per line -- which is what ui('toolbar', 'item') is for on
-   each control. Mirrors go-polyadmin's list.html. #}
+   Everything that *narrows* the table is on the left, everything that
+   *acts on* it is on the right, so the two never interleave. Filtering
+   lives in a right-hand drawer, so a ModelAdmin with six filters costs
+   the toolbar one trigger rather than six. Below lg the toolbar becomes
+   one stacked full-width column, which is what ui('toolbar', 'item') is
+   for on each control. #}
 {% from "admin/components/icons.html" import icon %}
 {% from "admin/components/ui/dropdown-menu.html" import dropdown_menu %}
 <div id="resource-list" class="space-y-4">

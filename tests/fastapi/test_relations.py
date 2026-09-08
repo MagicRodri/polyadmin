@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from polyadmin.core.admin import Admin
 from polyadmin.core.field import ForeignKeyField, ManyToManyField, StringField
 from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.query import DEFAULT_EMPTY_VALUE
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
 
@@ -118,7 +119,9 @@ def test_list_shows_dash_when_relation_is_none():
     user_admin._next_id = 2
 
     response = client.get("/admin/users")
-    assert "&mdash;" in response.text
+    # The em dash itself, not the &mdash; entity: the placeholder is now
+    # a configurable string (empty_value_display) rendered as text.
+    assert DEFAULT_EMPTY_VALUE in response.text
 
 
 def test_detail_renders_related_link():
@@ -253,9 +256,6 @@ def test_autocomplete_field_prefills_current_selection_label_on_edit():
     assert f'value="{acme.id}"' in response.text
 
 
-# -- many-to-many: the searchable multi-select --------------------------
-
-
 def multi_select_markup(page):
     """Just the multi-select component's markup: from its x-data to the
     next component's, so an assertion about this control can neither be
@@ -294,8 +294,6 @@ def test_many_to_many_renders_searchable_multi_select_not_a_native_multiple():
     assert 'placeholder="Search&hellip;"' in text, "expected the search box"
 
 
-# The widget posts what a <select multiple> posted: repeated inputs under
-# the field's own name, which is what parse_form_data's getlist reads.
 def test_many_to_many_selection_posts_under_the_field_name():
     client, _, user_admin, org_admin = make_client()
     org_admin.create({"name": "Acme"})
@@ -311,10 +309,6 @@ def test_many_to_many_selection_posts_under_the_field_name():
     assert 'data-value="1" data-label="Acme" data-selected="true"' not in text
 
 
-# The multi-select declares role=combobox/listbox, which promises
-# assistive tech that the keyboard works. Focus stays in the search box
-# -- typing is the point of this control -- so the arrows move an
-# aria-activedescendant highlight rather than real focus.
 def test_multi_select_is_keyboard_operable():
     client, _, _, org_admin = make_client()
     org_admin.create({"name": "Acme"})
@@ -333,9 +327,6 @@ def test_multi_select_is_keyboard_operable():
     )
 
 
-# The autocomplete relation field is the fourth listbox in the tree. It
-# always had arrow keys, but announced nothing: no combobox role and no
-# way for a screen reader to know which result was highlighted.
 def test_relation_combobox_is_announced_to_assistive_tech():
     # _make_autocomplete_client, not make_client: the plain fixture
     # renders a ui/select for the relation and a multi-select for the

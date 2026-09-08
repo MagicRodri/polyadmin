@@ -26,8 +26,10 @@ def register_pages(admin, users: UserRepository) -> None:
                 f"{ctx.base_path}/tools/broadcast",
                 flash=(
                     "success",
-                    f"Broadcast sent to {recipients} active user(s) "
-                    f"({urgency} urgency, {channels}, {rate}/min).",
+                    (
+                        f"Broadcast sent to {recipients} active user(s) "
+                        f"({urgency} urgency, {channels}, {rate}/min)."
+                    ),
                 ),
             )
         return ctx.render("pages/broadcast.html")

@@ -1,10 +1,10 @@
 """OrganizationAdmin: the relation target for UserAdmin.organization."""
 from __future__ import annotations
 
+from models import Organization, OrganizationRepository
+
 from polyadmin import ModelAdmin, StringField
 from polyadmin.core.inline import TabularInline
-
-from models import Organization, OrganizationRepository
 
 
 class OrganizationAdmin(ModelAdmin):

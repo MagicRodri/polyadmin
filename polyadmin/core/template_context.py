@@ -1,8 +1,7 @@
 """TemplateContext: the data handed to each rendered admin page.
 
-One function per view type, all built on top of `base_context` so every
-page gets the same admin-wide data (nav, base path, flash messages)
-without repeating it.
+One function per view type, all built on `base_context`, so every page gets the
+same admin-wide data (nav, base path, flash messages) without repeating it.
 """
 from __future__ import annotations
 
@@ -16,10 +15,9 @@ from polyadmin.core.query import ListRequest
 
 
 def default_permissions(model_admin: ModelAdmin) -> dict[str, bool]:
-    """Permissions as if every capability the ModelAdmin declares is
-    also authorized -- what you get with no Authorizer configured.
-    Real per-principal permissions are computed by the adapter
-    and passed in instead.
+    """Permissions as if every capability the ModelAdmin declares is also
+    authorized -- what you get with no Authorizer configured. Real per-
+    principal permissions are computed by the adapter and passed in.
     """
     # Keys are "can_view" etc, not "view"/"update" -- "update" in
     # particular would collide with the dict.update method when
@@ -34,10 +32,9 @@ def default_permissions(model_admin: ModelAdmin) -> dict[str, bool]:
 
 
 def _object_label(model_admin: ModelAdmin, obj: Any) -> str:
-    """A short human-readable label for an object in a breadcrumb trail.
-    Prefers the first search_fields entry (usually the most identifying
-    field, e.g. "email") over the first list_display column (often the
-    primary key), falling back to the primary key itself.
+    """A short label for an object in a breadcrumb trail: the first search_fields
+    entry (usually the most identifying), else the first list_display column,
+    else the primary key.
     """
     display_fields = list(model_admin.search_fields) or list(model_admin.list_display) or model_admin.get_detail_fields()
     if display_fields:
@@ -65,14 +62,12 @@ def _list_url(
     page: int | None = None,
     page_size: Any = _KEEP,
 ) -> str:
-    """One list-view URL, with every parameter carried over from the
-    current request except the ones explicitly overridden.
+    """One list-view URL, carrying over every parameter of the current request
+    except those overridden (pass None to drop one).
 
-    Every control on the list page (filters, sort, paging, rows-per-page,
-    reset) is a link, so they all need the same "keep what's there,
-    change one thing" rule. Building it once here is what keeps the
-    templates free of query-string assembly -- pass `None` for a
-    parameter to drop it rather than keep it.
+    Every control on the list page is a link needing the same "keep what's
+    there, change one thing" rule, so building it once here keeps the templates
+    free of query-string assembly.
     """
     search = list_request.search if search is _KEEP else search
     filters = list_request.filters if filters is _KEEP else filters
@@ -97,10 +92,8 @@ def _list_url(
 
 
 def _filter_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> list[dict[str, Any]]:
-    """Per-filter choice lists with precomputed URLs -- each choice is a
-    link (not a <select> option) that preserves search/ordering/
-    other-filters and only changes the one filter it represents,
-    resetting to page 1.
+    """Per-filter choice lists with precomputed URLs. Each choice is a link, not a
+    <select> option, preserving everything else and resetting to page 1.
     """
     controls = []
     for filt in model_admin.filters:
@@ -144,9 +137,10 @@ def _sort_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path
 
 
 def _page_size_options(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> list[dict[str, Any]]:
-    """Rows-per-page choices. Changing the size returns to page 1 --
-    staying on page 7 while quadrupling the page size would land the
-    reader somewhere they never asked to be."""
+    """Rows-per-page choices. Changing the size returns to page 1: staying on page
+    7 while quadrupling the size would land the reader somewhere they never
+    asked to be.
+    """
     return [
         {
             "size": size,
@@ -161,20 +155,16 @@ def _nav_link(key: str, label: str, url: str, icon: str, active_key: str | None)
     return {"type": "link", "key": key, "label": label, "url": url, "icon": icon, "active": key == active_key}
 
 
-# GROUP_ICON is fixed, not configurable per category -- a category is
-# just a string, not an object with its own settings -- so every
-# accordion section uses the same icon, distinct from any resource's
-# own icon (which nested links keep showing, see build_nav).
+# GROUP_ICON is fixed, not per-category: a category is a string, not an
+# object with settings of its own.
 GROUP_ICON = "folder"
 
 
 def build_nav(admin: Admin, base_path: str, active_key: str | None) -> list[dict[str, Any]]:
-    """Ordered sidebar entries: flat links and category-grouped
-    accordion sections, interleaved in first-registration-appearance
-    order across ModelAdmins and AdminPages. ModelAdmins with
-    can_view=False and AdminPages with show_in_nav=False are omitted.
-    A group's own "active" flag (used to default its accordion open)
-    is true iff any of its links is the current page.
+    """Ordered sidebar entries: flat links and category groups, interleaved in
+    first-registration order. Entries the principal cannot view, and pages with
+    show_in_nav=False, are omitted. A group's "active" flag defaults its
+    accordion open and is true iff it holds the current page.
     """
     order: list[dict[str, Any]] = []
     groups: dict[str, dict[str, Any]] = {}
@@ -209,9 +199,8 @@ def build_nav(admin: Admin, base_path: str, active_key: str | None) -> list[dict
 
 
 def category_breadcrumb(category: str | None) -> list[dict[str, Any]]:
-    """The category crumb, if any -- always the first segment after
-    the implicit home crumb, never a link (there's no route for a
-    category by itself) and never the *active*/current-page crumb.
+    """The category crumb, if any: the first segment after the home crumb, never a
+    link and never active.
     """
     if not category:
         return []
@@ -240,17 +229,15 @@ def base_context(
         "site_logo_url": admin.site_logo_url,
         "breadcrumbs": breadcrumbs or [],
         "nav_items": build_nav(admin, base_path, active_nav_key),
-        # The sidebar's footer (shadcn sidebar-07's NavUser) shows who
-        # is signed in, so the principal has to reach every page that
-        # renders a sidebar -- which is all of them.
+        # The sidebar footer shows who is signed in, so the principal has
+        # to reach every page that renders a sidebar -- which is all of
+        # them.
         "principal": principal,
-        # Per-request state like principal, and needed on every page for
-        # the same reason: base.html renders it as a meta tag and every
-        # no-JS form renders it as a hidden field.
+        # Needed on every page: base.html renders it as a meta tag and
+        # every no-JS form renders it as a hidden field.
         "csrf_token": csrf_token,
-        # Whether a login_backend is configured -- i.e. whether there is
-        # a session to end. Without one the admin has no logout route,
-        # so offering the control would be a dead button.
+        # Whether there is a session to end. Without a login_backend the
+        # admin has no logout route, so the control would be dead.
         "can_sign_out": admin.login_backend is not None,
     }
 
@@ -269,10 +256,9 @@ def list_context(
     csrf_token: str = "",
 ) -> dict[str, Any]:
     list_request = list_request or ListRequest()
-    # Carries the current search/filter/sort into the Export links, so
-    # exporting always downloads the same filtered dataset shown on
-    # screen -- deliberately excludes page/page_size, since
-    # export is of the whole filtered result, not just the current page.
+    # Carries search/filter/sort into the Export links so a download
+    # matches what is on screen. page/page_size are excluded: an export is
+    # of the whole filtered result.
     export_params: list[tuple[str, str]] = []
     if list_request.search:
         export_params.append(("search", list_request.search))
@@ -292,7 +278,7 @@ def list_context(
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "page": page,
-        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.actions],
+        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.get_actions()],
         "list_display": list(model_admin.list_display),
         # "cells", not "values" -- the latter collides with dict.values,
         # the built-in method, when accessed via Jinja's dot notation.
@@ -305,26 +291,21 @@ def list_context(
         "filter_controls": filter_controls,
         "sort_controls": _sort_controls(model_admin, list_request, base_path),
         "page_size_options": _page_size_options(model_admin, list_request, base_path),
-        # Every paging control is a precomputed URL for the same reason
-        # the filter links are: the template should never assemble a
-        # query string. First/last exist because the tasks-style footer
-        # offers all four jumps, not just prev/next.
+        # Precomputed for the same reason the filter links are: the
+        # template should never assemble a query string.
         "page_urls": {
             "first": _list_url(model_admin, list_request, base_path, page=None),
             "previous": _list_url(model_admin, list_request, base_path, page=page.previous_page) if page.has_previous else None,
             "next": _list_url(model_admin, list_request, base_path, page=page.next_page) if page.has_next else None,
             "last": _list_url(model_admin, list_request, base_path, page=page.num_pages),
         },
-        # Clears search and every filter but deliberately keeps sort and
-        # page size: those are how you're reading the table, not what
-        # you're narrowing it to.
+        # Keeps sort and page size: those are how you are reading the
+        # table, not what you are narrowing it to.
         "reset_url": _list_url(model_admin, list_request, base_path, search=None, filters=None, page=None),
         "has_active_filters": bool(list_request.search or list_request.filters),
-        # How many declared filters are currently narrowing the list --
-        # the badge on the Filters trigger, so the panel says how much
-        # it's hiding without being opened. Search isn't included, since
-        # it has its own visible box in the toolbar. Mirrors
-        # go-polyadmin's listData.ActiveFilterCount.
+        # Badges the Filters trigger, so the panel says how much it hides
+        # without being opened. Search is excluded: it has its own visible
+        # box.
         "active_filter_count": sum(1 for control in filter_controls if control["active"]),
         "ordering": list_request.ordering or "",
         "export_query": export_query,
@@ -355,7 +336,7 @@ def detail_context(
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
-        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.actions],
+        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.get_actions()],
         "permissions": permissions or default_permissions(model_admin),
         "relation_permissions": relation_permissions or {},
     }
@@ -405,10 +386,9 @@ def form_context(
         "fieldsets": model_admin.get_fieldsets(),
         "form_action": form_action,
         "relation_options": relation_options or {},
-        # The edit form offers Delete in its action bar, so it needs the
-        # same permission map the detail page gets -- otherwise the
-        # button would render for a principal the authorizer would then
-        # reject at the route.
+        # The edit form offers Delete, so it needs the detail page's
+        # permission map: otherwise the button renders for a principal the
+        # route then rejects.
         "permissions": permissions or default_permissions(model_admin),
     }
 

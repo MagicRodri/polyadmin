@@ -7,8 +7,6 @@ handler returned itself -- the cookie would be silently dropped. A route
 class wraps the endpoint and post-processes the real response, which is
 the idiomatic seam for this.
 
-Mirrors go-polyadmin/fiber/csrf.go. See
-.idea/superpowers/specs/2026-09-01-csrf-hardening-design.md.
 """
 
 from __future__ import annotations
@@ -16,7 +14,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from fastapi import Request, Response
-from fastapi.responses import HTMLResponse
 from fastapi.routing import APIRoute
 
 from polyadmin.core.csrf import (
@@ -27,6 +24,7 @@ from polyadmin.core.csrf import (
     is_safe_method,
     new_csrf_token,
 )
+from polyadmin.fastapi.errors import csrf_failure
 
 
 def make_csrf_route(admin, base_path: str) -> type[APIRoute]:
@@ -54,10 +52,7 @@ def make_csrf_route(admin, base_path: str) -> type[APIRoute]:
                     # an attacker could never have echoed back but which a
                     # confused client might. No cookie means no match.
                     if not csrf_tokens_match(submitted, cookie_token):
-                        response = HTMLResponse(
-                            "CSRF token missing or invalid. Reload the page and try again.",
-                            status_code=403,
-                        )
+                        response = csrf_failure(request, admin, base_path)
                         _decorate(response, token, cookie_token, request, base_path)
                         return response
 

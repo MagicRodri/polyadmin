@@ -1,12 +1,10 @@
-"""The optional list_page capability -- mirrors go-polyadmin/fiber/listquerier_test.go."""
+"""The optional list_page capability."""
 import re
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.query import ListRequest
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
 

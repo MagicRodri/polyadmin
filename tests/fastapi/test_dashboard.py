@@ -3,7 +3,16 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.dashboard import Dashboard
-from polyadmin.core.widget import Activity, Chart, Metric, Progress, Stat, Table, Tabs, Timeline
+from polyadmin.core.widget import (
+    Activity,
+    Chart,
+    Metric,
+    Progress,
+    Stat,
+    Table,
+    Tabs,
+    Timeline,
+)
 from polyadmin.fastapi.router import create_router
 from tests.core.test_model_admin import InMemoryUserAdmin
 
@@ -93,9 +102,6 @@ def test_dashboard_view_requires_dashboard_permission():
     assert client.get("/admin").status_code == 403
 
 
-# The tabs widget is the only one that renders other widgets inside
-# itself, so cover the round trip: each panel's child widget must
-# actually reach the page.
 def test_dashboard_renders_nested_tabs_panels():
     dashboard = Dashboard(
         widgets=[

@@ -1,14 +1,10 @@
-{# Slider, ported from shadcn/ui (Radix Slider).
+{# Slider, ported from shadcn/ui.
 
-   Mirrors go-polyadmin/templates/admin/components/ui/slider.html.
-
-   Radix builds the track/range/thumb out of divs and drives them with
-   pointer events. A native <input type="range"> already does that --
-   including keyboard arrows and, unlike the Radix version, posting with
-   a plain form submit -- so this port keeps the native control, tints it
-   with `accent-primary`, and uses Alpine only for the live value
-   readout beside it (which is presentation, so the control still works
-   with Alpine absent). #}
+   Radix builds the track and thumb from divs driven by pointer events;
+   a native <input type="range"> already does that, including keyboard
+   arrows and posting with a plain form submit. So this keeps the native
+   control, tints it with `accent-primary`, and uses Alpine only for the
+   value readout beside it. #}
 {% macro slider(name, label, min=0, max=100, step=1, value=0, suffix=none) %}
 <div class="mb-4" x-data="{ value: {{ value }} }">
   <div class="flex items-baseline justify-between gap-2">

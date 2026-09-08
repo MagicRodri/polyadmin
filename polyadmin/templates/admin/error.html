@@ -1,0 +1,33 @@
+{# Error page: 401, 403, 404, and a rejected CSRF token.
+
+   Outside the admin shell, like login.html and for a related reason: a 401
+   has no principal to build a sidebar for, and a 403's sidebar would
+   advertise resources the visitor has just been told they cannot reach.
+   What replaces it is one link home, which is the thing a bare "Permission
+   denied." text response never gave anyone.
+
+   It still pulls in the theme, so an error in a dark-mode admin is not a
+   white flash. #}
+{% from "admin/components/icons.html" import icon %}
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} &middot; {{ site_title }}</title>
+  {% include "admin/theme.html" %}
+</head>
+<body class="h-full bg-background text-foreground antialiased">
+  <div class="{{ ui('error', 'page') }}">
+    <div class="{{ ui('error', 'card') }}">
+      <p class="{{ ui('error', 'status') }}">{{ status }}</p>
+      <h1 class="{{ ui('error', 'title') }}">{{ title }}</h1>
+      <p class="{{ ui('error', 'message') }}">{{ message }}</p>
+      {% if home_url %}
+      <a href="{{ home_url }}" class="{{ ui('button', 'outline') }} {{ ui('button', 'size-sm') }}">
+        {{ icon("home", "size-4") }} Back to the admin</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

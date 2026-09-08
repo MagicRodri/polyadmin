@@ -128,7 +128,7 @@ def create_router(
                 build_lookup_handler(admin, model_admin, renderer, base_path),
                 methods=["GET"],
             )
-            if model_admin.actions:
+            if model_admin.get_actions():
                 router.add_api_route(
                     f"{prefix}/actions/{{action_name}}",
                     build_action_handler(admin, model_admin, base_path),

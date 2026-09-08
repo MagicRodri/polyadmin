@@ -1,6 +1,6 @@
-"""CSRF token primitives, mirrored by go-polyadmin/core/csrf.go.
+"""CSRF token primitives.
 
-The wire names below are shared with the Go implementation and with both
+The wire names below are shared with both
 adapters' templates. Changing one side without the other silently breaks
 every form in the other language.
 """

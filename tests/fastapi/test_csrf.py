@@ -101,11 +101,6 @@ def test_csrf_can_be_disabled():
     assert response.headers["x-frame-options"] == "DENY"
 
 
-# ActionableUserAdmin, not the plain one: the list page's bulk-actions
-# form and the detail page's record-action forms are both inside
-# `{% if actions %}`, so an admin with no declared actions renders
-# neither, and the assertions below would pass or fail for the wrong
-# reason.
 def test_pages_carry_the_token_for_forms_and_htmx():
     client, user_admin = make_client(model_admin_cls=ActionableUserAdmin)
     user = user_admin.create({"email": "a@example.com"})

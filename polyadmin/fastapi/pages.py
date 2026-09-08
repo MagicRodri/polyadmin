@@ -14,7 +14,13 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.page import AdminPage
 from polyadmin.core.template_context import base_context, category_breadcrumb
 from polyadmin.fastapi.auth import authorize
-from polyadmin.fastapi.responses import clear_flash, is_htmx_request, pop_flash, redirect, set_flash
+from polyadmin.fastapi.responses import (
+    clear_flash,
+    is_htmx_request,
+    pop_flash,
+    redirect,
+    set_flash,
+)
 from polyadmin.templating import Renderer
 
 

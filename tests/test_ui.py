@@ -1,4 +1,4 @@
-"""Tests for the shadcn variant resolver -- mirrors go-polyadmin/fiber/ui_test.go."""
+"""Tests for the shadcn variant resolver."""
 import re
 
 import pytest
@@ -205,5 +205,9 @@ def test_registry_matches_the_go_implementation_key_for_key():
         "history",
         # login page (shadcn's login-04 block)
         "login",
+        # 401/403/404 page
+        "error",
+        # bounded scrolling region (shadcn ScrollArea)
+        "scroll-area",
     }
     assert set(UI_REGISTRY) == expected_components

@@ -1,42 +1,23 @@
-{# Design tokens + frontend runtime. Mirrors
-     go-polyadmin/templates/admin/theme.html.
+{# Design tokens + frontend runtime.
 
-     This is the "take the tokens, leave the React" half of
-     plan/shadcnui-usage.md: the CSS variables below are shadcn/ui's
-     stock Zinc theme, and every class string in polyadmin/ui.py resolves
-     to them (bg-background, text-muted-foreground, border-input, ...)
-     rather than to a literal Tailwind palette. Restyling the whole
-     admin -- or flipping it to dark -- is therefore a change to these
-     variables and nothing else.
+   The variables below are shadcn/ui's stock Zinc theme, and every class
+   string in polyadmin/ui.py resolves to them rather than to a literal
+   Tailwind palette -- so restyling the admin, or flipping it to dark, is
+   a change to these variables and nothing else.
 
-     Script order in here is load-order-critical, top to bottom:
+   Script order is load-order-critical, top to bottom:
 
-       1. the dark-class script must run *synchronously before paint*,
-          otherwise a dark-mode reload flashes the light palette for a
-          frame (this is the same reason next-themes injects an inline
-          script);
-       2. the Tailwind CDN script must load *before* `tailwind.config`
-          is assigned -- backwards from what you'd guess. The CDN
-          script is what defines the global `tailwind` object in the
-          first place; setting `tailwind.config = {...}` before it
-          exists throws a silent `ReferenceError` (swallowed by the
-          browser, no visible failure) and Tailwind falls back to its
-          stock palette. Every custom color -- `bg-background`,
-          `text-foreground`, the `chart-*` tokens -- then resolves to
-          nothing, which is exactly what happened here: confirmed with
-          a real headless-Chrome run where `tailwind.config` came out
-          as `{}` and not one token-based utility (`.bg-background`,
-          `.text-chart-1`, ...) existed in the generated stylesheet.
-          This is also Tailwind's own documented order
-          (https://tailwindcss.com/docs/installation/play-cdn#customizing-tailwind);
-       3. Alpine *plugins* must load before Alpine core, per Alpine's
-          docs -- core initializes on load and only sees directives
-          registered by then. `x-trap` (action_confirm_modal.html) and
-          `x-collapse`/`x-anchor` (the ui/ components) come from these
-          three plugins.
+     1. the dark-class script must run synchronously before paint, or a
+        dark-mode reload flashes the light palette for a frame;
+     2. the Tailwind CDN script must load *before* `tailwind.config` is
+        assigned -- backwards from what you would guess. That script is
+        what defines the global `tailwind`, so assigning to it first
+        throws a ReferenceError the browser swallows, and every
+        token-based utility then resolves to nothing;
+     3. Alpine plugins must load before Alpine core, which initializes
+        on load and only sees directives registered by then.
 
-     Everything is CDN-loaded: there is no frontend build step in
-     either language implementation. #}
+   Everything is CDN-loaded: there is no frontend build step. #}
 <script>
   // (1) Pre-paint theme resolution -- see the note above.
   (function () {
@@ -123,12 +104,10 @@
   };
 </script>
 
-{# (3) Alpine plugins, then Alpine core, then HTMX. SortableJS (defer,
-   so it's guaranteed ready before any x-init that calls
-   Sortable.create -- see ui/table.html's reorderable drag handle) is
-   the framework's one non-Alpine dependency: drag-and-drop has no
-   small CSS-only equivalent the way every other component here gets
-   by with Alpine alone. Mirrors go-polyadmin/templates/admin/theme.html. #}
+{# (3) Alpine plugins, then Alpine core, then HTMX. SortableJS is
+   deferred so it is ready before any x-init calling Sortable.create,
+   and is the one non-Alpine dependency: drag-and-drop has no small
+   CSS-only equivalent. #}
 <script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://unpkg.com/@alpinejs/anchor@3.x.x/dist/cdn.min.js"></script>
@@ -228,6 +207,24 @@
     background-position: center;
     background-repeat: no-repeat;
   }
+  /* ScrollArea (ui("scroll-area")). Radix draws a custom scrollbar over
+     a hidden native one; this restyles the native one instead, which
+     needs real CSS -- Tailwind has no scrollbar utilities without a
+     plugin. Thin, token-coloured, and only visible where it is needed. */
+  .ui-scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .ui-scroll-area::-webkit-scrollbar { width: 6px; height: 6px; }
+  .ui-scroll-area::-webkit-scrollbar-track { background: transparent; }
+  .ui-scroll-area::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .ui-scroll-area:hover::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
   .dark .ui-checkbox:checked {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
   }

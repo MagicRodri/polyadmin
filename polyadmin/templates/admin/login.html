@@ -1,21 +1,14 @@
 {# Login page, ported from shadcn/ui's login-04 block.
 
-   Mirrors go-polyadmin/templates/admin/login.html.
+   The one page that does not extend base.html, and the reason a bare
+   layout exists: base.html wraps a nav built from what the current
+   principal may see, and here there is no principal yet. It still
+   includes admin/theme.html, so signing in does not flash a light page
+   at someone who chose dark.
 
-   This is the one page that does NOT extend base.html, and it is the
-   reason a bare layout exists at all: base.html is a SidebarProvider
-   wrapping a nav built from the ModelAdmins the *current principal* may
-   see -- and on this page there is no principal yet. A login form framed
-   by the admin's own chrome would also be a lie about what the visitor
-   has access to. So the document is written out here in full.
-
-   It still includes admin/theme.html, which is what keeps the design
-   tokens, the dark-mode class, and the pre-paint theme script working:
-   signing in does not flash a light page at someone who chose dark.
-
-   Deliberately absent from the port: the Apple/Google/Meta buttons,
-   "Sign up", and "Forgot your password?". The framework has no route
-   behind any of them -- see polyadmin/ui.py's "login" registry entry. #}
+   Deliberately absent from the port: the social buttons, "Sign up" and
+   "Forgot your password?" -- the framework has no route behind any of
+   them. #}
 {% from "admin/components/csrf-field.html" import csrf_field %}
 <!doctype html>
 <html lang="en" class="h-full">

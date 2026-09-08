@@ -1,19 +1,22 @@
 """The list query pipeline: search -> filters -> ordering.
 
-`execute_list_query` is deliberately independent of pagination so the
-same filtered/ordered result set can back the list view, an export, or
-a custom action -- each decides separately whether to paginate it.
+`execute_list_query` is independent of pagination so the same filtered and
+ordered result set can back the list view, an export, or a custom action, each
+deciding separately whether to paginate it.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
-
-# The size assumed when a request names none. Matches the handlers' own
-# query-string default, so a ListRequest built by hand and one parsed
-# from a URL page the same way.
+# The size assumed when a request names none, matching the handlers'
+# query-string default so a hand-built ListRequest pages like a parsed
+# one.
 DEFAULT_PAGE_SIZE = 25
+
+# Stands in for a None or blank value: an em dash reads as "nothing here"
+# rather than as a cell that failed to render.
+DEFAULT_EMPTY_VALUE = "\u2014"
 
 
 @dataclass
@@ -22,16 +25,15 @@ class ListRequest:
     filters: dict[str, str] = field(default_factory=dict)
     ordering: str | None = None
     page: int = 1
-    page_size: int = DEFAULT_PAGE_SIZE
-    # unlimited asks for every matching row rather than one page -- what
-    # an export wants. It overrides page/page_size rather than being
-    # expressed as page_size 0, so "unset" and "all" stay
-    # distinguishable.
+    page_size: int = 0
+    # unlimited asks for every matching row, which is what an export
+    # wants. It overrides page/page_size rather than being page_size 0, so
+    # "unset" and "all" stay distinguishable.
     unlimited: bool = False
 
     def window(self) -> tuple[int, int]:
-        """The (offset, limit) pair a data source wants. A limit of 0
-        means no limit -- see `unlimited`.
+        """The (offset, limit) pair a data source wants. A limit of 0 means no
+        limit -- see `unlimited`.
         """
         if self.unlimited:
             return 0, 0
@@ -41,20 +43,14 @@ class ListRequest:
 
 
 class ListQuerier(Protocol):
-    """An optional ModelAdmin capability. Implement `list_page` to
-    resolve the whole list query -- search, filters, ordering and the
-    page window -- in the data source itself, typically as one SQL
-    query, instead of letting the framework do it in memory over
-    everything get_queryset returns.
+    """An optional ModelAdmin capability: implement `list_page` to resolve search,
+    filters, ordering and the page window in the data source itself, rather
+    than in memory over everything get_queryset returns.
 
-    It is all-or-nothing by design: when a ModelAdmin implements this,
-    the framework applies *nothing* further, because it cannot tell what
-    the implementation already did and re-applying would double-filter.
-    The returned total is the count of rows matching search+filters
-    before the window, which is what pagination displays.
-
-    A ModelAdmin that does not implement it keeps the in-memory path,
-    unchanged.
+    All-or-nothing by design. The framework applies nothing further, because it
+    cannot tell what the implementation already did and re-applying would
+    double-filter. The returned total counts rows matching search+filters
+    before the window. Not implementing it keeps the in-memory path.
     """
 
     def list_page(self, list_request: ListRequest) -> tuple[list[Any], int]:
@@ -107,27 +103,35 @@ def execute_list_query(model_admin: Any, objects: list[Any], list_request: ListR
     return objects
 
 
-def list_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any], int]:
-    """Resolve a list query, and the only place that decides how.
+def apply_defaults(model_admin: Any, list_request: ListRequest) -> ListRequest:
+    """Fill in the ModelAdmin's ordering and page size where the request named
+    neither.
 
-    A ModelAdmin implementing `list_page` answers it itself -- one query
-    in its own data source, with nothing re-applied here, because we
-    cannot tell what it already did. Everything else falls back to
-    loading the queryset and filtering it in memory.
-
-    Every consumer goes through here (list view, both exports, the
-    autocomplete lookup, relation option lists), so the two paths cannot
-    drift: the request's window is what distinguishes "one page" from
-    "capped at 20" from "every matching row".
-
-    Returns the objects for the requested window and the total matching
-    rows before it, which is what pagination needs.
+    Resolved before the query runs so a `list_page` implementation is told
+    about them too: they are part of the question, not the answer. Idempotent,
+    so a caller needing the resolved values can apply it once and pass the same
+    request on.
     """
-    # Resolved here rather than inside the in-memory branch so a
-    # list_page implementation is told about it too -- it is part of the
-    # question, not part of the answer.
+    changes = {}
     if not list_request.ordering:
-        list_request = replace(list_request, ordering=model_admin.get_default_ordering())
+        changes["ordering"] = model_admin.get_default_ordering()
+    # Not for an unlimited request: that deliberately has no page.
+    if not list_request.unlimited and list_request.page_size < 1:
+        changes["page_size"] = model_admin.get_page_size()
+    return replace(list_request, **changes) if changes else list_request
+
+
+def list_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any], int]:
+    """Resolve a list query, and the only place that decides how: a ModelAdmin
+    implementing `list_page` answers it itself, everything else loads the
+    queryset and filters in memory.
+
+    Every consumer goes through here -- list view, both exports, the
+    autocomplete lookup, relation option lists -- so the paths cannot drift;
+    the request's window is what separates "one page" from "capped at 20" from
+    "every matching row". Returns the window's objects and the total before it.
+    """
+    list_request = apply_defaults(model_admin, list_request)
     if hasattr(model_admin, "list_page"):
         return model_admin.list_page(list_request)
     objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)

@@ -1,13 +1,8 @@
-{# Breadcrumb, ported from shadcn/ui (which is markup-only -- no Radix
-   primitive behind it, so this is a straight class-for-class port onto
-   the theme tokens). Mirrors
-   go-polyadmin/templates/admin/components/ui/breadcrumb.html.
-
-   A home-icon crumb (always links to the dashboard) followed by the
-   page's own trail, chevron-separated, with the current page as a
-   plain (non-link) item carrying aria-current. Doubles as the page's
-   header now that base.html has no separate <h1> -- the active crumb is
-   weighted like a title so it still reads as one. #}
+{# Breadcrumb, ported from shadcn/ui: a home crumb linking to the
+   dashboard, then the page's own trail, with the current page a plain
+   item carrying aria-current. It doubles as the page header, since
+   base.html has no separate <h1> -- the active crumb is weighted like a
+   title so it reads as one. #}
 {% from "admin/components/icons.html" import icon %}
 {% macro render_breadcrumbs(breadcrumbs, base_path) %}
 <nav aria-label="Breadcrumb">

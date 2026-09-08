@@ -1,9 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
+from main import app
 
 from polyadmin.core.csrf import CSRF_COOKIE_NAME, CSRF_HEADER_NAME, new_csrf_token
-
-from main import app
 
 client = TestClient(app)
 
@@ -72,11 +71,6 @@ def _sign_in_as(email):
     assert response.status_code == 303, f"signing in as {email} failed"
 
 
-# The viewer account exists to show the permission system doing
-# something other than refusing everything. It previously did refuse
-# everything -- SuperuserAuthorizer is all-or-nothing, so a non-superuser
-# got 403 on every page including the dashboard, which made the account
-# pointless and the admin look broken.
 def test_non_superuser_can_read():
     _sign_in_as("viewer@example.com")
     assert client.get("/admin", follow_redirects=False).status_code == 200

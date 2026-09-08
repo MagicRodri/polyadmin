@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.action import Action
-from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator
+from polyadmin.core.filter import BooleanFilter
 from polyadmin.fastapi.router import create_router
-from tests.core.test_model_admin import InMemoryUserAdmin
 from tests.conftest import csrf
+from tests.core.test_model_admin import InMemoryUserAdmin
 
 
 def _deactivate(model_admin, objects, principal):
@@ -81,7 +81,13 @@ def test_unknown_action_name_is_404():
 
 
 def test_action_route_not_registered_when_no_actions_declared():
-    client, _ = make_client(model_admin_cls=InMemoryUserAdmin)
+    # disable_delete_selected as well as declaring none: every admin that
+    # can delete now carries the built-in bulk delete, so "no actions"
+    # means opting out of that too.
+    class NoActions(InMemoryUserAdmin):
+        disable_delete_selected = True
+
+    client, _ = make_client(model_admin_cls=NoActions)
     response = client.post("/admin/users/actions/deactivate", data={"pks": ["1"]})
     assert response.status_code == 404
 
@@ -127,7 +133,10 @@ def test_list_view_shows_action_bar_and_checkboxes():
 
 
 def test_list_view_hides_action_bar_when_no_actions_declared():
-    client, _ = make_client(model_admin_cls=InMemoryUserAdmin)
+    class NoActions(InMemoryUserAdmin):
+        disable_delete_selected = True
+
+    client, _ = make_client(model_admin_cls=NoActions)
     response = client.get("/admin/users")
     assert response.status_code == 200
     assert 'id="bulk-actions-form"' not in response.text
@@ -310,9 +319,6 @@ def test_action_keeps_an_on_site_referer():
         follow_redirects=False,
     )
     assert response.headers["location"] == "/admin/users?page=2"
-
-
-# -- select all matching --------------------------------------------------
 
 
 def test_select_all_matching_acts_on_every_filtered_row_not_just_the_page():

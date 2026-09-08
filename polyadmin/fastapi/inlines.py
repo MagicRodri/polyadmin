@@ -136,6 +136,8 @@ def build_inline_context(
             {
                 "slug": inline.child,
                 "label": inline_label(admin, inline),
+                # The child's own placeholder, not the parent's.
+                "empty_value": child_admin.get_empty_value(),
                 "layout": inline.layout,
                 "mode": mode,
                 "child_admin": child_admin,

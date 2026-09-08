@@ -1,33 +1,24 @@
 {% from "admin/components/icons.html" import icon %}
 {# MultiSelect: a searchable Command-style list over a many-to-many
    relation's options, with the current selection shown as removable
-   chips on the trigger. Mirrors
-   go-polyadmin/templates/admin/components/ui/multi-select.html.
+   chips on the trigger.
 
    Same job as Django admin's filter_horizontal permissions widget -- a
    long option list is unusable until you can type at it -- built from
    shadcn's Combobox/Command idiom rather than Django's two-pane layout,
    which needs more width than a form column has.
 
-   Unlike the relation combobox in ui/field.html, the filtering is
-   client-side: a many-to-many's options are already in the page in full
-   (the server rendered every one of them), so there is nothing to fetch
-   and a /lookup round-trip per keystroke would be pure latency. The
-   autocomplete combobox exists precisely because *its* dataset is too
-   big to put in the page; this one's isn't.
+   Filtering is client-side, unlike the relation combobox: a
+   many-to-many's options are already in the page in full, so a
+   round-trip per keystroke would be pure latency.
 
-   Posting: one hidden input per selection, all under the field's own
-   name, which is exactly what a <select multiple> posts -- the handler
-   reads them with form.getlist() and can't tell the difference. An
-   empty selection posts nothing, again matching the native control, so
-   "cleared" and "untouched" stay as indistinguishable as they already
-   were.
+   It posts one hidden input per selection under the field's own name,
+   exactly what a <select multiple> posts, so the handler cannot tell
+   the difference. An empty selection posts nothing, again matching the
+   native control.
 
-   Values and labels flow through data-value/data-label and are read
-   back via $el.dataset, never interpolated into an Alpine expression --
-   same reasoning as ui/select.html and the relation combobox: a label
-   containing quotes must never have to survive being embedded in a JS
-   string.
+   Values and labels ride in on data-value/data-label and are read back
+   via $el.dataset, never interpolated into an Alpine expression.
 
    Args:
      name         form field name
@@ -35,18 +26,16 @@
      placeholder  shown when nothing is chosen
      disabled     bool #}
 {% macro multi_select(name, options, placeholder="Select…", disabled=false) %}
-{# Keyboard model: focus stays in the search box -- typing is the point
-   of this control -- and the arrow keys move a highlight that the input
-   reports via aria-activedescendant. Same approach as ui/select and the
-   relation combobox in ui/field.html; moving real focus into the list
-   would mean you could not keep typing. #}
+{# Focus stays in the search box -- typing is the point of this control
+   -- and the arrow keys move a highlight the input reports through
+   aria-activedescendant. Moving real focus into the list would mean you
+   could not keep typing. #}
 <div class="{{ ui('combobox') }}" x-data="adminMultiSelect()" x-init="hydrate()"
      x-id="['ms-option', 'ms-listbox']"
      @keydown.escape="closeToTrigger()" @click.outside="close()">
-  {# The selection itself. x-for over real inputs rather than one
-     comma-joined value: the server side already speaks "repeated field
-     name", and joining would mean inventing a separator that some
-     primary key eventually contains. #}
+  {# Real inputs rather than one comma-joined value: the server already
+     speaks "repeated field name", and joining would mean inventing a
+     separator some primary key eventually contains. #}
   <template x-for="item in selected" :key="item.value">
     <input type="hidden" name="{{ name }}" :value="item.value">
   </template>
@@ -95,12 +84,9 @@
              class="{{ ui('input', 'bare') }}">
     </div>
     {# The list holds what you can still add: picking an option moves it
-       out of here and into a chip on the trigger, the same
-       available/chosen split Django's filter_horizontal draws. So
-       nothing in this list is ever in a selected state -- hence no
-       check indicator, and no aria-selected/aria-multiselectable to go
-       with it. The chips are the record of what's chosen, each with its
-       own Remove button. #}
+       into a chip on the trigger. So nothing here is ever in a selected
+       state -- hence no check indicator and no aria-selected. The chips
+       are the record of what is chosen. #}
     <div x-ref="options" role="listbox" :id="$id('ms-listbox')" class="{{ ui('multi-select', 'list') }}">
       {% for value, label, selected in options %}
       <div role="option" tabindex="-1" :id="$id('ms-option', {{ loop.index0 }})"

@@ -1,12 +1,10 @@
-{# RadioGroup, ported from shadcn/ui (Radix RadioGroup).
+{# RadioGroup, ported from shadcn/ui.
 
-   Mirrors go-polyadmin/templates/admin/components/ui/radio-group.html.
-
-   Radix reimplements radio semantics on divs plus a roving tabindex;
-   native <input type="radio"> already has all of that -- one tab stop
-   per group, arrow keys to move within it, and it posts with a plain
-   form submit -- so this port keeps the native control and takes only
-   shadcn's layout and coloring (accent-primary for the dot). Zero JS.
+   Radix reimplements radio semantics on divs with a roving tabindex; a
+   native <input type="radio"> already has all of it -- one tab stop per
+   group, arrow keys within it, and a plain form submit -- so this keeps
+   the native control and takes only shadcn's layout and colouring.
+   Zero JS.
 
    `choices` is a list of dicts: {"value": ..., "label": ...,
    "help": ...(optional)}. #}

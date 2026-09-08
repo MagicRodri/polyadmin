@@ -1,4 +1,4 @@
-"""The login page and its gate. Mirrors go-polyadmin/fiber/login_test.go."""
+"""The login page and its gate."""
 
 import pytest
 from fastapi import FastAPI
@@ -82,9 +82,6 @@ def _next_of(location):
     return parse_qs(urlparse(location).query).get(NEXT_QUERY_PARAM, [""])[0]
 
 
-# -- the gate -------------------------------------------------------------
-
-
 def test_unauthenticated_request_redirects_to_login(client):
     response = client.get("/admin/users")
     assert response.status_code == 303
@@ -94,39 +91,26 @@ def test_unauthenticated_request_redirects_to_login(client):
     assert _next_of(location) == "/admin/users"
 
 
-# The query string is part of where they were going -- dropping it would
-# return someone to page 1 of an unsorted list after signing in.
 def test_login_redirect_preserves_the_query_string(client):
     response = client.get("/admin/users?page=3&sort=email")
     assert _next_of(response.headers["location"]) == "/admin/users?page=3&sort=email"
 
 
-# An expired session usually surfaces mid-page, on an htmx request. A 303
-# there would be followed by htmx and swapped into the page as content --
-# a login form inside a table cell. HX-Redirect navigates the window.
 def test_unauthenticated_htmx_request_gets_hx_redirect(client):
     response = client.get("/admin/users", headers={"HX-Request": "true"})
     assert response.headers["HX-Redirect"].startswith("/admin/login")
 
 
-# Without a login_backend there is nowhere to send anyone, so the
-# behaviour must be exactly what it was before login existed.
 def test_without_a_login_backend_unauthenticated_is_still_401():
     client = _client(Admin(model_admins=[InMemoryUserAdmin()], authenticator=DenyAllAuthenticator()))
     assert client.get("/admin/users").status_code == 401
 
 
-# ...and the login routes must not exist at all.
 def test_without_a_login_backend_the_login_route_is_not_mounted():
     client = _client(Admin(model_admins=[InMemoryUserAdmin()]))
     assert client.get("/admin/login").status_code == 404
 
 
-# -- the page -------------------------------------------------------------
-
-
-# The login page is reachable by someone with no session -- if it were
-# not, it could never be reached at all.
 def test_login_page_is_publicly_reachable(client):
     response = client.get("/admin/login")
     assert response.status_code == 200
@@ -134,9 +118,6 @@ def test_login_page_is_publicly_reachable(client):
         assert want in response.text, want
 
 
-# It is the one page outside the admin shell: there is no principal yet,
-# so a sidebar listing resources would be both impossible to build and a
-# lie about what the visitor can reach.
 def test_login_page_renders_without_the_admin_shell(client):
     page = client.get("/admin/login").text
     for unwanted in ("sidebarOpen", "breadcrumb", "Breadcrumb"):
@@ -146,14 +127,10 @@ def test_login_page_renders_without_the_admin_shell(client):
     assert "polyadmin-theme" in page
 
 
-# The dropped login-04 controls: each would be a dead end.
 def test_login_page_omits_controls_with_no_route_behind_them(client):
     page = client.get("/admin/login").text
     for unwanted in ("Forgot your password", "Sign up", "Login with Google", "Or continue with"):
         assert unwanted not in page, unwanted
-
-
-# -- signing in -----------------------------------------------------------
 
 
 def test_valid_credentials_begin_a_session_and_return_to_next(client, backend):
@@ -178,7 +155,6 @@ def test_invalid_credentials_do_not_begin_a_session(client, backend):
     assert "match an account" in response.text
 
 
-# A wrong password must not cost the email as well.
 def test_failed_sign_in_echoes_the_identifier_back(client):
     response = client.post(
         "/admin/login",
@@ -188,7 +164,6 @@ def test_failed_sign_in_echoes_the_identifier_back(client):
     assert 'value="demo@example.com"' in response.text
 
 
-# One message for both, or the form is an account enumerator.
 def test_unknown_user_and_wrong_password_are_indistinguishable(client):
     def alert_of(text):
         start = text.index('role="alert"')
@@ -205,8 +180,6 @@ def test_unknown_user_and_wrong_password_are_indistinguishable(client):
     assert alert_of(wrong_password) == alert_of(no_such_user)
 
 
-# Credentials good, session store down: the visitor is not signed in and
-# must not be told they are.
 def test_session_failure_does_not_sign_anyone_in(client, backend):
     backend.begin_error = RuntimeError("session store unavailable")
     response = client.post(
@@ -218,8 +191,6 @@ def test_session_failure_does_not_sign_anyone_in(client, backend):
     assert "location" not in response.headers
 
 
-# The open-redirect guard, exercised through the actual route rather than
-# only against safe_next_url directly.
 def test_sign_in_refuses_to_redirect_off_site(client):
     response = client.post(
         "/admin/login?next=https%3A%2F%2Fevil.example",
@@ -229,17 +200,11 @@ def test_sign_in_refuses_to_redirect_off_site(client):
     assert response.headers["location"] == "/admin"
 
 
-# Nothing to do here for someone who already has a session.
 def test_login_page_redirects_an_already_signed_in_visitor(client):
     client.cookies.set(SESSION_COOKIE, "demo")
     assert client.get("/admin/login").status_code == 303
 
 
-# -- signing out ----------------------------------------------------------
-
-
-# The control has to exist somewhere, or the only way out of the admin is
-# to clear cookies by hand.
 def test_sidebar_offers_sign_out_when_a_login_backend_is_configured(client):
     client.cookies.set(SESSION_COOKIE, "demo")
     page = client.get("/admin/users").text
@@ -248,8 +213,6 @@ def test_sidebar_offers_sign_out_when_a_login_backend_is_configured(client):
     assert '<form method="post" action="/admin/logout">' in page
 
 
-# Without a backend there is no logout route, so the control would be a
-# dead button.
 def test_sidebar_omits_sign_out_without_a_login_backend():
     client = _client(
         Admin(
@@ -279,8 +242,6 @@ def test_logout_lands_on_a_page_confirming_it(client):
     assert "signed out" in client.get("/admin/login?signedout=1").text
 
 
-# A logout reachable by GET is one any <img src> on the internet can fire
-# at a signed-in admin.
 def test_logout_rejects_get(client, backend):
     assert client.get("/admin/logout").status_code == 405
     assert backend.ends == 0

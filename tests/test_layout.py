@@ -1,4 +1,4 @@
-"""The shared template layout. Mirrors go-polyadmin/fiber/layout_test.go."""
+"""The shared template layout."""
 
 from pathlib import Path
 
@@ -17,6 +17,7 @@ SHARED_LAYOUT = {
     "admin/theme.html",
     "admin/login.html",
     "admin/dashboard.html",
+    "admin/error.html",
     "admin/resource/list.html",
     "admin/resource/detail.html",
     "admin/resource/form.html",
@@ -30,6 +31,7 @@ SHARED_LAYOUT = {
     "admin/components/toasts.html",
     "admin/components/action_confirm_modal.html",
     "admin/components/csrf-field.html",
+    "admin/components/error_fragment.html",
     "admin/components/ui/breadcrumb.html",
     "admin/components/ui/bulk-actions.html",
     "admin/components/ui/calendar.html",

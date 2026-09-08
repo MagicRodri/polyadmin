@@ -9,8 +9,9 @@ anything else.
 
 from __future__ import annotations
 
-from polyadmin import ModelAdmin, StringField
 from models import Role, RoleRepository
+
+from polyadmin import ModelAdmin, StringField
 
 
 class RoleAdmin(ModelAdmin):

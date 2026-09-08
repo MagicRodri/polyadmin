@@ -1,20 +1,16 @@
-{# DataTablePagination, ported from shadcn/ui's Tasks example: the
-   selection count on the left, then rows-per-page, the page indicator,
-   and the four jump buttons on the right. Mirrors
-   go-polyadmin/templates/admin/components/ui/pagination.html.
+{# DataTablePagination, from shadcn's Tasks example: selection count
+   left, then rows-per-page, the page indicator and the four jump
+   buttons right.
 
-   Unlike the old prev/next pair this always renders, even for a single
-   page -- the row count and the rows-per-page control are useful when
-   there's nothing to page through, and a footer that vanishes makes the
-   table appear to jump as you filter.
+   It always renders, even for a single page: the row count and the
+   rows-per-page control are useful with nothing to page through, and a
+   footer that vanishes makes the table appear to jump as you filter.
 
-   Every URL is precomputed by TemplateContext.list_context
-   (page_urls, page_size_options), so this template assembles no query
-   strings. Each is a real href as well as an hx-get, so paging still
+   Every URL is precomputed, so this template assembles no query
+   strings, and each is a real href as well as an hx-get, so paging
    works with JS off.
 
-   Included (not a macro) from components/list_content.html, sharing its
-   ambient context. #}
+   Included, not a macro, so it shares list_content.html's context. #}
 {% from "admin/components/icons.html" import icon %}
 {% set swap = 'hx-target="#resource-list" hx-select="#resource-list" hx-swap="outerHTML" hx-push-url="true"' %}
 <nav class="{{ ui('pagination') }}">

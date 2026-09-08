@@ -1,19 +1,13 @@
-"""Renderer: turns a ModelAdmin + data into an HTML page.
+"""Renderer: turns a ModelAdmin plus data into an HTML page.
 
-Three levels of template ownership: framework templates
-(this package's `templates/` dir), then application override
-directories, searched in the order given, before falling back to the
-framework default.
-
-`render_list_fragment` / `render_form_fragment` render just the
-interactive inner region (no base layout) for HTMX partial swaps
- -- the full-page and fragment variants share the same
-TemplateContext builder, so they never drift out of sync.
+Templates resolve in three levels: an explicit override, then the application
+directories in the order given, then this package's own. `render_list_fragment`
+and `render_form_fragment` render the inner region alone for htmx swaps,
+sharing the full page's TemplateContext builder so the two never drift apart.
 """
 from __future__ import annotations
 
 import logging
-
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -21,10 +15,10 @@ from typing import Any
 import jinja2
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.inline import Inline
+from polyadmin.core.inline import INLINE_MULTISELECT_ROWS, Inline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
-from polyadmin.core.query import ListRequest
+from polyadmin.core.query import DEFAULT_EMPTY_VALUE, ListRequest
 from polyadmin.core.template_context import (
     dashboard_context,
     delete_context,
@@ -34,13 +28,9 @@ from polyadmin.core.template_context import (
 )
 from polyadmin.ui import ui
 
-# build_inline_context is imported lazily inside the methods that need
-# it (not at module level) -- polyadmin.fastapi.inlines lives under
-# the polyadmin.fastapi package, whose __init__ imports router.py ->
-# handlers.py -> `from polyadmin.templating import Renderer`; an
-# eager top-level import here would close that into a real circular
-# import (this module partially initialized when fastapi/__init__.py
-# tries to import Renderer from it).
+# Imported lazily, not at module level: polyadmin.fastapi.__init__ imports
+# router -> handlers -> Renderer, so an eager import here would close the
+# cycle.
 
 FRAMEWORK_TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -54,11 +44,16 @@ class Renderer:
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        # `ui` resolves shadcn-derived class strings (polyadmin/ui.py).
-        # A global rather than a per-template import so every template --
-        # including application overrides and custom page/widget
-        # templates -- can style with the same vocabulary for free.
+        # A global rather than a per-template import, so overrides and
+        # custom page/widget templates style with the same vocabulary for
+        # free.
         self.env.globals["ui"] = ui
+        # The macro default in components/field.html.
+        self.env.globals["DEFAULT_EMPTY_VALUE"] = DEFAULT_EMPTY_VALUE
+        # How many options a tabular inline's listbox shows before it
+        # scrolls. Four keeps the row near the height of the controls
+        # beside it.
+        self.env.globals["INLINE_MULTISELECT_ROWS"] = INLINE_MULTISELECT_ROWS
 
     def render(self, template_name: str, context: dict[str, Any]) -> str:
         return self.env.get_template(template_name).render(**context)
@@ -147,6 +142,7 @@ class Renderer:
             csrf_token=csrf_token,
         )
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
+        context["wide_body"] = _wide_body(context["inlines"])
         context["history"] = _history_for(admin, model_admin, obj)
         return self.render_candidates(model_admin.get_template_candidates("detail"), context)
 
@@ -184,6 +180,7 @@ class Renderer:
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
+        context["wide_body"] = _wide_body(context["inlines"])
         return self.render_candidates(model_admin.get_template_candidates("form"), context)
 
     def render_form_fragment(
@@ -231,11 +228,9 @@ class Renderer:
         base_path: str = "/admin",
         redisplay: dict[str, Any] | None = None,
     ) -> str:
-        """Renders just the one inline section matching `inline.child`,
-        standalone -- the response body for the three inline
-        create/update/delete routes (see fastapi/handlers.py's
-        build_inline_handlers), swapped into `#inline-{child_slug}` via
-        HTMX's outerHTML on every mutation.
+        """Renders one inline section standalone: the response body for the inline
+        create/update/delete routes, swapped into `#inline-{child_slug}` by
+        htmx.
         """
         from polyadmin.fastapi.inlines import build_inline_context
 
@@ -266,11 +261,8 @@ class Renderer:
         error: str = "",
         notice: str = "",
     ) -> str:
-        """The login page.
-
-        Deliberately not built on base_context: nothing on this page
-        comes from the admin shell. There is no principal (that is the
-        point), no nav to build, and no breadcrumb trail to sit in.
+        """The login page. Deliberately not built on base_context: there is no
+        principal (that is the point), no nav, and no trail to sit in.
         """
         return self.render(
             "admin/login.html",
@@ -302,15 +294,22 @@ class Renderer:
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)
 
 
-# The detail page's History panel caps at a summary of recent activity
-# rather than being an audit browser -- a logger that wants the full
-# trail exposed can surface it wherever it already lives.
+# A summary of recent activity, not an audit browser: a logger wanting the
+# full trail exposed can surface it where it already lives.
 HISTORY_LIMIT = 10
 
 
+def _wide_body(inlines) -> bool:
+    """Whether any inline section is tabular. A table needs more than the max-w-xl
+    a column of form fields wants -- squeezing one in is what clipped its row
+    actions -- so such a page gets ui("page", "body-wide").
+    """
+    return any(inline.get("layout") == "tabular" for inline in inlines or [])
+
+
 def _history_for(admin: Any, model_admin: Any, obj: Any) -> list[dict[str, str]]:
-    """The record's recent audit entries, or [] when no logger is
-    configured or the one configured cannot read back.
+    """The record's recent audit entries, or [] when no logger is configured or
+    the one configured cannot read back.
     """
     from polyadmin.core.audit import AuditReader
 

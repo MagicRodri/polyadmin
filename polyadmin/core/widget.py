@@ -1,17 +1,15 @@
 """Widget: a single dashboard tile.
 
-Each widget type computes its own data via `get_data()` and names the
-template that renders it (`template`), so an application can add a
-custom widget type just by subclassing Widget and pointing `template`
-at its own file -- no framework change required.
-
-Every widget accepts either a static value or a `get_*` callable so
-applications can wire in live data (a DB count, a cache lookup, ...)
-without the widget caring where it came from.
+Each type computes its own data via `get_data()` and names the template that
+renders it, so a custom widget is a subclass pointing `template` at its own
+file -- no framework change required. Every widget takes either a static value
+or a `get_*` callable, so an application can wire in live data without the
+widget caring where it came from.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 
 class Widget:
@@ -44,15 +42,13 @@ class Metric(Widget):
 
 
 class Stat(Widget):
-    """A headline number paired with its change against the previous
-    period, e.g. "$45,385" and "12.5% up" -- adapted from Flowbite's
-    admin-dashboard "Sales this week" card. Metric answers "what is it
-    now?"; Stat also answers "which way is it moving?".
+    """A headline number paired with its change against the previous period.
+    Metric answers "what is it now?"; Stat also answers "which way is it
+    moving?".
 
-    `delta` is the signed percentage change, so -4.2 means "down
-    4.2%". The widget assumes up is good (green) and down is bad
-    (red); for a metric where that's inverted, such as an error rate,
-    negate the delta and say so in the title.
+    `delta` is the signed percentage change. Up is assumed good; for an
+    inverted metric such as an error rate, negate the delta and say so in the
+    title.
     """
 
     template = "admin/widgets/stat.html"
@@ -75,10 +71,9 @@ class Stat(Widget):
         value, delta = (
             self._get_stat() if self._get_stat is not None else (self._value, self._delta)
         )
-        # The template branches on `direction` rather than on the sign
-        # of `delta`, which keeps the arrow and color choice out of the
-        # markup. `delta` itself is reported unsigned, since the arrow
-        # already carries the direction.
+        # The template branches on `direction`, not the sign of `delta`,
+        # keeping the arrow and colour choice out of the markup. `delta`
+        # is reported unsigned, since the arrow carries the direction.
         direction = "up" if delta > 0 else "down" if delta < 0 else "flat"
         return {"value": value, "delta": round(abs(delta), 1), "direction": direction}
 
@@ -156,31 +151,18 @@ class Chart(Widget):
         return {"series": [(label, value, round(value / maximum * 100)) for label, value in series]}
 
 
-# Distinct qualitative palette for Donut slices, spaced around the
-# color wheel so up to 6 categories stay visually distinguishable at a
-# glance.
-#
-# These name shadcn/ui's --chart-* CSS variables (declared in
-# templates/admin/theme.html) rather than literal Tailwind shades, which
-# is the distinction shadcn itself draws: chart tokens are for
-# *categorical data*, separate from the UI-chrome tokens, but still
-# theme-owned. So a Donut follows the active theme and gets a palette
-# re-tuned for dark mode, instead of keeping colors chosen against
-# white. Overriding admin/theme.html restyles the slices along with
-# everything else.
-#
-# A slice never lands on the success/warning/danger hues that
-# components/toasts.html uses for status, so it can't be mistaken for
-# one.
+# The qualitative palette for Donut slices, spaced around the wheel so six
+# categories stay distinguishable. They name theme.html's --chart-*
+# variables rather than literal shades, so a Donut follows the active
+# theme and is re-tuned for dark mode. No slice lands on the
+# success/warning/danger hues, so it cannot be mistaken for a status.
 _DONUT_COLORS = ("chart-1", "chart-2", "chart-3", "chart-4", "chart-5", "chart-6")
 
 
 class Donut(Widget):
-    """A share-of-total breakdown, e.g. "Traffic by device" (Desktop /
-    Phone / Tablet), rendered as an SVG ring with a legend -- adapted
-    from Flowbite's admin-dashboard "Traffic by device" card. Built
-    from a handful of SVG <circle> arcs (stroke-dasharray), the same
-    "no charting-library dependency" stance as Chart."""
+    """A share-of-total breakdown drawn as an SVG ring with a legend, built from
+    <circle> arcs -- the same no-charting-library stance as Chart.
+    """
 
     template = "admin/widgets/donut.html"
 
@@ -208,20 +190,16 @@ class Donut(Widget):
                     "label": label,
                     "value": value,
                     "percent": round(percent, 1),
-                    # The classic SVG-ring trick: a circle with
-                    # circumference 100 (r=15.9155) lets stroke-dasharray
-                    # use percentages directly. 25 rotates the first
-                    # slice's start point to 12 o'clock; each following
-                    # slice is pushed further by its predecessors'
-                    # combined share.
+                    # A circle of circumference 100 (r=15.9155) lets
+                    # stroke-dasharray take percentages directly. 25
+                    # rotates the first slice to 12 o'clock; each later
+                    # one is pushed by its predecessors' combined share.
                     "dash_offset": round(25 - cumulative, 4),
                     "color": _DONUT_COLORS[i % len(_DONUT_COLORS)],
                 }
             )
             cumulative += percent
         return {"slices": slices, "total": total}
-
-
 
 
 class Activity(Widget):
@@ -247,16 +225,13 @@ class Activity(Widget):
 
 
 class Timeline(Widget):
-    """A vertical feed of dated events, drawn as a rail of dots --
-    adapted from Flowbite's admin-dashboard "Latest Activity" card.
-    Activity's flat strings are enough for a short "who did what"
-    list; Timeline is for entries that each need a timestamp and a
-    body of their own.
+    """A vertical feed of dated events drawn as a rail of dots. Activity's flat
+    strings suit a short "who did what" list; Timeline is for entries needing a
+    timestamp and a body of their own.
 
-    Entries are `(time, title, description)` triples. `time` is
-    already formatted for display ("April 2023", "2h ago") -- the
-    widget never parses or localizes it, so an application keeps full
-    control of how its timestamps read. `description` may be empty.
+    Entries are `(time, title, description)` triples. `time` arrives already
+    formatted: the widget never parses or localizes it, so the application
+    controls how its timestamps read.
     """
 
     template = "admin/widgets/timeline.html"
@@ -284,15 +259,11 @@ class Timeline(Widget):
 
 
 class Tabs(Widget):
-    """Several widgets stacked into one card, one visible at a time --
-    adapted from Flowbite's admin-dashboard "Statistics this month"
-    card, which swaps a "Top products" table for a "Top customers"
-    one.
+    """Several widgets stacked into one card, one visible at a time.
 
-    Panels are `(label, widget)` pairs. Tabs holds no data of its own;
-    every panel's widget still computes its own, and all of them are
-    computed on render (not on first click), so a panel backed by a
-    slow query costs the same whether or not anyone opens it.
+    Panels are `(label, widget)` pairs. Tabs holds no data itself, and every
+    panel is computed on render rather than on first click, so a panel backed
+    by a slow query costs the same whether or not anyone opens it.
     """
 
     template = "admin/widgets/tabs.html"
@@ -304,7 +275,6 @@ class Tabs(Widget):
         self.panels = list(panels)
 
     def get_data(self) -> dict[str, Any]:
-        # The widgets themselves are handed to the template, which
-        # renders each through the same `{% include widget.template %}`
-        # the dashboard uses for a top-level widget.
+        # Handed to the template, which renders each through the same `{%
+        # include widget.template %}` the dashboard uses.
         return {"panels": [{"label": label, "widget": widget} for label, widget in self.panels]}

@@ -1,4 +1,4 @@
-"""Layout-level theming assertions -- mirrors go-polyadmin/fiber/theme_test.go."""
+"""Layout-level theming assertions."""
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -99,7 +99,6 @@ def test_layout_renders_theme_toggle(page):
     assert "$store.theme.toggle()" in page
     assert 'Alpine.store("theme"' in page
     assert 'aria-label="Toggle dark mode"' in page
-
 
 
 def test_donut_slices_use_chart_tokens():

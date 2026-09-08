@@ -4,36 +4,29 @@
    `w-full caption-bottom text-sm` table, muted uppercase headers, and
    rows that highlight on hover. Class strings come from ui('table', ...)
    so the dashboard's Table widget and tabular inlines match this one.
-   Mirrors go-polyadmin/templates/admin/components/ui/table.html.
 
-   Included (not a macro) from components/list_content.html, sharing
-   its ambient context (rows, list_display, model_admin, ordering,
-   actions, permissions, base_path, reorderable) -- same reasoning as
-   components/ui/sidebar.html.
+   Included, not a macro, so it shares list_content.html's ambient
+   context (rows, list_display, model_admin, ordering, actions,
+   permissions, base_path, reorderable).
 
-   Row actions are one dropdown-menu button (dots-vertical) instead of
-   a row of icon buttons -- shadcn/ui's own dashboard-01 data table
-   does the same once a row has more than one or two actions. Built
-   inline here rather than through a shared dropdown-menu partial:
-   Delete needs hx-delete/hx-confirm on an item, a shape a data-only
-   item list doesn't express, matching the framework's existing
-   precedent of bespoke overlay markup at a specific call site (dialog,
-   toast, tabs) rather than forcing every variant through one partial.
+   Row actions are one dropdown trigger rather than a row of icon
+   buttons. Built inline instead of through a shared dropdown-menu
+   partial: Delete needs hx-delete/hx-confirm on an item, which a
+   data-only item list cannot express.
 
-   Reorderable drag-and-drop is visual only: SortableJS (theme.html)
-   reorders the actual <tr> elements in place with no onEnd handler and
-   nothing hydrated from a data attribute, so there's no state to keep
-   in sync -- the next sort, search, page, or plain reload re-renders
-   the table from the server's real order and the drag is simply gone.
-   That statelessness is also why x-init lives directly on <tbody> with
-   no x-data: htmx's outerHTML swap (search/sort/pagination) replaces
-   this whole component, and Alpine re-runs x-init on every element it
-   discovers, so the drag keeps working after a swap for free. #}
-{# selectAll state lives here rather than on the bulk-actions form: the
-   header checkbox is inside this table, the form is a sibling in the
-   toolbar (the two are linked by the HTML form= attribute), and Alpine
-   state cannot span them. The form's hidden flag is written
-   imperatively for the same reason. #}
+   Reorderable drag-and-drop is visual only: SortableJS reorders the
+   <tr> elements with no onEnd handler and nothing hydrated from a data
+   attribute, so there is no state to keep in sync and the next sort,
+   search, page, or reload simply re-renders the server's real order.
+   That is also why x-init sits on <tbody> with no x-data: htmx's
+   outerHTML swap replaces this whole component, and Alpine re-runs
+   x-init on what it discovers, so the drag survives a swap for
+   free. #}
+{# selectAll state lives here, not on the bulk-actions form: the header
+   checkbox is inside this table and the form is a sibling in the
+   toolbar (linked by the HTML form= attribute), so Alpine state cannot
+   span them. The form's hidden flag is written imperatively for the
+   same reason. #}
 <div class="{{ ui('table', 'wrapper') }}"
      x-data="{
        pageTicked: false,
@@ -84,14 +77,10 @@
                  class="{{ ui('checkbox') }}">
         </th>
         {% endif %}
-        {# DataTableColumnHeader, from shadcn/ui's Tasks example: the
-           header is a dropdown trigger offering Asc/Desc explicitly,
-           rather than a link that cycles direction on each click -- with
-           a cycling link you can't tell what a click will do until you
-           try it. The trigger's icon shows the current direction, or
-           the neutral up/down glyph when the column isn't sorted. Both
-           choices are real hrefs (URLs precomputed in list_context), so
-           sorting still works with JS off. #}
+        {# The header is a dropdown offering Asc/Desc explicitly rather
+           than a link that cycles: with a cycling link you cannot tell
+           what a click will do until you try it. Both choices are real
+           hrefs, so sorting works with JS off. #}
         {% for name in list_display %}
         {% set sorted_by = sort_controls[name] %}
         <th scope="col" class="{{ ui('table', 'th') }}"
@@ -152,7 +141,7 @@
         {% endif %}
         {% for name in list_display %}
         <td class="{{ ui('table', 'cell') }}">
-          {{ render_field_value(model_admin.get_field(name), row.cells[name]) }}
+          {{ render_field_value(model_admin.get_field(name), row.cells[name], model_admin.get_empty_value()) }}
         </td>
         {% endfor %}
         <td class="{{ ui('table', 'cell') }} text-right">

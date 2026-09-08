@@ -1,5 +1,3 @@
-"""Mirrors go-polyadmin/core/login_test.go."""
-
 import pytest
 
 from polyadmin.core.login import safe_next_url
@@ -48,15 +46,10 @@ def test_safe_next_url_keeps_destinations_inside_the_admin(next_url):
     assert safe_next_url(next_url, "/admin") == next_url
 
 
-# Mounting at the root makes every absolute path "inside" the admin, but
-# the off-site checks still have to hold -- that is the case where a
-# sloppy prefix check would let anything through.
 def test_safe_next_url_at_root_still_rejects_off_site():
     assert safe_next_url("/users", "/") == "/users"
     assert safe_next_url("//evil.example", "/") == "/"
 
 
-# A trailing slash on the mount point must not change which destinations
-# are considered inside it.
 def test_safe_next_url_ignores_a_trailing_slash_on_base_path():
     assert safe_next_url("/admin/users", "/admin/") == "/admin/users"

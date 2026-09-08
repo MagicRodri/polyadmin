@@ -1,9 +1,8 @@
 """ModelAdmin: the central per-resource abstraction.
 
-Resource identity, field resolution, the CRUD lifecycle hooks
-(get_queryset / get_object / create / update / delete), search,
-filters, ordering, pagination, relations, actions, exports, and
-template resolution all live here.
+Resource identity, field resolution, the CRUD lifecycle hooks, search, filters,
+ordering, pagination, relations, actions, exports, and template resolution all
+live here.
 """
 
 from __future__ import annotations
@@ -12,20 +11,18 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from polyadmin.core.action import DELETE_SELECTED_NAME, delete_selected_action
 from polyadmin.core.field import Field
 from polyadmin.core.inline import Inline
+from polyadmin.core.query import DEFAULT_EMPTY_VALUE
 
 
 @dataclass
 class Fieldset:
-    """One titled group of form fields -- Django's `fieldsets`.
-
-    A title of None renders the group with no header, which is how the
-    default (undeclared) case renders as a plain flat form.
-
-    `collapsed` only seeds the initial state; the group can always be
-    opened. It is for the sections a form has to carry but rarely needs,
-    which is exactly when a flat form starts to hurt.
+    """One titled group of form fields -- Django's `fieldsets`. A title of None
+    renders the group with no header, which is how the undeclared default
+    renders as a plain flat form. `collapsed` only seeds the initial state; the
+    group can always be opened.
     """
 
     fields: Sequence[str] = ()
@@ -43,48 +40,48 @@ class ModelAdmin:
     model: ClassVar[type]
 
     slug: ClassVar[str | None] = None
-    # Sidebar grouping: ModelAdmins (and AdminPages, see core/page.py)
-    # sharing a category collapse into one accordion section, in
-    # first-registration-appearance order. None keeps today's flat
-    # top-level nav link.
+    # Sidebar grouping: ModelAdmins and AdminPages sharing a category
+    # collapse into one section. None keeps a flat top-level link.
     category: ClassVar[str | None] = None
-    # Sidebar-nav icon name (see templates/admin/components/icons.html)
-    # shown next to this ModelAdmin's own link, whether it renders flat
-    # or nested inside a category's accordion.
+    # Sidebar icon name (see components/icons.html), shown flat or nested
+    # inside a category's accordion alike.
     icon: ClassVar[str] = "collection"
 
     list_display: ClassVar[Sequence[str]] = ()
     form_fields: ClassVar[Sequence[str]] = ()
-    # When set, `fieldsets` defines both the grouping and the form's
-    # field list -- get_form_fields() reports the flattened result, so
-    # there is one source of truth for what the form renders and what
-    # the handler parses. `form_fields` is then unused.
-    fieldsets: ClassVar[Sequence["Fieldset"]] = ()
-    # Shown on the form as values rather than inputs, and refused if
-    # posted anyway -- see the adapter's parse_form_data. Override
-    # get_readonly_fields to vary by object, which is how "editable on
-    # create, frozen afterwards" is expressed.
+    # When set, `fieldsets` defines both the grouping and the field list:
+    # get_form_fields() reports it flattened, so the form and the handler
+    # agree. `form_fields` is then unused.
+    fieldsets: ClassVar[Sequence[Fieldset]] = ()
+    # Rendered as values, not inputs, and refused if posted anyway.
+    # Override get_readonly_fields to vary by object, which is how
+    # "editable on create, frozen afterwards" is expressed.
     readonly_fields: ClassVar[Sequence[str]] = ()
-    # The sort applied when a request names none -- a field name,
-    # optionally prefixed with "-" for descending, the same syntax the
-    # ?sort= parameter uses. Without one, rows arrive in whatever order
-    # the data source happened to return, which for a dict-backed store
-    # is not even stable between requests.
+    # The sort applied when a request names none, in the ?sort= syntax
+    # ("-field" for descending). Without one, rows arrive in whatever
+    # order the data source returned, which for a dict-backed store is not
+    # stable between requests.
     ordering: ClassVar[str | None] = None
+    # How many rows a list page holds; None means DEFAULT_PAGE_SIZE.
+    # Django's list_per_page.
+    list_per_page: ClassVar[int | None] = None
+    # What a read-only view shows for a None or blank value; None means
+    # DEFAULT_EMPTY_VALUE.
+    empty_value_display: ClassVar[str | None] = None
     search_fields: ClassVar[Sequence[str]] = ()
     detail_fields: ClassVar[Sequence[str] | None] = None
     filters: ClassVar[Sequence[Any]] = ()
     fields: ClassVar[Sequence[Field]] = ()
     actions: ClassVar[Sequence[Any]] = ()
-    # Reverse-relation declarations: child ModelAdmins whose records
-    # point back at this one, managed/displayed inline on this
-    # ModelAdmin's create/detail/edit pages. See core/inline.py and
-    # docs/inlines.md.
+    # Removes the built-in bulk delete. Opt-out, so the default keeps it,
+    # as Django does.
+    disable_delete_selected: ClassVar[bool] = False
+    # Child ModelAdmins whose records point back at this one, managed
+    # inline on its create/detail/edit pages. See docs/inlines.md.
     inlines: ClassVar[Sequence[Inline]] = ()
-    # Relation (foreignkey/onetoone) form fields that render as a
-    # lookup-driven search box instead of a <select>
-    # populated from the target's full queryset -- for relations too
-    # large, or too principal-sensitive, to dump wholesale into a page.
+    # Relation fields that render as a lookup-driven search box rather
+    # than a <select> over the target's full queryset -- for relations too
+    # large, or too principal-sensitive, to dump into a page.
     autocomplete_fields: ClassVar[Sequence[str]] = ()
 
     can_view: ClassVar[bool] = True
@@ -93,14 +90,10 @@ class ModelAdmin:
     can_delete: ClassVar[bool] = True
     can_export: ClassVar[bool] = True
 
-    # Shows a drag handle on this ModelAdmin's list view. Defaults to
-    # False (opt-in), unlike can_*/*_template above: dragging never
-    # persists anywhere -- it only reorders the <tr> elements already
-    # on the page, and reverts on the next reload, sort, search, or
-    # page change re-rendering the table from the server's own order.
-    # It exists for admins who want to eyeball/triage a list by hand
-    # without the framework taking a position on how (or whether) that
-    # order is stored. Mirrors go-polyadmin's BaseModelAdmin.EnableReordering.
+    # Shows a drag handle on the list view. Opt-in, because dragging never
+    # persists: it reorders the <tr> elements on the page and reverts on
+    # the next render. It is for triaging a list by hand without the
+    # framework taking a position on how that order would be stored.
     enable_reordering: ClassVar[bool] = False
 
     list_template: ClassVar[str | None] = None
@@ -113,8 +106,6 @@ class ModelAdmin:
             raise TypeError(f"{type(self).__name__} must define `model`.")
         self._fields: dict[str, Field] = self._build_fields()
 
-    # -- identity -----------------------------------------------------
-
     def get_slug(self) -> str:
         if self.slug:
             return self.slug
@@ -122,8 +113,6 @@ class ModelAdmin:
 
     def get_verbose_name(self) -> str:
         return self.model.__name__
-
-    # -- fields ---------------------------------------------------------
 
     def _build_fields(self) -> dict[str, Field]:
         declared = {field.name: field for field in self.fields}
@@ -165,12 +154,20 @@ class ModelAdmin:
         return names
 
     def get_readonly_fields(self, obj: Any = None) -> list[str]:
-        """Fields that must render as values rather than inputs for this
-        object. `obj` is None on the create form, so an override can
-        distinguish creating from editing -- the declarative default
-        applies to both.
+        """Fields rendering as values rather than inputs for this object. `obj` is
+        None on the create form, so an override can tell creating from editing.
         """
         return list(self.readonly_fields)
+
+    def get_page_size(self) -> int:
+        """This ModelAdmin's own page size, or 0 to accept the framework
+        default. See `list_per_page`."""
+        return self.list_per_page or 0
+
+    def get_empty_value(self) -> str:
+        """What stands in for a None or blank value on the list and
+        detail views. See `empty_value_display`."""
+        return self.empty_value_display or DEFAULT_EMPTY_VALUE
 
     def get_default_ordering(self) -> str | None:
         """The sort to use when the request names none."""
@@ -180,10 +177,10 @@ class ModelAdmin:
         """The question every call site actually asks."""
         return name in self.get_readonly_fields(obj)
 
-    def get_fieldsets(self) -> list["Fieldset"]:
+    def get_fieldsets(self) -> list[Fieldset]:
         """Always at least one group: the form template renders groups
-        unconditionally, so "none declared" means one unnamed group
-        holding every form field, not zero groups holding nothing.
+        unconditionally, so "none declared" means one unnamed group holding
+        every form field, not zero groups holding nothing.
         """
         if not self.fieldsets:
             return [Fieldset(fields=list(self.form_fields))]
@@ -194,18 +191,30 @@ class ModelAdmin:
             return list(self.detail_fields)
         return list(dict.fromkeys([*self.list_display, *self.get_form_fields()]))
 
+    def get_actions(self) -> list[Any]:
+        """The declared actions plus the built-in bulk delete every admin that can
+        delete gets for free. Declaring one named DELETE_SELECTED_NAME replaces
+        it rather than duplicating it.
+        """
+        declared = list(self.actions)
+        if self.disable_delete_selected or not self.can_delete:
+            return declared
+        if any(a.name == DELETE_SELECTED_NAME for a in declared):
+            return declared
+        # Appended, not prepended: the destructive action should not be
+        # the first thing in the listbox.
+        return [*declared, delete_selected_action()]
+
     def get_action(self, name: str) -> Any | None:
-        for action in self.actions:
+        for action in self.get_actions():
             if action.name == name:
                 return action
         return None
 
-    # -- templates ------------------------------------------------------
-
     def get_template_candidates(self, view: str) -> list[str]:
-        """Template lookup order for a view ("list"/"detail"/"form"/"delete"):
-        an explicit `{view}_template` override, then a resource-specific
-        template, then the framework default.
+        """Template lookup order for a view: an explicit `{view}_template`
+        override, then a resource-specific template, then the framework
+        default.
         """
         candidates: list[str] = []
         explicit = getattr(self, f"{view}_template", None)
@@ -214,8 +223,6 @@ class ModelAdmin:
         candidates.append(f"admin/resource/{self.get_slug()}/{view}.html")
         candidates.append(f"admin/resource/{view}.html")
         return candidates
-
-    # -- CRUD lifecycle ---------------------------------------------------
 
     def get_queryset(self) -> Any:
         """Return the base, unfiltered collection of records for this resource."""
@@ -238,8 +245,6 @@ class ModelAdmin:
     def delete(self, obj: Any) -> None:
         """Delete an existing record."""
         raise NotImplementedError(f"{type(self).__name__} must implement delete().")
-
-    # -- validation ---------------------------------------------------
 
     def validate(self, data: dict[str, Any]) -> dict[str, list[str]]:
         """Run field-level validation over form data. Returns name -> errors."""

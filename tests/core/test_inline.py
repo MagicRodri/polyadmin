@@ -1,5 +1,10 @@
 from polyadmin.core.field import ForeignKeyField, StringField
-from polyadmin.core.inline import Inline, StackedInline, TabularInline, filter_inline_children
+from polyadmin.core.inline import (
+    Inline,
+    StackedInline,
+    TabularInline,
+    filter_inline_children,
+)
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 

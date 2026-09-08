@@ -1,32 +1,21 @@
-{# Confirmation modal, the Dialog/AlertDialog port from shadcn/ui
-   (Radix Dialog), covering both places a "confirm
-   before doing something irreversible" prompt shows up: Actions --
-   the list view's bulk-select form and each detail-page
-   record-action form -- and the list view's per-row Delete button
-   (components/ui/table.html's `hx-delete`/`hx-confirm`). One teleported
-   instance backs both: it opens on a window-level `action-confirm-request`
-   event carrying `{message, onConfirm}`, where `onConfirm` is a plain
-   JS callback -- form submission and htmx's own confirm hook need
-   different follow-through (`form.submit()` vs `issueRequest(true)`),
-   so the modal itself stays agnostic to which one it's dealing with.
+{# Confirmation modal, the Dialog port from shadcn/ui. It covers both
+   places an "are you sure" prompt appears: an Action's form, and the
+   list's per-row Delete. One teleported instance backs both, opening on
+   a window-level `action-confirm-request` event carrying
+   `{message, onConfirm}`. `onConfirm` is a plain callback because a
+   form submit and htmx's confirm hook need different follow-through
+   (`form.submit()` versus `issueRequest(true)`), so the modal stays
+   agnostic.
 
-   The confirmation text never gets serialized into a JS/HTML string:
-   for Actions it rides in on the submitting form as `data-confirm` (or,
-   for the bulk form, the selected <option>'s `data-confirm`), already
-   HTML-attribute-escaped by Jinja2; for hx-confirm it comes from
-   htmx's own `htmx:confirm` event detail, which htmx itself already
-   read out of the `hx-confirm` HTML attribute. Either way it's read
-   back out as a live JS value and handed straight to the modal through
-   a CustomEvent, never re-embedded into markup. Same pattern as
-   components/toasts.html's flash-message relay. #}
+   The confirmation text is never serialized into a JS or HTML string:
+   it arrives as an attribute value or as htmx's own event detail, and
+   is handed to the modal through a CustomEvent as a live JS value,
+   never re-embedded into markup. #}
 <template x-teleport="body">
-  {# `onConfirm = $event.detail.onConfirm` (assigning the callback
-     straight from the event, in the same statement Alpine sees) makes
-     Alpine invoke it immediately instead of just storing it -- the
-     modal would flash open and the action would already be done
-     before anyone could click anything. Routing it through a plain
-     local first avoids whatever in Alpine's expression evaluation
-     triggers that auto-call. #}
+  {# Assigning the callback straight from the event in one statement
+     makes Alpine invoke it immediately rather than store it: the modal
+     would flash open with the action already done. Routing it through a
+     plain local first avoids that. #}
   <div x-data="{ open: false, message: '', onConfirm: null }"
        @action-confirm-request.window="let cb = $event.detail.onConfirm; onConfirm = cb; message = $event.detail.message; open = true"
        @keydown.escape.window="open = false"

@@ -138,9 +138,6 @@ def test_validate_required_field():
     assert "email" in errors
 
 
-# -- fieldsets ------------------------------------------------------------
-
-
 def test_fieldsets_default_to_one_unnamed_group_over_form_fields():
     # Undeclared is the common case, and the form template renders
     # fieldsets unconditionally -- so "no fieldsets" has to mean one
@@ -187,9 +184,6 @@ def test_collapsed_fieldset_is_opt_in():
     sets = A().get_fieldsets()
     assert sets[0].collapsed is True
     assert sets[1].collapsed is False
-
-
-# -- read-only fields -----------------------------------------------------
 
 
 def test_readonly_fields_default_to_none():

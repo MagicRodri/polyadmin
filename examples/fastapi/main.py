@@ -7,10 +7,6 @@ Run with:
 then open http://127.0.0.1:8000/admin
 """
 
-from polyadmin.core.admin import Admin
-from polyadmin.core.dashboard import Dashboard
-from polyadmin.core.widget import Chart, Donut, Metric, Stat, Table, Tabs, Timeline
-from polyadmin.fastapi.router import create_router
 from fastapi import FastAPI
 from models import OrganizationRepository, RoleRepository, UserRepository, seed
 from organization_admin import OrganizationAdmin
@@ -18,6 +14,11 @@ from pages import register_pages
 from role_admin import RoleAdmin
 from session import CookieSessionBackend, ReadOnlyForNonSuperusers
 from user_admin import UserAdmin
+
+from polyadmin.core.admin import Admin
+from polyadmin.core.dashboard import Dashboard
+from polyadmin.core.widget import Chart, Donut, Metric, Stat, Table, Tabs, Timeline
+from polyadmin.fastapi.router import create_router
 
 users = UserRepository()
 organizations = OrganizationRepository()

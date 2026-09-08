@@ -1,25 +1,16 @@
 {% from "admin/components/ui/switch.html" import switch_control %}
-{# Context-aware form input for a field. Default renderer, overridable
-   by replacing this template. Mirrors
-   go-polyadmin/templates/admin/components/ui/field.html.
+{# Form/FormItem, ported from shadcn/ui: every branch below renders the
+   same label + control + description + error unit, with the wrapper
+   classes from ui('field', ...) so a custom field lines up with the
+   generated ones for free.
 
-   This is the Form/FormItem port from shadcn/ui (plan/shadcnui-usage.md
-   Phase D): every branch below renders the same
-   label + control + description + error unit, with the wrapper classes
-   coming from ui('field', ...) so a custom field added later lines up
-   with the generated ones for free.
+   Controls that must survive a JS-free POST stay native elements styled
+   to match shadcn -- checkbox and <input type="date"> -- rather than
+   shadcn's Radix-backed versions. The Alpine-driven ports are the
+   relation combobox and the calendar popover.
 
-   Controls that must survive a plain (JS-free) form POST stay native
-   elements styled to match shadcn -- <select>, checkbox, and
-   <input type="date"> -- rather than the Radix-backed listbox,
-   checkbox, and day-picker shadcn uses. See polyadmin/ui.py for the
-   per-component reasoning. The two genuinely Alpine-driven ports here
-   are the relation combobox and the date picker's calendar popover.
-
-   `with context` so the combobox branch can read `base_path` to build
-   its /lookup URL without every call site having to pass it through
-   explicitly (same reasoning as components/field.html's
-   render_related_link). #}
+   `with context` so the combobox branch can read `base_path` for its
+   /lookup URL without every call site passing it through. #}
 {% from "admin/components/icons.html" import icon %}
 {% from "admin/components/ui/calendar.html" import date_picker %}
 {% from "admin/components/ui/select.html" import select %}
@@ -33,10 +24,9 @@
   "datetime": "datetime-local",
   "password": "password",
 } %}
-{# A boolean renders as a switch on the same row as its name, the way
-   Django Unfold does it: a toggle reads as a setting, and a setting's
-   name belongs beside it rather than stacked above it. Every other type
-   keeps the label-above-control layout. #}
+{# A boolean renders as a switch on the same row as its name: a toggle
+   reads as a setting, and a setting's name belongs beside it. Every
+   other type keeps the label-above-control layout. #}
 {% set inline = field.field_type == "boolean" and not readonly_field %}
 <div class="{{ ui('field') }}{% if inline %} {{ ui('field', 'row') }}{% endif %}">
   {# Inline: the control comes first in source order, so the switch sits
@@ -55,10 +45,9 @@
   </span>
   {% if not inline %}
   <div class="{{ ui('field', 'control') }}">
-  {# Read-only wins over every type branch below: the field renders as
-     its value with no control at all, and posts nothing. The handler
-     refuses the name too (see _parse_form_data) -- omitting the input
-     here is presentation, not protection. #}
+  {# Read-only wins over every type branch below: no control, and
+     nothing posted. The handler refuses the name too -- omitting the
+     input here is presentation, not protection. #}
   {% if readonly_field %}
   <p class="{{ ui('field', 'readonly') }}">{{ value if value not in (none, "") else "&mdash;" | safe }}</p>
   {% elif field.field_type == "text" %}
@@ -78,25 +67,18 @@
   {% for choice in field.choices %}{% set enum_options.pairs = enum_options.pairs + [(choice, choice)] %}{% endfor %}
   {{ select(field.name, enum_options.pairs, selected=value, placeholder="Select…", disabled=field.disabled) }}
   {% elif field.field_type in ("foreignkey", "onetoone") and relation and relation.autocomplete %}
-  {# Combobox, ported from shadcn/ui (Radix Popover + cmdk). cmdk
-     filters a client-side item array; the whole point of
-     autocomplete_fields is never loading the target's full dataset into
-     the page, so the filtering stays server-side on the /lookup route
-     and htmx owns the round-trip while Alpine owns only open/close and
-     arrow-key navigation of whatever came back.
+  {# Combobox, from shadcn's Popover + cmdk. cmdk filters a client-side
+     array, but the point of autocomplete_fields is never loading the
+     target's full dataset into the page, so filtering stays server-side
+     on /lookup: htmx owns the round-trip, Alpine only open/close and
+     arrow keys.
 
-     The pk/label of a *searched* result flow through that result's
-     data-pk/data-label attributes (read via `$el.dataset` in
-     selectItem), and the *initial* selection's pk/label are just the
-     hidden/text inputs' own server-rendered `value` attributes --
-     selectItem writes a new pk straight to $refs.hiddenInput.value
-     (imperatively, not via a reactive `:value` binding) so there's no
-     risk of Alpine's x-bind/x-init ordering clobbering the
-     server-rendered value with empty state before it's ever read (x-bind
-     directives run before x-init, so a `:value` tied to x-data would
-     blank the field on every page load). Both routes go through
-     ordinary HTML-attribute escaping, so a label containing quotes
-     never has to survive being embedded in a JS expression. #}
+     A result's pk and label ride in on data-pk/data-label and are read
+     back through `$el.dataset`; the initial selection is the inputs'
+     own server-rendered `value`. selectItem writes the pk imperatively
+     rather than through a reactive `:value`, because x-bind runs before
+     x-init and would blank the server-rendered value on every load.
+     Neither route puts a label inside a JS expression. #}
   <div class="{{ ui('combobox') }}"
        x-data="{
          open: false, query: '', activeEl: null, activeId: '',

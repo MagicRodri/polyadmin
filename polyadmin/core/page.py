@@ -8,7 +8,8 @@ Named `AdminPage`, not `Page`, to avoid colliding with
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 # String-quoted forward ref: PageContext lives in the FastAPI adapter
 # (polyadmin.fastapi.pages), and core must not import adapter code.

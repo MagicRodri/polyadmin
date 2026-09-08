@@ -15,23 +15,21 @@
 {%- endif -%}
 {% endmacro %}
 
-{# A boolean renders as a check or a cross rather than the words
-   "Yes"/"No" -- Django admin's convention, and the one thing that makes
-   a column of booleans scannable: a glyph reads as a shape at a glance
-   where two similar-length words have to be read.
+{# A boolean renders as a check or a cross rather than "Yes"/"No": a
+   glyph reads as a shape at a glance where two similar-length words
+   have to be read. The word stays as an sr-only label, so nothing
+   depends on the icon alone. Exports stringify through
+   core/exporter.py and are untouched.
 
-   The word stays in the markup as an sr-only label, so a screen reader
-   still hears "Yes"/"No" and nothing depends on the icon alone (the
-   icon itself is aria-hidden, from the icon macro). Exports are
-   untouched -- they stringify through core/exporter.py, never through
-   here.
-
-   "Yes" keeps a green that reads as affirmative in both themes; the
-   emerald-600/400 pair is picked for contrast against bg-card either
-   way, since there is no shadcn "success" token to defer to. #}
-{% macro render_field_value(field, value) -%}
-{%- if value is none -%}
-<span class="{{ ui('text', 'placeholder') }}">&mdash;</span>
+   The emerald pair is picked for contrast against bg-card in both
+   themes, since there is no shadcn "success" token to defer to. #}
+{% macro render_field_value(field, value, empty=DEFAULT_EMPTY_VALUE) -%}
+{#- Blank counts as empty, not just None: a column of empty cells and a
+    column of dashes say different things to a reader, and "" is by far
+    the more common way a value goes missing in practice. A zero or a
+    False is a real value and must not be dashed. -#}
+{%- if value is none or (value is string and not value.strip()) -%}
+<span class="{{ ui('text', 'placeholder') }}">{{ empty }}</span>
 {%- elif field.field_type == "boolean" -%}
 {%- if value -%}
 <span class="inline-flex items-center text-emerald-600 dark:text-emerald-400">{{ icon("check", "size-4") }}<span class="sr-only">Yes</span></span>
@@ -44,7 +42,7 @@
 {{ render_related_link(field.relation, value) }}
 {%- elif field.field_type == "manytomany" -%}
 {%- if not value -%}
-<span class="{{ ui('text', 'placeholder') }}">&mdash;</span>
+<span class="{{ ui('text', 'placeholder') }}">{{ empty }}</span>
 {%- else -%}
 {%- for related_obj in value -%}
 {{ render_related_link(field.relation, related_obj) }}{% if not loop.last %}, {% endif %}
