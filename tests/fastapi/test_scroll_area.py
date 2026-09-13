@@ -76,8 +76,8 @@ def test_inline_edit_controls_are_actually_styled():
 
     section = _inline_section(client.get(f"/admin/organizations/{org.id}/edit").text)
     assert "<input" in section, "no controls in the edit row"
-    # The resolved classes, not the expression that produces them.
-    assert "{{" not in section, "an unrendered Jinja expression reached the output"
+    # The resolved classes, not the expression that produces them (that
+    # the expression never leaks is the suite-wide guard in conftest).
     assert ui("input", "size-sm") in section
     # No plain <select> to check here: the inline's own fk_field is
     # implied by context and never rendered, so the only select in this
