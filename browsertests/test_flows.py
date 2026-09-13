@@ -212,3 +212,23 @@ def test_inline_selects_are_not_clipped(admin_page):
             .length"""
     )
     assert clipped == 0, "a select is narrower than its widest option"
+
+
+def test_no_admin_page_scrolls_sideways(admin_page):
+    for path in ("", "/users", "/users/create", "/organizations/1", "/organizations/1/edit"):
+        admin_page.goto(f"{ADMIN_URL}{path}")
+        overflow = admin_page.evaluate(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
+        assert overflow <= 0, f"{path or '/'} scrolls sideways by {overflow}px"
+
+
+def test_sidebar_rail_sits_on_the_sidebar_edge(admin_page):
+    admin_page.goto(f"{ADMIN_URL}/users")
+    sidebar = admin_page.locator("aside").bounding_box()
+    rail = admin_page.locator('aside button[aria-label="Toggle sidebar"].cursor-w-resize').bounding_box()
+    rail_centre = rail["x"] + rail["width"] / 2
+    sidebar_edge = sidebar["x"] + sidebar["width"]
+    assert abs(rail_centre - sidebar_edge) <= 2, (
+        f"the rail is centred at {rail_centre}px, the sidebar ends at {sidebar_edge}px"
+    )

@@ -13,6 +13,10 @@
    exactly the 3rem collapsed width, so nothing slides sideways as the
    width animates.
 
+   md:relative, not md:static, undoes the sheet's `fixed`: the rail is
+   absolutely positioned against the aside, and a static aside handed it
+   to the page, parking it on the viewport's right edge.
+
    Included, not a macro, so it shares base.html's ambient context.
    `icon` rides in on that context; csrf_field does not, since base.html
    has no form of its own, so the sign-out form imports it here. #}
@@ -23,7 +27,7 @@
          collapsed ? '{{ ui('sidebar', 'collapsed') }}' : '{{ ui('sidebar', 'expanded') }}'
        ]"
        class="{{ ui('sheet', 'content') }} {{ ui('sheet', 'side-left') }} {{ ui('sidebar') }}
-              !w-72 md:!w-auto md:static md:!transform-none md:shadow-none">
+              !w-72 md:!w-auto md:relative md:!transform-none md:shadow-none">
 
   {# -- SidebarHeader: the block's TeamSwitcher slot -- #}
   <div class="{{ ui('sidebar', 'header') }}">

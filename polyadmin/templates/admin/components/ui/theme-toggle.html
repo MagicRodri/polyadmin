@@ -8,7 +8,9 @@
    sibling -- rather than shadcn's Radix version, which portals and
    tracks with Floating UI: neither is needed for a label pinned under a
    fixed-size icon button, and this costs no JS. `pointer-events-none`
-   keeps it from eating the hover it depends on. #}
+   keeps it from eating the hover it depends on. Right-aligned, not
+   centred: the toggle ends the header, and a centred label wider than
+   the button overhung the viewport and scrolled every page sideways. #}
 {% from "admin/components/icons.html" import icon %}
 {% macro theme_toggle() %}
 <span class="relative inline-flex">
@@ -24,7 +26,7 @@
     <span x-show="$store.theme.dark" style="display: none">{{ icon("moon", "w-4 h-4") }}</span>
   </button>
   <span role="tooltip"
-        class="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 -translate-x-1/2 whitespace-nowrap opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100 {{ ui('tooltip', 'content') }}">
+        class="pointer-events-none absolute right-0 top-full z-50 mt-1.5 whitespace-nowrap opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100 {{ ui('tooltip', 'content') }}">
     <span x-text="$store.theme.dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
   </span>
 </span>
