@@ -212,6 +212,7 @@
     {% for name in inline.detail_field_names %}
     <th class="{{ ui('table', 'th-compact') }}">{{ inline.child_admin.get_field(name).label }}</th>
     {% endfor %}
+    <th></th>
   </tr></thead>
   <tbody class="divide-y divide-border">
     {% for row in inline.rows %}
@@ -219,15 +220,19 @@
       {% for name in inline.detail_field_names %}
       {% set field = inline.child_admin.get_field(name) %}
       <td class="px-3 py-2 text-sm">
-        {% if loop.first %}<a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</a>
         {# A relation with several targets renders as a comma-joined run
            of links, and in a table cell that wraps: one record with
            three of them made the row three lines tall and widened the
            column enough to push the row's own actions off the card. #}
-        {% elif field.field_type == "manytomany" %}<span class="{{ ui('scroll-area', 'x') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</span>
+        {% if field.field_type == "manytomany" %}<span class="{{ ui('scroll-area', 'x') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</span>
         {% else %}{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}{% endif %}
       </td>
       {% endfor %}
+      {# The row link is its own column rather than wrapped around the
+         first value, which may itself be a relation link. #}
+      <td class="px-3 py-2 text-right whitespace-nowrap">
+        <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">View</a>
+      </td>
     </tr>
     {% endfor %}
   </tbody>

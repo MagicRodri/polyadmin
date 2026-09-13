@@ -196,11 +196,7 @@ def test_inline_table_shows_its_row_actions(admin_page):
         }"""
     )
     assert overflow <= 0, f"the inline table overflows its card by {overflow}px"
-    # A link to the child record, however the row renders it: Go puts a
-    # trailing "View" column there and Python makes the first cell the
-    # link. That divergence is recorded in the roadmap, not papered over
-    # here.
-    row_link = admin_page.locator('#inline-users table tbody a[href*="/users/"]').first
+    row_link = admin_page.locator("#inline-users table tbody tr td:last-child a", has_text="View").first
     expect(row_link).to_be_visible()
 
 

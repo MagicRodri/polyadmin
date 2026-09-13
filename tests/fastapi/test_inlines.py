@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -180,6 +182,25 @@ def test_inline_section_readonly_on_detail_page():
     section = response.text.split('id="inline-users"')[1]
     section = section.split(ui("page", "actions"))[0]
     assert "<input" not in section
+
+
+def test_readonly_tabular_inline_links_each_row_from_a_trailing_view_column():
+    client, org_admin, user_admin = make_client()
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = client.get(f"/admin/organizations/{org.id}").text.split('id="inline-users"')[1]
+    table = section.split("</table>")[0]
+    # <th[\s>], not "<th": that would count the <thead> too.
+    header_cells = len(re.findall(r"<th[\s>]", table.split("</thead>")[0]))
+    row = table.split("<tbody")[1].split("</tr>")[0]
+    cells = row.split("<td")[1:]
+
+    # Its own column, not a link wrapped around the first value: that
+    # value may itself be a relation, and <a> inside <a> is invalid.
+    assert f'href="/admin/users/{users[0].id}"' in cells[-1]
+    assert ">View</a>" in cells[-1]
+    assert "/admin/users/" not in cells[0]
+    assert header_cells == len(cells), "the header and the row disagree on the column count"
 
 
 def test_inline_create_adds_row_and_returns_section_fragment():
