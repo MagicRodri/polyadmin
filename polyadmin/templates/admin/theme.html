@@ -127,6 +127,38 @@
     var meta = document.querySelector('meta[name="csrf-token"]');
     if (meta) evt.detail.headers["X-CSRF-Token"] = meta.content;
   });
+
+  // Dates and decimals are rendered as ISO values and formatted here, in
+  // the page's locale, so both implementations display them identically.
+  // A date-only value is built from its parts: new Date("YYYY-MM-DD")
+  // parses as UTC midnight, the previous day west of Greenwich.
+  window.polyadminFormat = function (root) {
+    var lang = document.documentElement.lang || undefined;
+    root.querySelectorAll("time[data-format]").forEach(function (el) {
+      var iso = el.getAttribute("datetime"), d, m;
+      if (el.dataset.format === "date") {
+        m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+        if (!m) return;
+        d = new Date(+m[1], +m[2] - 1, +m[3]);
+        el.textContent = new Intl.DateTimeFormat(lang, { dateStyle: "medium" }).format(d);
+      } else {
+        m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(iso);
+        if (!m) return;
+        d = /(Z|[+-]\d{2}:\d{2})$/.test(iso)
+          ? new Date(iso)
+          : new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+        el.textContent = new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(d);
+      }
+    });
+    root.querySelectorAll('[data-format="decimal"]').forEach(function (el) {
+      var raw = el.dataset.value, n = Number(raw);
+      if (raw === "" || !isFinite(n)) return;
+      var digits = (raw.split(".")[1] || "").length;
+      el.textContent = new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+    });
+  };
+  document.addEventListener("DOMContentLoaded", function () { window.polyadminFormat(document); });
+  document.addEventListener("htmx:load", function (evt) { window.polyadminFormat(evt.detail.elt); });
 </script>
 
 <style>

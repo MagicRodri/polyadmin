@@ -116,6 +116,64 @@ def test_seeded_users_appear_in_list():
     assert "jane@example.com" in response.text
 
 
+def test_create_organization_persists_founded_and_balance():
+    response = client.post(
+        "/admin/organizations/create",
+        data={"name": "Startup Co", "founded": "2020-06-15", "balance": "999.75"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert response.status_code == 303
+
+    location = response.headers["location"]
+    detail = client.get(location)
+    assert detail.status_code == 200
+    # Rendered as the markup contract (Task 12): a <time datetime="...">
+    # for the date and a data-value carrying the exact posted precision --
+    # not silently dropped to zero/None by the framework's own type
+    # coercion (see field.py's parse_form_value for "date"/"decimal").
+    assert '<time datetime="2020-06-15" data-format="date">2020-06-15</time>' in detail.text
+    assert 'data-value="999.75"' in detail.text
+
+
+def test_editing_an_organization_updates_founded_and_balance():
+    create = client.post(
+        "/admin/organizations/create",
+        data={"name": "Edit Target", "founded": "2020-06-15", "balance": "999.75"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    location = create.headers["location"]
+    pk = location.rsplit("/", 1)[-1]
+
+    edit = client.post(
+        f"/admin/organizations/{pk}/edit",
+        data={"name": "Edit Target", "founded": "2021-01-02", "balance": "42.5"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert edit.status_code == 303
+
+    detail = client.get(location)
+    assert '<time datetime="2021-01-02" data-format="date">2021-01-02</time>' in detail.text
+    assert 'data-value="42.5"' in detail.text
+
+
+def test_malformed_organization_date_and_balance_are_rejected_not_zeroed():
+    response = client.post(
+        "/admin/organizations/create",
+        data={"name": "Bad Data Inc", "founded": "not-a-date", "balance": "not-a-number"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    # Never silently saved as zero/None: the submission is rejected and
+    # redisplayed with field errors, exactly like any other invalid field.
+    assert response.status_code == 422
+    assert "Enter a valid date." in response.text
+    assert "Enter a valid number." in response.text
+    assert "Bad Data Inc" not in client.get("/admin/organizations").text
+
+
 def test_create_user_end_to_end():
     response = client.post(
         "/admin/users/create",

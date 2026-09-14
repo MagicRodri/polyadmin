@@ -48,6 +48,12 @@
 {{ render_related_link(field.relation, related_obj) }}{% if not loop.last %}, {% endif %}
 {%- endfor -%}
 {%- endif -%}
+{%- elif field.field_type == "date" and value|iso_date -%}
+<time datetime="{{ value|iso_date }}" data-format="date">{{ value|iso_date }}</time>
+{%- elif field.field_type == "datetime" and value|iso_datetime -%}
+<time datetime="{{ value|iso_datetime }}" data-format="datetime">{{ value|iso_datetime }}</time>
+{%- elif field.field_type == "decimal" -%}
+<span data-format="decimal" data-value="{{ value|decimal_display }}">{{ value|decimal_display }}</span>
 {%- else -%}
 {{ value }}
 {%- endif -%}

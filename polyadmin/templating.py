@@ -8,8 +8,11 @@ sharing the full page's TemplateContext builder so the two never drift apart.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +38,43 @@ from polyadmin.ui import ui
 # cycle.
 
 FRAMEWORK_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$")
+
+
+def iso_date(value: Any) -> str | None:
+    """YYYY-MM-DD, the only form the browser-side formatter reads for a date."""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and _ISO_DATE.match(value):
+        return value
+    return None
+
+
+def iso_datetime(value: Any) -> str | None:
+    """ISO 8601 with its offset when aware; a naive value stays naive and is
+    shown as wall-clock time.
+    """
+    if isinstance(value, datetime):
+        return value.isoformat(timespec="seconds")
+    if isinstance(value, str) and _ISO_DATETIME.match(value):
+        return value
+    return None
+
+
+def decimal_display(value: Any) -> str:
+    """Fixed-point text for a decimal value -- never the scientific notation
+    plain str() can fall into for a Decimal built from scientific-notation
+    input (e.g. "1e21"), which would throw off the browser-side formatter's
+    fraction-digit count. format(value, "f") keeps the value's own
+    precision, unlike forcing a fixed number of decimal places.
+    """
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    return str(value)
 
 
 @dataclass(frozen=True)
@@ -101,6 +141,9 @@ class Renderer:
         env.globals["INLINE_MULTISELECT_ROWS"] = INLINE_MULTISELECT_ROWS
         env.globals["locale"] = locale
         env.globals["locale_switcher"] = self._switcher(locale)
+        env.filters["iso_date"] = iso_date
+        env.filters["iso_datetime"] = iso_datetime
+        env.filters["decimal_display"] = decimal_display
         return env
 
     def _switcher(self, locale: str) -> LocaleSwitcher | None:

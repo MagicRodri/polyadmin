@@ -8,6 +8,8 @@ example is to exercise `admin`, not demonstrate an ORM.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
 from itertools import count
 
 
@@ -15,6 +17,8 @@ from itertools import count
 class Organization:
     id: int
     name: str
+    founded: date | None = None
+    balance: Decimal = Decimal(0)
 
 
 class OrganizationRepository:
@@ -28,9 +32,15 @@ class OrganizationRepository:
     def get(self, pk: int) -> Organization | None:
         return self._organizations.get(pk)
 
-    def create(self, *, name: str) -> Organization:
-        organization = Organization(id=next(self._ids), name=name)
+    def create(self, *, name: str, founded: date | None = None, balance: Decimal = Decimal(0)) -> Organization:
+        organization = Organization(id=next(self._ids), name=name, founded=founded, balance=balance)
         self._organizations[organization.id] = organization
+        return organization
+
+    def update(self, organization: Organization, *, name: str, founded: date | None, balance: Decimal) -> Organization:
+        organization.name = name
+        organization.founded = founded
+        organization.balance = balance
         return organization
 
 
@@ -138,10 +148,14 @@ def seed(
     organizations: OrganizationRepository,
     roles: RoleRepository,
 ) -> None:
-    acme = organizations.create(name="Acme Corp")
-    widgets = organizations.create(name="Widgets Inc")
-    globex = organizations.create(name="Globex Corporation")
-    initech = organizations.create(name="Initech")
+    # Founded in the same month for every organization: Task 15's browser
+    # test checks that this date renders with a French month name under
+    # the fr locale, and it doesn't matter which organization it looks at.
+    founded = date(2019, 3, 1)
+    acme = organizations.create(name="Acme Corp", founded=founded, balance=Decimal("1234.5"))
+    widgets = organizations.create(name="Widgets Inc", founded=founded, balance=Decimal("1234.5"))
+    globex = organizations.create(name="Globex Corporation", founded=founded, balance=Decimal("1234.5"))
+    initech = organizations.create(name="Initech", founded=founded, balance=Decimal("1234.5"))
 
     # Enough roles that the multi-select's search box has something to
     # do -- the control only earns its keep past the point where

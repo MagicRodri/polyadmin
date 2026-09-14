@@ -94,7 +94,15 @@
       // The month on screen. Never the selection -- that lives in the
       // date input (see this file's header comment).
       view: new Date(),
-      weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+
+      // Monday-first short weekday names in the page's language.
+      // 2024-01-01 was a Monday.
+      get weekdays() {
+        var format = new Intl.DateTimeFormat(document.documentElement.lang || undefined, { weekday: "short" });
+        var out = [];
+        for (var i = 0; i < 7; i++) out.push(format.format(new Date(2024, 0, 1 + i)));
+        return out;
+      },
 
       init() {
         this.view = this.parsed() || new Date();
@@ -115,7 +123,7 @@
       },
 
       get monthLabel() {
-        return this.view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+        return this.view.toLocaleDateString(document.documentElement.lang || undefined, { month: "long", year: "numeric" });
       },
 
       get todayISO() { return this.iso(new Date()); },
