@@ -9,8 +9,6 @@ rendering will build on.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Any
 
 from polyadmin.i18n import gettext
@@ -19,16 +17,6 @@ if TYPE_CHECKING:
     from polyadmin.core.relation import Relation
 
 _UNSET = object()
-
-# A value the browser-side formatter needs a real type for (see
-# templates/admin/theme.html's polyadminFormat): parse_form_value coerces
-# a posted string into one, and validate() below reports a message when it
-# can't -- a malformed "someday" or "twelve" is a validation error, never a
-# silently-saved zero or None.
-_MALFORMED_MESSAGES = {
-    "date": "Enter a valid date.",
-    "decimal": "Enter a valid number.",
-}
 
 
 class Field:
@@ -86,12 +74,7 @@ class Field:
                 return raw
         if self.field_type == "decimal":
             try:
-                return Decimal(raw)
-            except (InvalidOperation, TypeError, ValueError):
-                return raw
-        if self.field_type == "date":
-            try:
-                return date.fromisoformat(raw)
+                return float(raw)
             except (TypeError, ValueError):
                 return raw
         if self.field_type == "json":
@@ -108,12 +91,6 @@ class Field:
         errors: list[str] = []
         if self.required and (value is None or value == ""):
             errors.append(gettext("%(label)s is required.") % {"label": gettext(self.label)})
-            return errors
-        # parse_form_value hands back the original string, unconverted,
-        # when it can't coerce it -- the only way a "date"/"decimal"
-        # field's value is still a str at this point.
-        if isinstance(value, str) and value != "" and self.field_type in _MALFORMED_MESSAGES:
-            errors.append(gettext(_MALFORMED_MESSAGES[self.field_type]))
             return errors
         for validator in self.validators:
             try:

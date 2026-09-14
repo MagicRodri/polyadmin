@@ -1,14 +1,4 @@
-from datetime import date
-from decimal import Decimal
-
-from polyadmin.core.field import (
-    BooleanField,
-    DateField,
-    DecimalField,
-    EnumField,
-    Field,
-    StringField,
-)
+from polyadmin.core.field import BooleanField, EnumField, Field, StringField
 
 
 class Obj:
@@ -56,34 +46,3 @@ def test_custom_validator():
 def test_enum_field_choices():
     field = EnumField("role", choices=["admin", "member"])
     assert field.choices == ["admin", "member"]
-
-
-def test_date_field_parses_a_posted_string():
-    field = DateField("founded")
-    assert field.parse_form_value("2019-03-01") == date(2019, 3, 1)
-    assert field.parse_form_value("") is None
-
-
-def test_date_field_rejects_a_malformed_posted_string():
-    field = DateField("founded")
-    # parse_form_value hands back the unparsed string; validate() is what
-    # turns that into a form error, rather than letting it through to
-    # ModelAdmin.create()/update() as a value to be silently defaulted.
-    assert field.parse_form_value("someday") == "someday"
-    assert field.validate("someday") == ["Enter a valid date."]
-    assert field.validate(date(2019, 3, 1)) == []
-    assert field.validate(None) == []  # not required: absent is fine
-
-
-def test_decimal_field_parses_a_posted_string():
-    field = DecimalField("balance")
-    assert field.parse_form_value("1234.50") == Decimal("1234.50")
-    assert field.parse_form_value("") is None
-
-
-def test_decimal_field_rejects_a_malformed_posted_string():
-    field = DecimalField("balance")
-    assert field.parse_form_value("twelve") == "twelve"
-    assert field.validate("twelve") == ["Enter a valid number."]
-    assert field.validate(Decimal("1234.5")) == []
-    assert field.validate(None) == []

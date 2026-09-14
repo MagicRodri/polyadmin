@@ -1,6 +1,7 @@
 """OrganizationAdmin: the relation target for UserAdmin.organization."""
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from models import Organization, OrganizationRepository
@@ -8,12 +9,28 @@ from models import Organization, OrganizationRepository
 from polyadmin import DateField, DecimalField, ModelAdmin, StringField
 from polyadmin.core.inline import TabularInline
 
-# Field.parse_form_value (polyadmin/core/field.py) already turns a posted
-# "founded"/"balance" string into a date/Decimal before this admin ever
-# sees it, and Field.validate() rejects one it can't parse -- "Enter a
-# valid date."/"Enter a valid number." -- so create()/update() below never
-# receive a malformed value to fall back on silently. Only "absent" (an
-# optional field left blank posts as None) needs a default.
+
+def _valid_founded_date(value):
+    """Rejects a Founded value the framework couldn't already coerce:
+    Field.parse_form_value (polyadmin/core/field.py) does no date parsing
+    of its own (unlike the "decimal" field type), so any non-empty string
+    reaching here has to be checked by hand.
+    """
+    if not isinstance(value, str) or value == "":
+        return
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        raise ValueError("Enter a valid date.") from None
+
+
+def _valid_balance(value):
+    """Rejects a Balance value parse_form_value could not parse: it hands
+    back the raw string unchanged when float() fails, a float otherwise,
+    so seeing a non-empty string here means the input was bad.
+    """
+    if isinstance(value, str) and value != "":
+        raise ValueError("Enter a valid number.")
 
 
 class OrganizationAdmin(ModelAdmin):
@@ -26,8 +43,8 @@ class OrganizationAdmin(ModelAdmin):
     search_fields = ["name"]
     fields = [
         StringField("name", required=True),
-        DateField("founded"),
-        DecimalField("balance"),
+        DateField("founded", validators=[_valid_founded_date]),
+        DecimalField("balance", validators=[_valid_balance]),
     ]
     # Shows each Organization's Users inline on its own
     # create/detail/edit pages -- see docs/inlines.md.
@@ -49,14 +66,37 @@ class OrganizationAdmin(ModelAdmin):
     def create(self, data):
         return self.repository.create(
             name=data["name"],
-            founded=data.get("founded"),
-            balance=data.get("balance") if data.get("balance") is not None else Decimal(0),
+            founded=_parse_founded(data.get("founded")),
+            balance=_parse_balance(data.get("balance")),
         )
 
     def update(self, obj, data):
         return self.repository.update(
             obj,
             name=data["name"],
-            founded=data.get("founded"),
-            balance=data.get("balance") if data.get("balance") is not None else Decimal(0),
+            founded=_parse_founded(data.get("founded")),
+            balance=_parse_balance(data.get("balance")),
         )
+
+
+def _parse_founded(value):
+    """Founded arrives as the raw YYYY-MM-DD string once _valid_founded_date
+    has already rejected anything malformed (create()/update() only run
+    once ModelAdmin.validate has passed) -- absent/empty is None.
+    """
+    if not value:
+        return None
+    return date.fromisoformat(value)
+
+
+def _parse_balance(value):
+    """Balance arrives as a float once Field.parse_form_value has already
+    coerced it (and _valid_balance has rejected anything it couldn't) --
+    absent/empty is None. Converting through str(value) rather than
+    Decimal(value) directly avoids surfacing float's binary imprecision
+    (Decimal(0.1) is a long ugly repeating value; Decimal(str(0.1)) is
+    the "0.1" a person typed).
+    """
+    if value is None:
+        return Decimal(0)
+    return Decimal(str(value))

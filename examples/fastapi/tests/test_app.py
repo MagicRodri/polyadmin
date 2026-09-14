@@ -129,9 +129,12 @@ def test_create_organization_persists_founded_and_balance():
     detail = client.get(location)
     assert detail.status_code == 200
     # Rendered as the markup contract (Task 12): a <time datetime="...">
-    # for the date and a data-value carrying the exact posted precision --
-    # not silently dropped to zero/None by the framework's own type
-    # coercion (see field.py's parse_form_value for "date"/"decimal").
+    # for the date and a data-value carrying the exact posted precision.
+    # This exercises the real create() pipeline end to end -- Field.parse_
+    # form_value (float for "decimal", raw string for "date"), the example
+    # admin's own validators (organization_admin.py's _valid_founded_date/
+    # _valid_balance), then its create() turning both into the model's
+    # types -- not just a unit call.
     assert '<time datetime="2020-06-15" data-format="date">2020-06-15</time>' in detail.text
     assert 'data-value="999.75"' in detail.text
 
@@ -159,7 +162,7 @@ def test_editing_an_organization_updates_founded_and_balance():
     assert 'data-value="42.5"' in detail.text
 
 
-def test_malformed_organization_date_and_balance_are_rejected_not_zeroed():
+def test_create_organization_rejects_garbage_and_persists_nothing():
     response = client.post(
         "/admin/organizations/create",
         data={"name": "Bad Data Inc", "founded": "not-a-date", "balance": "not-a-number"},
@@ -172,6 +175,48 @@ def test_malformed_organization_date_and_balance_are_rejected_not_zeroed():
     assert "Enter a valid date." in response.text
     assert "Enter a valid number." in response.text
     assert "Bad Data Inc" not in client.get("/admin/organizations").text
+
+
+def test_editing_an_organization_rejects_garbage_and_keeps_original_values():
+    create = client.post(
+        "/admin/organizations/create",
+        data={"name": "Keep Me", "founded": "2018-01-01", "balance": "100"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    location = create.headers["location"]
+    pk = location.rsplit("/", 1)[-1]
+
+    edit = client.post(
+        f"/admin/organizations/{pk}/edit",
+        data={"name": "Keep Me", "founded": "nope", "balance": "nope"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert edit.status_code == 422
+    assert "Enter a valid date." in edit.text
+    assert "Enter a valid number." in edit.text
+
+    # The rejected update must not have touched the record.
+    detail = client.get(location)
+    assert '<time datetime="2018-01-01" data-format="date">2018-01-01</time>' in detail.text
+    assert 'data-value="100' in detail.text
+
+
+def test_create_organization_with_both_fields_empty_saves_successfully():
+    response = client.post(
+        "/admin/organizations/create",
+        data={"name": "No Dates Yet", "founded": "", "balance": ""},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert response.status_code == 303
+
+    detail = client.get(response.headers["location"])
+    assert detail.status_code == 200
+    assert "No Dates Yet" in detail.text
+    # Optional and left blank: no <time> element for founded at all.
+    assert "data-format=\"date\"" not in detail.text
 
 
 def test_create_user_end_to_end():
