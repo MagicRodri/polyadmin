@@ -1,0 +1,30 @@
+{# Language switcher. Trigger and panel follow ui/dropdown-menu, which
+   renders only links; each option here is a small form posting to the
+   switcher route, like the sidebar's sign-out.
+
+   Each language is named in itself and never translated, so someone who
+   lands on a page they cannot read can still find their own. The `lang`
+   attribute on each option says so to assistive tech. #}
+{% from "admin/components/csrf-field.html" import csrf_field %}
+{% from "admin/components/icons.html" import icon %}
+{% macro locale_switcher_menu(switcher, base_path, csrf_token) %}
+<div class="relative inline-flex" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
+  <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
+          class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
+    {{ icon("language", "w-4 h-4") }}<span class="sr-only">{{ _("Language") }}</span>
+  </button>
+  <div x-show="open" x-cloak x-transition role="menu" class="{{ ui('dropdown', 'content') }} absolute right-0 top-full mt-1">
+    {% for option in switcher.options %}
+    <form method="post" action="{{ base_path }}/locale">
+      {{ csrf_field(csrf_token) }}
+      <input type="hidden" name="locale" value="{{ option.code }}">
+      <button type="submit" role="menuitemradio" lang="{{ option.code }}"
+              aria-checked="{{ 'true' if option.code == switcher.current else 'false' }}"
+              class="{{ ui('dropdown', 'item') }}">
+        <span class="w-4">{% if option.code == switcher.current %}{{ icon("check", "w-4 h-4") }}{% endif %}</span>{{ option.name }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}

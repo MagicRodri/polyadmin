@@ -19,6 +19,7 @@ from typing import Any, Protocol, runtime_checkable
 # otherwise have to thread the value through.
 LOGIN_PATH = "/login"
 LOGOUT_PATH = "/logout"
+LOCALE_PATH = "/locale"
 
 # Carries the URL an unauthenticated visitor was trying to reach, so
 # signing in returns them there instead of dumping them on the dashboard.

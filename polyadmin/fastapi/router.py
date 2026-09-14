@@ -17,7 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import DASHBOARD_VIEW
 from polyadmin.core.exporter import CSVExporter, XLSXExporter
-from polyadmin.core.login import LOGIN_PATH, LOGOUT_PATH
+from polyadmin.core.login import LOCALE_PATH, LOGIN_PATH, LOGOUT_PATH
 from polyadmin.fastapi.auth import authorize
 from polyadmin.fastapi.handlers import (
     build_action_handler,
@@ -31,7 +31,7 @@ from polyadmin.fastapi.handlers import (
     build_lookup_handler,
 )
 from polyadmin.fastapi.inlines import validate_inlines
-from polyadmin.fastapi.locale import make_admin_route
+from polyadmin.fastapi.locale import build_locale_handler, make_admin_route
 from polyadmin.fastapi.login import build_login_handlers, build_logout_handler
 from polyadmin.fastapi.pages import build_page_handler
 from polyadmin.fastapi.responses import clear_flash, pop_flash
@@ -73,6 +73,11 @@ def create_router(
             build_logout_handler(admin, base_path),
             methods=["POST"],
             include_in_schema=False,
+        )
+
+    if admin.locale_switcher and len(i18n.supported) > 1:
+        router.add_api_route(
+            LOCALE_PATH, build_locale_handler(i18n, base_path), methods=["POST"], include_in_schema=False
         )
 
     @router.get("", include_in_schema=False)

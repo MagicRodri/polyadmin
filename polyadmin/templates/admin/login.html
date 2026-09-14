@@ -10,6 +10,7 @@
    "Forgot your password?" -- the framework has no route behind any of
    them. #}
 {% from "admin/components/csrf-field.html" import csrf_field %}
+{% from "admin/components/ui/locale-switcher.html" import locale_switcher_menu %}
 <!doctype html>
 <html lang="{{ locale }}" class="h-full">
 <head>
@@ -21,7 +22,8 @@
   <title>Sign in &middot; {{ site_title }}</title>
   {% include "admin/theme.html" %}
 </head>
-<body class="h-full bg-background text-foreground antialiased">
+<body class="relative h-full bg-background text-foreground antialiased">
+  {% if locale_switcher %}<div class="absolute right-4 top-4">{{ locale_switcher_menu(locale_switcher, base_path, csrf_token) }}</div>{% endif %}
   <div class="{{ ui('login', 'page') }}">
     <div class="{{ ui('login', 'container') }}">
       <div class="{{ ui('card') }} overflow-hidden">

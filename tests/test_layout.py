@@ -38,6 +38,7 @@ SHARED_LAYOUT = {
     "admin/components/ui/dropdown-menu.html",
     "admin/components/ui/field.html",
     "admin/components/ui/filter-panel.html",
+    "admin/components/ui/locale-switcher.html",
     "admin/components/ui/multi-select.html",
     "admin/components/ui/pagination.html",
     "admin/components/ui/radio-group.html",

@@ -306,6 +306,7 @@ class Renderer:
         identifier: str = "",
         error: str = "",
         notice: str = "",
+        base_path: str = "",
     ) -> str:
         """The login page. Deliberately not built on base_context: there is no
         principal (that is the point), no nav, and no trail to sit in.
@@ -319,6 +320,7 @@ class Renderer:
                 "identifier": identifier,
                 "error": error,
                 "notice": notice,
+                "base_path": base_path,
             },
         )
 

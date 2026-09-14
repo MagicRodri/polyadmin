@@ -39,6 +39,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             identifier=identifier,
             error=error,
             notice=notice,
+            base_path=base_path,
         )
         return HTMLResponse(html, status_code=status)
 
