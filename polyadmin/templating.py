@@ -70,11 +70,25 @@ class Renderer:
             extensions=["jinja2.ext.i18n"],
         )
         translator = self.i18n.translator
-        env.install_gettext_callables(
-            lambda message: translator.gettext(locale, message),
-            lambda singular, plural, n: translator.ngettext(locale, singular, plural, n),
-            newstyle=True,
-        )
+
+        # Our own callables, not Jinja's newstyle wrappers: those mark a
+        # translation as Markup, which let a host string through `_()`
+        # unescaped, and always %-format, which broke on a label containing
+        # "%". These return plain text, so autoescape escapes it at output
+        # and `|tojson` sees the raw string. `_()` formats only when given
+        # arguments -- a literal % needs %% only then, as with Go's t.
+        def translate(message: str, **variables: Any) -> str:
+            text = str(translator.gettext(locale, message))
+            return text % variables if variables else text
+
+        def translate_plural(singular: str, plural: str, num: int, **variables: Any) -> str:
+            variables.setdefault("num", num)
+            return str(translator.ngettext(locale, singular, plural, num)) % variables
+
+        # newstyle=False installs them as they are. `_` is the extension's
+        # alias for `gettext`; pgettext/npgettext are left unset (no template
+        # uses them), as is `{% trans %}`, which nothing uses either.
+        env.install_gettext_callables(translate, translate_plural, newstyle=False)
         # A global rather than a per-template import, so overrides and
         # custom page/widget templates style with the same vocabulary for
         # free.

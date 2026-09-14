@@ -1,6 +1,8 @@
 from polyadmin.core.admin import Admin
 from polyadmin.core.pagination import paginate
+from polyadmin.i18n import GettextTranslator, I18n, use_locale
 from polyadmin.templating import Renderer
+from tests.core.test_i18n import RU_PLURALS, write_catalog
 from tests.core.test_model_admin import InMemoryUserAdmin
 
 
@@ -110,3 +112,54 @@ def test_resource_specific_template_beats_generic_default(tmp_path):
     html = Renderer(template_dirs=[tmp_path]).render_list(admin, user_admin, page)
 
     assert html == "USERS-ONLY LIST TEMPLATE"
+
+
+# -- gettext in templates ------------------------------------------------
+# `_` and `ngettext` return plain text, so autoescape escapes a translation
+# at output like any other string, and `|tojson` serialises the raw text.
+
+
+def render_in(locale, source, *, tmp_path=None, entries=None, plural_forms=None, **context):
+    """Render `source` in `locale`, with an optional host catalog for it."""
+    catalogs = []
+    if entries:
+        catalogs = [(write_catalog(tmp_path, locale, entries, domain="host", plural_forms=plural_forms), "host")]
+    translator = GettextTranslator(catalogs)
+    i18n = I18n(translator=translator, default="en", supported=sorted({"en", locale}), names={})
+    renderer = Renderer(i18n=i18n)
+    with use_locale(locale, translator):
+        return renderer.env.from_string(source).render(**context)
+
+
+def test_a_host_string_with_a_percent_sign_renders_as_is():
+    # No arguments, no formatting -- as with Go's t.
+    assert render_in("en", "{{ _(label) }}", label="Discount (%)") == "Discount (%)"
+    assert render_in("en", "{{ _(label) }}", label="100% done") == "100% done"
+
+
+def test_a_translated_host_string_is_escaped_in_attributes_and_text():
+    html = render_in("en", '<p title="{{ _(label) }}">{{ _(label) }}</p>', label='Say "hi" <b>')
+    assert html == '<p title="Say &#34;hi&#34; &lt;b&gt;">Say &#34;hi&#34; &lt;b&gt;</p>'
+
+
+def test_tojson_serialises_the_raw_translation(tmp_path):
+    html = render_in("fr", """{{ _("Light mode")|tojson }}""", tmp_path=tmp_path,
+                     entries={"Light mode": "Mode d'affichage"})
+    assert html == '"Mode d\\u0027affichage"'
+    assert "&#39;" not in html
+
+
+def test_placeholders_are_formatted_and_their_values_escaped(tmp_path):
+    html = render_in("fr", """{{ _("Remove %(label)s", label=label) }} {{ _("100%% of %(label)s", label=label) }}""",
+                     tmp_path=tmp_path, entries={"Remove %(label)s": "Retirer %(label)s"}, label="<b>")
+    assert html == "Retirer &lt;b&gt; 100% of &lt;b&gt;"
+
+
+def test_ngettext_picks_the_plural_form_and_binds_num(tmp_path):
+    entries = {("%(num)d record", "%(num)d records"): ["%(num)d запись", "%(num)d записи", "%(num)d записей"]}
+    source = """{% for n in counts %}{{ ngettext("%(num)d record", "%(num)d records", n) }};{% endfor %}"""
+    html = render_in("ru", source, tmp_path=tmp_path, entries=entries, plural_forms=RU_PLURALS, counts=[1, 3, 5])
+    assert html == "1 запись;3 записи;5 записей;"
+    # Further placeholders ride alongside the bound count.
+    html = render_in("en", """{{ ngettext("%(n)s of %(num)d row", "%(n)s of %(num)d rows", 3, n="<n>") }}""")
+    assert html == "&lt;n&gt; of 3 rows"
