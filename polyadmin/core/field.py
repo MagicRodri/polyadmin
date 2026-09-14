@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
+from polyadmin.i18n import gettext
+
 if TYPE_CHECKING:
     from polyadmin.core.relation import Relation
 
@@ -88,13 +90,15 @@ class Field:
         """Run configured validators, returning a list of error messages."""
         errors: list[str] = []
         if self.required and (value is None or value == ""):
-            errors.append(f"{self.label} is required.")
+            errors.append(gettext("%(label)s is required.") % {"label": gettext(self.label)})
             return errors
         for validator in self.validators:
             try:
                 validator(value)
             except ValueError as exc:
-                errors.append(str(exc))
+                # A static English message translates from the host's
+                # catalog; one already translated misses and passes through.
+                errors.append(gettext(str(exc)))
         return errors
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid

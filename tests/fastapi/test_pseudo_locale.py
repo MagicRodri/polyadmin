@@ -25,11 +25,13 @@ from polyadmin.core.widget import (
 )
 from polyadmin.fastapi.router import create_router
 from polyadmin.i18n import PSEUDO_LOCALE
+from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin
 from tests.fastapi.test_inlines import make_client as make_inline_client
 from tests.fastapi.test_inlines import seed_org_with_users
+from tests.fastapi.test_login import FakeLoginBackend
 
-SWEEP_AREAS = {"layout": True, "list": True, "forms": True, "detail": True, "errors": False}
+SWEEP_AREAS = {"layout": True, "list": True, "forms": True, "detail": True, "errors": True}
 LOCALE_NAMES = ["English", "Français", "Русский", "Pseudo (en-XA)"]
 VISIBLE_ATTRS = {"placeholder", "aria-label", "title", "alt", "hx-confirm"}
 PSEUDO = re.compile(r"\[[^\[\]]*\]")
@@ -119,28 +121,57 @@ def inline_client(tmp_path):
     return client, ["a@example.com", "Acme", "PO", *LOCALE_NAMES]
 
 
+def login_client(tmp_path):
+    backend = FakeLoginBackend()
+    admin = Admin(
+        model_admins=[InMemoryUserAdmin()],
+        authenticator=backend,
+        login_backend=backend,
+        pseudo_locale=True,
+    )
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), [*LOCALE_NAMES]
+
+
+def _get(client, path, headers):
+    return client.get(path, headers=headers)
+
+
+def _failed_login(client, path, headers):
+    return client.post(
+        path,
+        data={"identifier": "wrong@example.com", "password": "wrong"},
+        headers={**csrf(client), **headers},
+    )
+
+
 PAGES = [
-    ("layout", "shell", "/admin/hello", {}, main_client),
-    ("list", "list", "/admin/users", {}, main_client),
-    ("list", "list fragment", "/admin/users?search=a", {"HX-Request": "true"}, main_client),
-    ("forms", "create", "/admin/users/create", {}, main_client),
-    ("forms", "edit", "/admin/users/1/edit", {}, main_client),
-    ("forms", "inline edit", "/admin/organizations/1/edit", {}, inline_client),
-    ("detail", "detail", "/admin/users/1", {}, main_client),
-    ("detail", "delete", "/admin/users/1/delete", {}, main_client),
-    ("detail", "inline detail", "/admin/organizations/1", {}, inline_client),
-    ("detail", "dashboard", "/admin", {}, main_client),
-    ("errors", "not found", "/admin/users/999", {}, main_client),
+    ("layout", "shell", "/admin/hello", {}, main_client, _get),
+    ("list", "list", "/admin/users", {}, main_client, _get),
+    ("list", "list fragment", "/admin/users?search=a", {"HX-Request": "true"}, main_client, _get),
+    ("forms", "create", "/admin/users/create", {}, main_client, _get),
+    ("forms", "edit", "/admin/users/1/edit", {}, main_client, _get),
+    ("forms", "inline edit", "/admin/organizations/1/edit", {}, inline_client, _get),
+    ("detail", "detail", "/admin/users/1", {}, main_client, _get),
+    ("detail", "delete", "/admin/users/1/delete", {}, main_client, _get),
+    ("detail", "inline detail", "/admin/organizations/1", {}, inline_client, _get),
+    ("detail", "dashboard", "/admin", {}, main_client, _get),
+    ("errors", "not found", "/admin/users/999", {}, main_client, _get),
+    ("layout", "login", "/admin/login", {}, login_client, _get),
+    ("errors", "failed login", "/admin/login", {}, login_client, _failed_login),
 ]
 
 
-@pytest.mark.parametrize(("area", "name", "path", "headers", "factory"), PAGES, ids=[f"{p[0]}/{p[1]}" for p in PAGES])
-def test_pseudo_locale_sweep(tmp_path, area, name, path, headers, factory):
+@pytest.mark.parametrize(
+    ("area", "name", "path", "headers", "factory", "request_fn"), PAGES, ids=[f"{p[0]}/{p[1]}" for p in PAGES]
+)
+def test_pseudo_locale_sweep(tmp_path, area, name, path, headers, factory, request_fn):
     if not SWEEP_AREAS[area]:
         pytest.skip(f"area {area!r} not converted yet")
     client, allow = factory(tmp_path)
     client.cookies.set("admin_locale", PSEUDO_LOCALE)
-    response = client.get(path, headers=headers)
+    response = request_fn(client, path, headers)
     assert response.status_code < 500
     left = untranslated(response.text, allow)
     assert not left, f"untranslated on {path}:\n  " + "\n  ".join(left)

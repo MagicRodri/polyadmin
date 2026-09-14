@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from polyadmin.i18n import N_
+
 
 class Filter:
     def __init__(self, name: str, *, label: str | None = None):
@@ -26,7 +28,7 @@ class Filter:
 
 class BooleanFilter(Filter):
     def choices_with_labels(self) -> list[tuple[str, str]]:
-        return [("", "All"), ("true", "Yes"), ("false", "No")]
+        return [("", N_("All")), ("true", N_("Yes")), ("false", N_("No"))]
 
     def apply(self, objects, raw_value, model_admin):
         if not raw_value:
@@ -42,7 +44,7 @@ class ChoiceFilter(Filter):
         self.choices = list(choices)
 
     def choices_with_labels(self) -> list[tuple[str, str]]:
-        return [("", "All")] + [(str(choice), str(choice)) for choice in self.choices]
+        return [("", N_("All"))] + [(str(choice), str(choice)) for choice in self.choices]
 
     def apply(self, objects, raw_value, model_admin):
         if not raw_value:

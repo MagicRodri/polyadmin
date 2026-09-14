@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from polyadmin.core.admin import Admin
 from polyadmin.core.login import NEXT_QUERY_PARAM, safe_next_url
 from polyadmin.fastapi.responses import redirect
+from polyadmin.i18n import N_, gettext
 from polyadmin.templating import Renderer
 
 logger = logging.getLogger("polyadmin")
@@ -19,9 +20,9 @@ logger = logging.getLogger("polyadmin")
 # telling them apart turns the form into an account enumerator.
 # core.login.LoginBackend asks implementations not to distinguish them
 # either, for the same reason.
-INVALID_CREDENTIALS = "That email and password don't match an account."
-SIGNED_OUT = "You have been signed out."
-SESSION_FAILED = "Sign-in could not be completed. Please try again."
+INVALID_CREDENTIALS = N_("That email and password don't match an account.")
+SIGNED_OUT = N_("You have been signed out.")
+SESSION_FAILED = N_("Sign-in could not be completed. Please try again.")
 
 
 def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
@@ -51,7 +52,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             return RedirectResponse(
                 safe_next_url(request.query_params.get(NEXT_QUERY_PARAM), base_path), status_code=303
             )
-        notice = SIGNED_OUT if request.query_params.get("signedout") == "1" else ""
+        notice = gettext(SIGNED_OUT) if request.query_params.get("signedout") == "1" else ""
         return _page(request, notice=notice)
 
     async def login_post(request: Request) -> Response:
@@ -68,7 +69,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             # 401, not 200: a failed sign-in is a failed sign-in, and the
             # status is what a log or a rate limiter in front of this
             # reads. The body is still the form.
-            return _page(request, identifier=identifier, error=INVALID_CREDENTIALS, status=401)
+            return _page(request, identifier=identifier, error=gettext(INVALID_CREDENTIALS), status=401)
 
         response = RedirectResponse(next_url, status_code=303)
         try:
@@ -83,7 +84,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             # stored, so the visitor is not signed in and must not be
             # told they are. Logged for the operator, generic on screen.
             logger.warning("begin_session failed for %s: %s", principal.id, exc)
-            return _page(request, identifier=identifier, error=SESSION_FAILED, status=500)
+            return _page(request, identifier=identifier, error=gettext(SESSION_FAILED), status=500)
         return response
 
     return login_get, login_post

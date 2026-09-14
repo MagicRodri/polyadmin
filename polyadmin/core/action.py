@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any
 
+from polyadmin.i18n import N_, ngettext
+
 ActionHandler = Callable[[Any, Sequence[Any], Any], "str | None"]
 
 
@@ -75,12 +77,12 @@ def delete_selected_action() -> Action:
                     f"deleted {deleted} of {len(objects)}, then: {exc}"
                 ) from exc
             deleted += 1
-        return f"Deleted {deleted} record(s)."
+        return ngettext("Deleted %(num)d record.", "Deleted %(num)d records.", deleted) % {"num": deleted}
 
     return Action(
         DELETE_SELECTED_NAME,
         handler,
-        label="Delete selected",
-        confirm="Delete the selected records? This cannot be undone.",
+        label=N_("Delete selected"),
+        confirm=N_("Delete the selected records? This cannot be undone."),
         permission="delete",
     )

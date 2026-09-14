@@ -57,6 +57,7 @@ class Exporter:
         model_admin: ModelAdmin,
         objects: Iterable[Any],
         columns: list[str],
+        header: list[str] | None = None,
     ) -> Iterator[bytes]:
         raise NotImplementedError
 
@@ -74,12 +75,13 @@ class CSVExporter(Exporter):
         model_admin: ModelAdmin,
         objects: Iterable[Any],
         columns: list[str],
+        header: list[str] | None = None,
     ) -> Iterator[bytes]:
         fields = [model_admin.get_field(name) for name in columns]
         buffer = io.StringIO()
         writer = csv.writer(buffer)
 
-        writer.writerow([field.label for field in fields])
+        writer.writerow(header or [field.label for field in fields])
         yield buffer.getvalue().encode("utf-8")
         buffer.seek(0)
         buffer.truncate(0)
@@ -104,6 +106,7 @@ class XLSXExporter(Exporter):
         model_admin: ModelAdmin,
         objects: Iterable[Any],
         columns: list[str],
+        header: list[str] | None = None,
     ) -> Iterator[bytes]:
         from openpyxl import Workbook
 
@@ -111,7 +114,7 @@ class XLSXExporter(Exporter):
         workbook = Workbook(write_only=True)
         sheet = workbook.create_sheet(model_admin.get_verbose_name())
 
-        sheet.append([field.label for field in fields])
+        sheet.append(header or [field.label for field in fields])
         for obj in objects:
             row = [cell_value(admin, field, obj) for field in fields]
             # openpyxl only accepts str/int/float/bool/datetime cells --

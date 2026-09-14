@@ -21,13 +21,14 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 
 from polyadmin.fastapi.responses import is_htmx_request
+from polyadmin.i18n import N_, gettext
 
-FORBIDDEN = ("Permission denied", "Your account doesn't have permission to do that.")
-NOT_FOUND = ("Not found", "That record doesn't exist, or it was deleted.")
-UNAUTHENTICATED = ("Sign-in required", "You need to be signed in to view this page.")
+FORBIDDEN = (N_("Permission denied"), N_("Your account doesn't have permission to do that."))
+NOT_FOUND = (N_("Not found"), N_("That record doesn't exist, or it was deleted."))
+UNAUTHENTICATED = (N_("Sign-in required"), N_("You need to be signed in to view this page."))
 CSRF_FAILED = (
-    "Security check failed",
-    "This page expired before the form was submitted. Reload and try again.",
+    N_("Security check failed"),
+    N_("This page expired before the form was submitted. Reload and try again."),
 )
 
 
@@ -54,10 +55,10 @@ def error_response(
     alert, since a whole document swapped into a table cell is nonsense.
     """
     context = {
-        "site_title": getattr(admin, "site_title", "") or "PolyAdmin",
+        "site_title": gettext(getattr(admin, "site_title", "") or "PolyAdmin"),
         "status": status,
-        "title": title,
-        "message": message,
+        "title": gettext(title),
+        "message": gettext(message),
         # No point offering the link when an unauthenticated visitor
         # cannot reach the dashboard either.
         "home_url": "" if status == 401 else base_path,

@@ -34,6 +34,7 @@ from polyadmin.fastapi.responses import (
     redirect,
     set_flash,
 )
+from polyadmin.i18n import gettext, ngettext
 from polyadmin.templating import Renderer
 
 # The submit buttons meaning something other than "save and show me the
@@ -274,16 +275,19 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         record_audit(admin, principal, model_admin, AUDIT_CREATE, obj)
         # "Save and add another" goes back to an empty form, checked
         # before building the record's URL since it never uses one.
+        # Translators: %(name)s is the model's name. French and Russian
+        # nouns carry gender, so phrase around agreement.
+        created_message = gettext("%(name)s created.") % {"name": gettext(model_admin.get_verbose_name())}
         if form.get(SAVE_ADD_ANOTHER_FIELD):
             response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
-            set_flash(response, "success", f"{model_admin.get_verbose_name()} created.")
+            set_flash(response, "success", created_message)
             return response
         pk = model_admin.get_pk(obj)
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
         response = redirect(request, target)
-        set_flash(response, "success", f"{model_admin.get_verbose_name()} created.")
+        set_flash(response, "success", created_message)
         return response
 
     return create_get, create_post
@@ -354,15 +358,18 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return HTMLResponse(html, status_code=422)
         model_admin.update(obj, data)
         record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
+        # Translators: %(name)s is the model's name. French and Russian
+        # nouns carry gender, so phrase around agreement.
+        updated_message = gettext("%(name)s updated.") % {"name": gettext(model_admin.get_verbose_name())}
         if form.get(SAVE_ADD_ANOTHER_FIELD):
             response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
-            set_flash(response, "success", f"{model_admin.get_verbose_name()} updated.")
+            set_flash(response, "success", updated_message)
             return response
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
         response = redirect(request, target)
-        set_flash(response, "success", f"{model_admin.get_verbose_name()} updated.")
+        set_flash(response, "success", updated_message)
         return response
 
     return edit_get, edit_post
@@ -401,7 +408,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             model_admin.delete(obj)
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
-        set_flash(response, "success", f"{model_admin.get_verbose_name()} deleted.")
+        # Translators: %(name)s is the model's name. French and Russian
+        # nouns carry gender, so phrase around agreement.
+        deleted_message = gettext("%(name)s deleted.") % {"name": gettext(model_admin.get_verbose_name())}
+        set_flash(response, "success", deleted_message)
         return response
 
     async def delete_htmx(request: Request, pk: str) -> HTMLResponse:
@@ -469,7 +479,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
         select_all = bool(form.get(SELECT_ALL_FIELD))
         if not select_all and not pks:
             response = redirect(request, redirect_to)
-            set_flash(response, "warning", "No items selected.")
+            set_flash(response, "warning", gettext("No items selected."))
             return response
 
         if select_all:
@@ -480,7 +490,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             objects = [obj for pk in pks if (obj := model_admin.get_object(pk)) is not None]
         if not objects:
             response = redirect(request, redirect_to)
-            set_flash(response, "warning", "No items selected.")
+            set_flash(response, "warning", gettext("No items selected."))
             return response
         message = action.handler(model_admin, objects, principal)
         # One entry per record, not per action: the log's question is
@@ -488,8 +498,16 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
         # 500 answers to it.
         for obj in objects:
             record_audit(admin, principal, model_admin, action.name, obj)
+        if message:
+            # A host's static message translates from its catalog; one it
+            # already translated with gettext misses and passes through.
+            message = gettext(message)
+        else:
+            message = ngettext(
+                "%(label)s applied to %(num)d record.", "%(label)s applied to %(num)d records.", len(objects)
+            ) % {"label": gettext(action.label), "num": len(objects)}
         response = redirect(request, redirect_to)
-        set_flash(response, "success", message or f"{action.label} applied to {len(objects)} record(s).")
+        set_flash(response, "success", message)
         return response
 
     return action_view
@@ -543,9 +561,13 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
         list_request.unlimited = True
         objects, _ = list_objects(model_admin, list_request)
         columns = list(model_admin.list_display)
+        # Computed here, not inside the generator: the route wrapper resets
+        # the locale context variable as soon as this handler returns, and
+        # StreamingResponse only iterates the generator afterwards.
+        header = [gettext(model_admin.get_field(name).label) for name in columns]
         filename = f"{slug}.{exporter.file_extension()}"
         return StreamingResponse(
-            exporter.stream(admin, model_admin, objects, columns),
+            exporter.stream(admin, model_admin, objects, columns, header=header),
             media_type=exporter.content_type,
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
