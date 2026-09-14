@@ -15,6 +15,7 @@ from polyadmin.core.authorization import resource_permission
 from polyadmin.core.login import LOGIN_PATH, NEXT_QUERY_PARAM
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.fastapi.errors import forbidden, unauthenticated
+from polyadmin.fastapi.locale import cached_principal
 from polyadmin.fastapi.responses import redirect
 
 
@@ -33,7 +34,7 @@ def authorize(
     """
     principal = None
     if admin.authenticator is not None:
-        principal = admin.authenticator.authenticate(request)
+        principal = cached_principal(admin, request)
         if principal is None:
             if admin.login_backend is None:
                 return None, unauthenticated(request, admin, base_path)

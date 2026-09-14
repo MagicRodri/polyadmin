@@ -66,7 +66,8 @@ def error_response(
         "admin/components/error_fragment.html" if is_htmx_request(request) else "admin/error.html"
     )
     try:
-        html = _renderer().render(template, context)
+        renderer = getattr(request.state, "renderer", None) or _renderer()
+        html = renderer.render(template, context)
     except Exception:  # noqa: BLE001 -- see below
         # The error page itself failed to build. Fall back to the plain
         # body rather than returning nothing at all -- an ugly 403 beats

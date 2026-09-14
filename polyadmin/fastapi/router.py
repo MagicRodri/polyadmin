@@ -19,7 +19,6 @@ from polyadmin.core.authorization import DASHBOARD_VIEW
 from polyadmin.core.exporter import CSVExporter, XLSXExporter
 from polyadmin.core.login import LOGIN_PATH, LOGOUT_PATH
 from polyadmin.fastapi.auth import authorize
-from polyadmin.fastapi.csrf import make_csrf_route
 from polyadmin.fastapi.handlers import (
     build_action_handler,
     build_create_handlers,
@@ -32,10 +31,12 @@ from polyadmin.fastapi.handlers import (
     build_lookup_handler,
 )
 from polyadmin.fastapi.inlines import validate_inlines
+from polyadmin.fastapi.locale import make_admin_route
 from polyadmin.fastapi.login import build_login_handlers, build_logout_handler
 from polyadmin.fastapi.pages import build_page_handler
 from polyadmin.fastapi.responses import clear_flash, pop_flash
 from polyadmin.fastapi.static import mount_static
+from polyadmin.i18n import I18n
 from polyadmin.templating import Renderer
 
 DEFAULT_EXPORTERS = [CSVExporter(), XLSXExporter()]
@@ -49,9 +50,10 @@ def create_router(
     static_dir: str | Path | None = None,
     exporters: tuple = tuple(DEFAULT_EXPORTERS),
 ) -> APIRouter:
-    renderer = Renderer(template_dirs=template_dirs)
-    # route_class, not a dependency: see polyadmin/fastapi/csrf.py.
-    router = APIRouter(route_class=make_csrf_route(admin, base_path))
+    i18n = I18n.from_admin(admin)
+    renderer = Renderer(template_dirs=template_dirs, i18n=i18n, switcher_enabled=admin.locale_switcher)
+    # route_class, not a dependency: see polyadmin/fastapi/locale.py.
+    router = APIRouter(route_class=make_admin_route(admin, base_path, i18n, renderer))
 
     mount_static(router, static_dir=static_dir)
 

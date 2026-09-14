@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ from polyadmin.core.template_context import (
     form_context,
     list_context,
 )
+from polyadmin.i18n import I18n, LocaleOption, get_locale
 from polyadmin.ui import ui
 
 # Imported lazily, not at module level: polyadmin.fastapi.__init__ imports
@@ -35,25 +37,69 @@ from polyadmin.ui import ui
 FRAMEWORK_TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
+@dataclass(frozen=True)
+class LocaleSwitcher:
+    """The language switcher's data; None when it is off."""
+
+    options: list[LocaleOption]
+    current: str
+
+
 class Renderer:
-    def __init__(self, *, template_dirs: Iterable[str | Path] = ()) -> None:
+    def __init__(
+        self,
+        *,
+        template_dirs: Iterable[str | Path] = (),
+        i18n: I18n | None = None,
+        switcher_enabled: bool = False,
+    ) -> None:
+        self.switcher_enabled = switcher_enabled
+        self.i18n = i18n or I18n.from_admin(Admin())
         search_dirs = [str(d) for d in template_dirs] + [str(FRAMEWORK_TEMPLATES_DIR)]
-        self.env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(search_dirs),
+        loader = jinja2.FileSystemLoader(search_dirs)
+        # One environment per locale: the i18n extension installs gettext
+        # per environment, and the request's locale picks one (see `env`).
+        self._envs = {locale: self._make_env(loader, locale) for locale in self.i18n.supported}
+
+    def _make_env(self, loader: jinja2.BaseLoader, locale: str) -> jinja2.Environment:
+        env = jinja2.Environment(
+            loader=loader,
             autoescape=jinja2.select_autoescape(["html"]),
             trim_blocks=True,
             lstrip_blocks=True,
+            extensions=["jinja2.ext.i18n"],
+        )
+        translator = self.i18n.translator
+        env.install_gettext_callables(
+            lambda message: translator.gettext(locale, message),
+            lambda singular, plural, n: translator.ngettext(locale, singular, plural, n),
+            newstyle=True,
         )
         # A global rather than a per-template import, so overrides and
         # custom page/widget templates style with the same vocabulary for
         # free.
-        self.env.globals["ui"] = ui
+        env.globals["ui"] = ui
         # The macro default in components/field.html.
-        self.env.globals["DEFAULT_EMPTY_VALUE"] = DEFAULT_EMPTY_VALUE
+        env.globals["DEFAULT_EMPTY_VALUE"] = DEFAULT_EMPTY_VALUE
         # How many options a tabular inline's listbox shows before it
         # scrolls. Four keeps the row near the height of the controls
         # beside it.
-        self.env.globals["INLINE_MULTISELECT_ROWS"] = INLINE_MULTISELECT_ROWS
+        env.globals["INLINE_MULTISELECT_ROWS"] = INLINE_MULTISELECT_ROWS
+        env.globals["locale"] = locale
+        env.globals["locale_switcher"] = self._switcher(locale)
+        return env
+
+    def _switcher(self, locale: str) -> LocaleSwitcher | None:
+        # Set by create_router from Admin.locale_switcher; a bare Renderer
+        # (tests) shows none.
+        if not self.switcher_enabled or len(self.i18n.supported) < 2:
+            return None
+        return LocaleSwitcher(options=self.i18n.options(), current=locale)
+
+    @property
+    def env(self) -> jinja2.Environment:
+        """The environment for the current request's locale."""
+        return self._envs.get(get_locale()) or self._envs[self.i18n.default]
 
     def render(self, template_name: str, context: dict[str, Any]) -> str:
         return self.env.get_template(template_name).render(**context)
