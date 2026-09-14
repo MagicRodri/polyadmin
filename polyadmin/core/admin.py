@@ -8,7 +8,8 @@ live in the framework adapters (e.g. polyadmin.fastapi), not here.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from polyadmin.core.model_admin import ModelAdmin
@@ -30,6 +31,14 @@ class Admin:
         disable_csrf: bool = False,
         audit_logger: Any | None = None,
         login_backend: Any | None = None,
+        default_locale: str = "en",
+        locales: Sequence[str] = (),
+        locale_resolver: Callable[[Any, Any], str | None] | None = None,
+        catalogs: Sequence[tuple[str | Path, str]] = (),
+        translator: Any | None = None,
+        locale_names: Mapping[str, str] | None = None,
+        locale_switcher: bool = True,
+        pseudo_locale: bool = False,
     ) -> None:
         self.dashboard = dashboard
         self.authenticator = authenticator
@@ -48,6 +57,17 @@ class Admin:
         # unauthenticated request redirect there instead of returning
         # 401. None leaves both behaviours off -- see core/login.py.
         self.login_backend = login_backend
+        # Internationalisation -- see polyadmin/i18n and docs/i18n.md. The
+        # defaults serve English plus every framework catalog, resolved per
+        # request, with the language switcher shown.
+        self.default_locale = default_locale
+        self.locales = list(locales)
+        self.locale_resolver = locale_resolver
+        self.catalogs = list(catalogs)
+        self.translator = translator
+        self.locale_names = dict(locale_names or {})
+        self.locale_switcher = locale_switcher
+        self.pseudo_locale = pseudo_locale
         self._registry: dict[str, ModelAdmin] = {}
         self._pages: dict[str, AdminPage] = {}
         for model_admin in model_admins:
