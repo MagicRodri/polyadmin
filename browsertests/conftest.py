@@ -92,7 +92,7 @@ def _sign_in(page, credentials):
     page.goto(f"{ADMIN_URL}/login")
     page.fill("#login-identifier", email)
     page.fill("#login-password", password)
-    page.click("button[type=submit]")
+    page.click("form:has(#login-identifier) button[type=submit]")
     # A failed sign-in leaves the form up, which would make every
     # assertion after it vacuous.
     expect(page).not_to_have_url("**/login**")

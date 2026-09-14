@@ -41,7 +41,7 @@ def test_wrong_password_is_refused_and_keeps_the_email(anon_page):
     anon_page.goto(f"{ADMIN_URL}/login")
     anon_page.fill("#login-identifier", "admin@example.com")
     anon_page.fill("#login-password", "not the password")
-    anon_page.click("button[type=submit]")
+    anon_page.click("form:has(#login-identifier) button[type=submit]")
 
     expect(anon_page.get_by_role("alert")).to_contain_text("match an account")
     expect(anon_page.locator("#login-identifier")).to_have_value("admin@example.com")
@@ -51,7 +51,7 @@ def test_signing_in_lands_on_the_requested_page(anon_page):
     anon_page.goto(f"{ADMIN_URL}/users")
     anon_page.fill("#login-identifier", "admin@example.com")
     anon_page.fill("#login-password", "polyadmin")
-    anon_page.click("button[type=submit]")
+    anon_page.click("form:has(#login-identifier) button[type=submit]")
 
     expect(anon_page).to_have_url(f"{ADMIN_URL}/users")
     expect(anon_page.locator("table tbody tr").first).to_be_visible()
@@ -69,13 +69,13 @@ def test_login_panel_is_visible_against_the_page(anon_page):
         anon_page.evaluate("dark => document.documentElement.classList.toggle('dark', dark)", dark)
         panel = anon_page.evaluate(
             """() => {
-                const aside = document.querySelector('form').parentElement.lastElementChild;
+                const aside = document.querySelector('form:has(#login-identifier)').parentElement.lastElementChild;
                 const style = getComputedStyle(aside);
                 return {background: style.backgroundColor, image: style.backgroundImage};
             }"""
         )
         page_background = anon_page.evaluate(
-            "() => getComputedStyle(document.querySelector('body > div')).backgroundColor"
+            "() => getComputedStyle(document.querySelector('form:has(#login-identifier)').closest('body > div')).backgroundColor"
         )
         assert panel["image"] != "none" or panel["background"] != page_background, (
             f"panel is invisible against the page in {'dark' if dark else 'light'} mode: {panel}"
@@ -84,8 +84,8 @@ def test_login_panel_is_visible_against_the_page(anon_page):
 
 def test_login_card_is_two_columns_at_desktop_width(anon_page):
     anon_page.goto(f"{ADMIN_URL}/login")
-    form = anon_page.locator("form").bounding_box()
-    aside = anon_page.locator("form + div").bounding_box()
+    form = anon_page.locator("form:has(#login-identifier)").bounding_box()
+    aside = anon_page.locator("form:has(#login-identifier) + div").bounding_box()
     assert aside["x"] >= form["x"] + form["width"] - 2, "the panel is not beside the form"
 
 
