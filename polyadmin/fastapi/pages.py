@@ -21,6 +21,7 @@ from polyadmin.fastapi.responses import (
     redirect,
     set_flash,
 )
+from polyadmin.i18n import gettext
 from polyadmin.templating import Renderer
 
 
@@ -59,7 +60,7 @@ class PageContext:
                 messages=pop_flash(self.request),
                 breadcrumbs=[
                     *category_breadcrumb(self.page.category),
-                    {"label": self.page.label, "url": None, "active": True},
+                    {"label": gettext(self.page.label), "url": None, "active": True},
                 ],
                 active_nav_key=f"page:{self.page.path}",
                 # getattr, not attribute access: mirrors the Fiber

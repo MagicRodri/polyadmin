@@ -40,8 +40,8 @@
         {% endif %}
       </span>
       <span x-show="!collapsed" class="grid flex-1 text-left leading-tight">
-        <span class="truncate font-semibold text-foreground">{{ site_title }}</span>
-        <span class="truncate text-xs text-muted-foreground">Admin</span>
+        <span class="truncate font-semibold text-foreground">{{ _(site_title) }}</span>
+        <span class="truncate text-xs text-muted-foreground">{{ _("Admin") }}</span>
       </span>
     </a>
   </div>
@@ -49,19 +49,19 @@
   {# -- SidebarContent: the block's NavMain -- #}
   <div class="{{ ui('sidebar', 'content') }}">
     <div class="{{ ui('sidebar', 'group') }}">
-      <div x-show="!collapsed" class="{{ ui('sidebar', 'group-label') }}">Platform</div>
+      <div x-show="!collapsed" class="{{ ui('sidebar', 'group-label') }}">{{ _("Platform") }}</div>
       <nav class="{{ ui('sidebar', 'menu') }}">
-        <a href="{{ base_path }}" :title="collapsed ? 'Dashboard' : null"
+        <a href="{{ base_path }}" :title='collapsed ? {{ _("Dashboard")|tojson }} : null'
            class="{{ ui('nav-item') }} {{ ui('nav-item', 'active') if not model_admin else ui('nav-item', 'inactive') }}">
           {{ icon("home", "size-4 shrink-0") }}
-          <span x-show="!collapsed" class="truncate">Dashboard</span>
+          <span x-show="!collapsed" class="truncate">{{ _("Dashboard") }}</span>
         </a>
         {% for entry in nav_items %}
           {% if entry.type == "link" %}
-          <a href="{{ entry.url }}" :title="collapsed ? '{{ entry.label }}' : null"
+          <a href="{{ entry.url }}" :title='collapsed ? {{ _(entry.label)|tojson }} : null'
              class="{{ ui('nav-item') }} {{ ui('nav-item', 'active') if entry.active else ui('nav-item', 'inactive') }}">
             {{ icon(entry.icon, "size-4 shrink-0") }}
-            <span x-show="!collapsed" class="truncate">{{ entry.label }}</span>
+            <span x-show="!collapsed" class="truncate">{{ _(entry.label) }}</span>
           </a>
           {% else %}
           {# Collapsed to the icon rail there is nowhere to put a
@@ -69,7 +69,7 @@
              child rather than expanding into nothing. #}
           <div x-data="{ open: {{ entry.active | tojson }} }">
             <a x-show="collapsed" href="{{ entry.links[0].url if entry.links else base_path }}"
-               :title="'{{ entry.label }}'"
+               :title='{{ _(entry.label)|tojson }}'
                class="{{ ui('nav-item') }} {{ ui('nav-item', 'active') if entry.active else ui('nav-item', 'inactive') }}">
               {{ icon(entry.icon, "size-4 shrink-0") }}
             </a>
@@ -77,7 +77,7 @@
                     :aria-expanded="open ? 'true' : 'false'"
                     class="{{ ui('nav-item') }} {{ ui('nav-item', 'inactive') }}">
               {{ icon(entry.icon, "size-4 shrink-0") }}
-              <span class="flex-1 truncate">{{ entry.label }}</span>
+              <span class="flex-1 truncate">{{ _(entry.label) }}</span>
               <span :class="open ? 'rotate-90' : ''" class="ml-auto transition-transform duration-200">
                 {{ icon("chevron-right", "size-4") }}
               </span>
@@ -86,7 +86,7 @@
               {% for link in entry.links %}
               <a href="{{ link.url }}"
                  class="{{ ui('nav-item') }} {{ ui('nav-item', 'active') if link.active else ui('nav-item', 'inactive') }}">
-                <span class="truncate">{{ link.label }}</span>
+                <span class="truncate">{{ _(link.label) }}</span>
               </a>
               {% endfor %}
             </div>
@@ -112,7 +112,7 @@
         <span x-show="!collapsed" class="grid flex-1 text-left leading-tight">
           <span class="truncate font-medium text-foreground">{{ display_name }}</span>
           <span class="truncate text-xs text-muted-foreground">
-            {{ "Superuser" if principal.is_superuser else "Signed in" }}
+            {{ _("Superuser") if principal.is_superuser else _("Signed in") }}
           </span>
         </span>
         <span x-show="!collapsed">{{ icon("chevrons-up-down", "ml-auto size-4") }}</span>
@@ -132,7 +132,7 @@
           <span class="grid flex-1 leading-tight">
             <span class="truncate font-medium text-foreground">{{ display_name }}</span>
             <span class="truncate text-xs font-normal text-muted-foreground">
-              {{ "Superuser" if principal.is_superuser else "Signed in" }}
+              {{ _("Superuser") if principal.is_superuser else _("Signed in") }}
             </span>
           </span>
         </div>
@@ -149,7 +149,7 @@
           {{ csrf_field(csrf_token) }}
           <button type="submit" role="menuitem" class="{{ ui('dropdown', 'item') }} w-full">
             {{ icon("logout", "size-4") }}
-            <span>Sign out</span>
+            <span>{{ _("Sign out") }}</span>
           </button>
         </form>
         {% endif %}
@@ -159,6 +159,6 @@
   {% endif %}
 
   {# -- SidebarRail -- #}
-  <button type="button" @click="toggle()" tabindex="-1" aria-label="Toggle sidebar"
+  <button type="button" @click="toggle()" tabindex="-1" aria-label="{{ _('Toggle sidebar') }}"
           class="{{ ui('sidebar', 'rail') }}"></button>
 </aside>

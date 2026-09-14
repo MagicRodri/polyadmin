@@ -19,7 +19,7 @@
   {# No hx-* on this page, so the token travels as a hidden field only --
      but the meta tag stays for consistency with base.html. #}
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>Sign in &middot; {{ site_title }}</title>
+  <title>{{ _("Sign in") }} &middot; {{ _(site_title) }}</title>
   {% include "admin/theme.html" %}
 </head>
 <body class="relative h-full bg-background text-foreground antialiased">
@@ -34,8 +34,8 @@
           <form method="post" class="{{ ui('login', 'form') }}">
             <div class="{{ ui('login', 'stack') }}">
               <div class="{{ ui('login', 'heading') }}">
-                <h1 class="{{ ui('login', 'title') }}">Welcome back</h1>
-                <p class="{{ ui('login', 'subtitle') }}">Sign in to {{ site_title }}</p>
+                <h1 class="{{ ui('login', 'title') }}">{{ _("Welcome back") }}</h1>
+                <p class="{{ ui('login', 'subtitle') }}">{{ _("Sign in to %(site)s", site=_(site_title)) }}</p>
               </div>
 
               {# One message for a bad password and for no such user
@@ -54,24 +54,24 @@
               {% endif %}
 
               <div class="{{ ui('login', 'group') }}">
-                <label for="login-identifier" class="{{ ui('label') }}">Email</label>
+                <label for="login-identifier" class="{{ ui('label') }}">{{ _("Email") }}</label>
                 {# The submitted value is echoed back so a typo in the
                    password does not cost the email as well. #}
                 <input type="email" id="login-identifier" name="identifier"
-                       value="{{ identifier }}" placeholder="m@example.com"
+                       value="{{ identifier }}" placeholder="{{ _('m@example.com') }}"
                        autocomplete="username" required autofocus
                        class="{{ ui('input') }}">
               </div>
 
               <div class="{{ ui('login', 'group') }}">
-                <label for="login-password" class="{{ ui('label') }}">Password</label>
+                <label for="login-password" class="{{ ui('label') }}">{{ _("Password") }}</label>
                 <input type="password" id="login-password" name="password"
                        autocomplete="current-password" required
                        class="{{ ui('input') }}">
               </div>
 
               {{ csrf_field(csrf_token) }}
-              <button type="submit" class="{{ ui('button') }} w-full">Sign in</button>
+              <button type="submit" class="{{ ui('button') }} w-full">{{ _("Sign in") }}</button>
             </div>
           </form>
 
@@ -83,7 +83,7 @@
               {% if site_logo_url %}
               <img src="{{ site_logo_url }}" alt="" class="{{ ui('login', 'logo') }}">
               {% endif %}
-              <span class="{{ ui('login', 'brand') }}">{{ site_title }}</span>
+              <span class="{{ ui('login', 'brand') }}">{{ _(site_title) }}</span>
             </div>
           </div>
         </div>

@@ -2,6 +2,11 @@
 
 One function per view type, all built on `base_context`, so every page gets the
 same admin-wide data (nav, base path, flash messages) without repeating it.
+
+Breadcrumbs are translated here, where they are built, in the request's
+locale: the resource's name and the crumbs' own literals go through gettext,
+an object's label is data and does not. Nav labels are left for the sidebar
+template to translate, so each string is translated once.
 """
 from __future__ import annotations
 
@@ -12,6 +17,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
 from polyadmin.core.query import ListRequest
+from polyadmin.i18n import gettext
 
 
 def default_permissions(model_admin: ModelAdmin) -> dict[str, bool]:
@@ -204,7 +210,7 @@ def category_breadcrumb(category: str | None) -> list[dict[str, Any]]:
     """
     if not category:
         return []
-    return [{"label": category, "url": None, "active": False}]
+    return [{"label": gettext(category), "url": None, "active": False}]
 
 
 def base_context(
@@ -272,7 +278,7 @@ def list_context(
 
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": model_admin.get_verbose_name(), "url": None, "active": True},
+        {"label": gettext(model_admin.get_verbose_name()), "url": None, "active": True},
     ]
 
     return {
@@ -329,7 +335,7 @@ def detail_context(
 ) -> dict[str, Any]:
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": model_admin.get_verbose_name(), "url": f"{base_path}/{model_admin.get_slug()}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{model_admin.get_slug()}"},
         {"label": _object_label(model_admin, obj), "url": None, "active": True},
     ]
     return {
@@ -365,13 +371,13 @@ def form_context(
 
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": model_admin.get_verbose_name(), "url": f"{base_path}/{slug}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
     ]
     if obj is not None:
         breadcrumbs.append({"label": _object_label(model_admin, obj), "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"})
-        breadcrumbs.append({"label": "Edit", "url": None, "active": True})
+        breadcrumbs.append({"label": gettext("Edit"), "url": None, "active": True})
     else:
-        breadcrumbs.append({"label": "New", "url": None, "active": True})
+        breadcrumbs.append({"label": gettext("New"), "url": None, "active": True})
 
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
@@ -405,7 +411,7 @@ def dashboard_context(
 ) -> dict[str, Any]:
     # A single active crumb -- since base.html has no separate <h1>,
     # this is the only page-title element the dashboard gets.
-    breadcrumbs = [{"label": getattr(dashboard, "title", None) or "Dashboard", "url": None, "active": True}]
+    breadcrumbs = [{"label": gettext(getattr(dashboard, "title", None) or "Dashboard"), "url": None, "active": True}]
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=None, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "dashboard": dashboard,
@@ -426,9 +432,9 @@ def delete_context(
     slug = model_admin.get_slug()
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": model_admin.get_verbose_name(), "url": f"{base_path}/{slug}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
         {"label": _object_label(model_admin, obj), "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"},
-        {"label": "Delete", "url": None, "active": True},
+        {"label": gettext("Delete"), "url": None, "active": True},
     ]
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),

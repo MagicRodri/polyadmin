@@ -17,7 +17,7 @@
   <button type="button" @click="$store.theme.toggle()"
           class="peer {{ ui('button', 'ghost-muted', 'size-icon-sm') }}"
           :aria-pressed="$store.theme.dark ? 'true' : 'false'"
-          aria-label="Toggle dark mode">
+          aria-label="{{ _('Toggle dark mode') }}">
     {# No x-cloak: with Alpine still loading, x-show has not run and
        both icons would show at once. The sun is the server-rendered
        default and the moon starts hidden, so the pre-Alpine frame shows
@@ -27,7 +27,7 @@
   </button>
   <span role="tooltip"
         class="pointer-events-none absolute right-0 top-full z-50 mt-1.5 whitespace-nowrap opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100 {{ ui('tooltip', 'content') }}">
-    <span x-text="$store.theme.dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
+    <span x-text='$store.theme.dark ? {{ _("Light mode")|tojson }} : {{ _("Dark mode")|tojson }}'>{{ _("Dark mode") }}</span>
   </span>
 </span>
 {% endmacro %}

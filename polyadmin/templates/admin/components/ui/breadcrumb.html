@@ -5,12 +5,12 @@
    title so it reads as one. #}
 {% from "admin/components/icons.html" import icon %}
 {% macro render_breadcrumbs(breadcrumbs, base_path) %}
-<nav aria-label="Breadcrumb">
+<nav aria-label="{{ _('Breadcrumb') }}">
   <ol class="{{ ui('breadcrumb') }}">
     <li class="flex items-center">
       <a href="{{ base_path }}" class="{{ ui('breadcrumb', 'link') }} p-0.5">
         {{ icon("home", "w-4 h-4") }}
-        <span class="sr-only">Dashboard</span>
+        <span class="sr-only">{{ _("Dashboard") }}</span>
       </a>
     </li>
     {% for crumb in breadcrumbs %}

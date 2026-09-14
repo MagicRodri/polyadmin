@@ -127,13 +127,13 @@ class UserAdmin(ModelAdmin):
         del self._store[obj.id]
 
 
-def make_client(*, inline_layout="tabular", authenticator=None, authorizer=None):
+def make_client(*, inline_layout="tabular", authenticator=None, authorizer=None, **admin_kwargs):
     org_store: dict[int, Organization] = {}
     user_store: dict[int, User] = {}
     org_admin_cls = make_organization_admin(inline_layout=inline_layout)
     org_admin = org_admin_cls(org_store)
     user_admin = UserAdmin(user_store, org_store)
-    admin = Admin(model_admins=[org_admin, user_admin], authenticator=authenticator, authorizer=authorizer)
+    admin = Admin(model_admins=[org_admin, user_admin], authenticator=authenticator, authorizer=authorizer, **admin_kwargs)
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
     return TestClient(app), org_admin, user_admin

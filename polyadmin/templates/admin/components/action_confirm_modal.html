@@ -35,17 +35,17 @@
            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
            class="{{ ui('dialog', 'content-sm') }}">
-        <h3 class="{{ ui('dialog', 'title') }}">Confirm</h3>
+        <h3 class="{{ ui('dialog', 'title') }}">{{ _("Confirm") }}</h3>
         <p class="{{ ui('dialog', 'description') }}" x-text="message"></p>
         <div class="{{ ui('dialog', 'footer') }}">
           <button type="button" @click="open = false; onConfirm = null"
                   class="{{ ui('button', 'outline', 'size-sm') }}">
-            Cancel
+            {{ _("Cancel") }}
           </button>
           <button type="button"
                   @click="open = false; if (onConfirm) { onConfirm(); onConfirm = null; }"
                   class="{{ ui('button', 'size-sm') }}">
-            Confirm
+            {{ _("Confirm") }}
           </button>
         </div>
       </div>

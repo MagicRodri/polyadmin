@@ -13,7 +13,7 @@
      scripts read it here instead -- see theme.html's htmx:configRequest
      listener. #}
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>{% block title %}{{ site_title }}{% endblock %} &middot; {{ site_title }}</title>
+  <title>{% block title %}{{ _(site_title) }}{% endblock %} &middot; {{ _(site_title) }}</title>
   {# Design tokens, Tailwind config, Alpine + plugins, HTMX, and the
      theme store -- all of it, in the one load order that works. See
      admin/theme.html. #}
@@ -63,7 +63,7 @@
         <button type="button" @click="window.innerWidth < 768 ? sidebarOpen = true : toggle()"
                 class="-ml-1 {{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
           {{ icon("sidebar", "w-4 h-4") }}
-          <span class="sr-only">Toggle sidebar</span>
+          <span class="sr-only">{{ _("Toggle sidebar") }}</span>
         </button>
         <div class="{{ ui('separator', 'vertical') }} mr-2 !h-4"></div>
         <div class="min-w-0 flex-1">
