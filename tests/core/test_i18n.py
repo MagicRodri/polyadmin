@@ -37,7 +37,9 @@ RU_PLURALS = "nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 
 
 def test_missing_translation_falls_back_to_english(tmp_path):
     tr = GettextTranslator([(write_catalog(tmp_path, "fr", {"Save": "Enregistrer"}), "polyadmin")])
-    assert tr.gettext("fr", "Cancel") == "Cancel"
+    # "Cancel" won't do here: the framework's own shipped fr catalog (Task 14)
+    # now legitimately translates it, so use a msgid that exists nowhere.
+    assert tr.gettext("fr", "This msgid does not exist anywhere") == "This msgid does not exist anywhere"
     assert tr.gettext("de", "Save") == "Save"
     assert tr.gettext("fr", "Save") == "Enregistrer"
 

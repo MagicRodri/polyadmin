@@ -1,0 +1,382 @@
+# French translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-09-14 22:02+0500\n"
+"PO-Revision-Date: 2026-09-14 22:04+0500\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: fr\n"
+"Language-Team: fr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(label)s applied to %(num)d record."
+msgid_plural "%(label)s applied to %(num)d records."
+msgstr[0] "%(label)s appliqué à %(num)d enregistrement."
+msgstr[1] "%(label)s appliqué à %(num)d enregistrements."
+
+#, python-format
+msgid "%(label)s is required."
+msgstr "« %(label)s » est obligatoire."
+
+#, python-format
+msgid "%(n)s of %(num)d row selected"
+msgid_plural "%(n)s of %(num)d rows selected"
+msgstr[0] "%(n)s sur %(num)d ligne sélectionnée"
+msgstr[1] "%(n)s sur %(num)d lignes sélectionnées"
+
+#, python-format
+msgid "%(name)s created."
+msgstr "« %(name)s » : enregistrement créé."
+
+#, python-format
+msgid "%(name)s deleted."
+msgstr "« %(name)s » : enregistrement supprimé."
+
+#, python-format
+msgid "%(name)s updated."
+msgstr "« %(name)s » : enregistrement mis à jour."
+
+#, python-format
+msgid "%(num)d row"
+msgid_plural "%(num)d rows"
+msgstr[0] "%(num)d ligne"
+msgstr[1] "%(num)d lignes"
+
+msgid "Action…"
+msgstr "Action…"
+
+msgid "Add"
+msgstr "Ajouter"
+
+msgid "Admin"
+msgstr "Administration"
+
+msgid "All"
+msgstr "Tous"
+
+#, python-format
+msgid "Are you sure you want to delete this %(name)s? This action cannot be undone."
+msgstr "Confirmer la suppression de « %(name)s » ? Cette action est irréversible."
+
+msgid "Asc"
+msgstr "Croissant"
+
+msgid "Back to the admin"
+msgstr "Retour à l'administration"
+
+msgid "Breadcrumb"
+msgstr "Fil d'Ariane"
+
+msgid "CSV"
+msgstr "CSV"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Clear all"
+msgstr "Tout effacer"
+
+msgid "Clear selection"
+msgstr "Effacer la sélection"
+
+msgid "Close filters"
+msgstr "Fermer les filtres"
+
+msgid "Confirm"
+msgstr "Confirmer"
+
+#, python-format
+msgid "Couldn't save %(name)s"
+msgstr "Impossible d'enregistrer « %(name)s »"
+
+msgid "Dark mode"
+msgstr "Mode sombre"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+#, python-format
+msgid "Delete %(name)s"
+msgstr "Supprimer %(name)s"
+
+msgid "Delete selected"
+msgstr "Supprimer la sélection"
+
+msgid "Delete the selected records? This cannot be undone."
+msgstr "Supprimer les enregistrements sélectionnés ? Cette action est irréversible."
+
+#, python-format
+msgid "Delete this %(name)s?"
+msgstr "Supprimer « %(name)s » ?"
+
+#, python-format
+msgid "Deleted %(num)d record."
+msgid_plural "Deleted %(num)d records."
+msgstr[0] "%(num)d enregistrement supprimé."
+msgstr[1] "%(num)d enregistrements supprimés."
+
+msgid "Desc"
+msgstr "Décroissant"
+
+msgid "Drag to reorder"
+msgstr "Glisser pour réorganiser"
+
+msgid "Drag to reorder (not saved)"
+msgstr "Glisser pour réorganiser (non enregistré)"
+
+msgid "Edit"
+msgstr "Modifier"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Everything is selected."
+msgstr "Tout est sélectionné."
+
+msgid "Export"
+msgstr "Exporter"
+
+msgid "Filters"
+msgstr "Filtres"
+
+msgid "First page"
+msgstr "Première page"
+
+msgid "History"
+msgstr "Historique"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Last page"
+msgstr "Dernière page"
+
+msgid "Light mode"
+msgstr "Mode clair"
+
+msgid "New"
+msgstr "Nouveau"
+
+msgid "Next month"
+msgstr "Mois suivant"
+
+msgid "Next page"
+msgstr "Page suivante"
+
+msgid "No"
+msgstr "Non"
+
+#, python-format
+msgid "No %(label)s."
+msgstr "Aucun %(label)s."
+
+msgid "No data."
+msgstr "Aucune donnée."
+
+msgid "No items selected."
+msgstr "Aucun élément sélectionné."
+
+msgid "No matches."
+msgstr "Aucun résultat."
+
+msgid "No options."
+msgstr "Aucune option."
+
+msgid "No panels configured."
+msgstr "Aucun panneau configuré."
+
+msgid "No recent activity."
+msgstr "Aucune activité récente."
+
+msgid "No records."
+msgstr "Aucun enregistrement."
+
+msgid "No widgets configured."
+msgstr "Aucun widget configuré."
+
+msgid "Not found"
+msgstr "Introuvable"
+
+msgid "Open calendar"
+msgstr "Ouvrir le calendrier"
+
+msgid "Open menu"
+msgstr "Ouvrir le menu"
+
+#, python-format
+msgid "Page %(page)d of %(pages)d"
+msgstr "Page %(page)d sur %(pages)d"
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Permission denied"
+msgstr "Accès refusé"
+
+msgid "Platform"
+msgstr "Plateforme"
+
+msgid "PolyAdmin"
+msgstr "PolyAdmin"
+
+msgid "Previous month"
+msgstr "Mois précédent"
+
+msgid "Previous page"
+msgstr "Page précédente"
+
+msgid "Remove"
+msgstr "Retirer"
+
+#, python-format
+msgid "Remove %(label)s"
+msgstr "Retirer %(label)s"
+
+#, python-format
+msgid "Remove this %(label)s?"
+msgstr "Retirer « %(label)s » ?"
+
+msgid "Rows per page"
+msgstr "Lignes par page"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Save and add another"
+msgstr "Enregistrer et ajouter un autre"
+
+msgid "Save and continue editing"
+msgstr "Enregistrer et continuer la modification"
+
+#, python-format
+msgid "Save to add %(label)s."
+msgstr "Enregistrer pour ajouter %(label)s."
+
+msgid "Search..."
+msgstr "Rechercher..."
+
+msgid "Search…"
+msgstr "Rechercher…"
+
+msgid "Security check failed"
+msgstr "Échec de la vérification de sécurité"
+
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+msgid "Select row"
+msgstr "Sélectionner la ligne"
+
+#, python-format
+msgid "Select the %(num)d matching"
+msgid_plural "Select all %(num)d matching"
+msgstr[0] "Sélectionner le %(num)d élément correspondant"
+msgstr[1] "Sélectionner tous les %(num)d éléments correspondants"
+
+msgid "Select…"
+msgstr "Sélectionner…"
+
+msgid "Sign in"
+msgstr "Se connecter"
+
+#, python-format
+msgid "Sign in to %(site)s"
+msgstr "Se connecter à %(site)s"
+
+msgid "Sign out"
+msgstr "Se déconnecter"
+
+msgid "Sign-in could not be completed. Please try again."
+msgstr "La connexion n'a pas pu aboutir. Veuillez réessayer."
+
+msgid "Sign-in required"
+msgstr "Connexion requise"
+
+msgid "Signed in"
+msgstr "Connecté"
+
+msgid "Superuser"
+msgstr "Superutilisateur"
+
+msgid "That email and password don't match an account."
+msgstr "Cette adresse e-mail et ce mot de passe ne correspondent à aucun compte."
+
+msgid "That record doesn't exist, or it was deleted."
+msgstr "Cet enregistrement n'existe pas, ou a été supprimé."
+
+#, python-format
+msgid "The %(num)d matching this filter is selected."
+msgid_plural "All %(num)d matching this filter are selected."
+msgstr[0] "Le %(num)d élément correspondant à ce filtre est sélectionné."
+msgstr[1] "Tous les %(num)d éléments correspondant à ce filtre sont sélectionnés."
+
+#, python-format
+msgid "The %(num)d on this page is selected."
+msgid_plural "All %(num)d on this page are selected."
+msgstr[0] "Le %(num)d de cette page est sélectionné."
+msgstr[1] "Tous les %(num)d de cette page sont sélectionnés."
+
+msgid "This page expired before the form was submitted. Reload and try again."
+msgstr "Cette page a expiré avant l'envoi du formulaire. Rechargez la page et réessayez."
+
+msgid "Toggle dark mode"
+msgstr "Basculer le mode sombre"
+
+msgid "Toggle sidebar"
+msgstr "Basculer la barre latérale"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "View"
+msgstr "Voir"
+
+msgid "Welcome back"
+msgstr "Bon retour"
+
+msgid "XLSX"
+msgstr "XLSX"
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "You have been signed out."
+msgstr "Vous avez été déconnecté."
+
+msgid "You need to be signed in to view this page."
+msgstr "Vous devez être connecté pour voir cette page."
+
+msgid "Your account doesn't have permission to do that."
+msgstr "Votre compte n'a pas la permission d'effectuer cette action."
+
+msgid "create"
+msgstr "création"
+
+msgid "delete"
+msgstr "suppression"
+
+msgid "m@example.com"
+msgstr "m@example.com"
+
+msgid "no change"
+msgstr "aucun changement"
+
+msgid "system"
+msgstr "système"
+
+msgid "update"
+msgstr "modification"
+

@@ -1,0 +1,383 @@
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-09-14 22:02+0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(label)s applied to %(num)d record."
+msgid_plural "%(label)s applied to %(num)d records."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "%(label)s is required."
+msgstr ""
+
+#, python-format
+msgid "%(n)s of %(num)d row selected"
+msgid_plural "%(n)s of %(num)d rows selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "%(name)s created."
+msgstr ""
+
+#, python-format
+msgid "%(name)s deleted."
+msgstr ""
+
+#, python-format
+msgid "%(name)s updated."
+msgstr ""
+
+#, python-format
+msgid "%(num)d row"
+msgid_plural "%(num)d rows"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Action…"
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+#, python-format
+msgid ""
+"Are you sure you want to delete this %(name)s? This action cannot be "
+"undone."
+msgstr ""
+
+msgid "Asc"
+msgstr ""
+
+msgid "Back to the admin"
+msgstr ""
+
+msgid "Breadcrumb"
+msgstr ""
+
+msgid "CSV"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Clear all"
+msgstr ""
+
+msgid "Clear selection"
+msgstr ""
+
+msgid "Close filters"
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+#, python-format
+msgid "Couldn't save %(name)s"
+msgstr ""
+
+msgid "Dark mode"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+#, python-format
+msgid "Delete %(name)s"
+msgstr ""
+
+msgid "Delete selected"
+msgstr ""
+
+msgid "Delete the selected records? This cannot be undone."
+msgstr ""
+
+#, python-format
+msgid "Delete this %(name)s?"
+msgstr ""
+
+#, python-format
+msgid "Deleted %(num)d record."
+msgid_plural "Deleted %(num)d records."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Desc"
+msgstr ""
+
+msgid "Drag to reorder"
+msgstr ""
+
+msgid "Drag to reorder (not saved)"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Everything is selected."
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "Filters"
+msgstr ""
+
+msgid "First page"
+msgstr ""
+
+msgid "History"
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid "Last page"
+msgstr ""
+
+msgid "Light mode"
+msgstr ""
+
+msgid "New"
+msgstr ""
+
+msgid "Next month"
+msgstr ""
+
+msgid "Next page"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+#, python-format
+msgid "No %(label)s."
+msgstr ""
+
+msgid "No data."
+msgstr ""
+
+msgid "No items selected."
+msgstr ""
+
+msgid "No matches."
+msgstr ""
+
+msgid "No options."
+msgstr ""
+
+msgid "No panels configured."
+msgstr ""
+
+msgid "No recent activity."
+msgstr ""
+
+msgid "No records."
+msgstr ""
+
+msgid "No widgets configured."
+msgstr ""
+
+msgid "Not found"
+msgstr ""
+
+msgid "Open calendar"
+msgstr ""
+
+msgid "Open menu"
+msgstr ""
+
+#, python-format
+msgid "Page %(page)d of %(pages)d"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Permission denied"
+msgstr ""
+
+msgid "Platform"
+msgstr ""
+
+msgid "PolyAdmin"
+msgstr ""
+
+msgid "Previous month"
+msgstr ""
+
+msgid "Previous page"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+#, python-format
+msgid "Remove %(label)s"
+msgstr ""
+
+#, python-format
+msgid "Remove this %(label)s?"
+msgstr ""
+
+msgid "Rows per page"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save and add another"
+msgstr ""
+
+msgid "Save and continue editing"
+msgstr ""
+
+#, python-format
+msgid "Save to add %(label)s."
+msgstr ""
+
+msgid "Search..."
+msgstr ""
+
+msgid "Search…"
+msgstr ""
+
+msgid "Security check failed"
+msgstr ""
+
+msgid "Select all"
+msgstr ""
+
+msgid "Select row"
+msgstr ""
+
+#, python-format
+msgid "Select the %(num)d matching"
+msgid_plural "Select all %(num)d matching"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Select…"
+msgstr ""
+
+msgid "Sign in"
+msgstr ""
+
+#, python-format
+msgid "Sign in to %(site)s"
+msgstr ""
+
+msgid "Sign out"
+msgstr ""
+
+msgid "Sign-in could not be completed. Please try again."
+msgstr ""
+
+msgid "Sign-in required"
+msgstr ""
+
+msgid "Signed in"
+msgstr ""
+
+msgid "Superuser"
+msgstr ""
+
+msgid "That email and password don't match an account."
+msgstr ""
+
+msgid "That record doesn't exist, or it was deleted."
+msgstr ""
+
+#, python-format
+msgid "The %(num)d matching this filter is selected."
+msgid_plural "All %(num)d matching this filter are selected."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "The %(num)d on this page is selected."
+msgid_plural "All %(num)d on this page are selected."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "This page expired before the form was submitted. Reload and try again."
+msgstr ""
+
+msgid "Toggle dark mode"
+msgstr ""
+
+msgid "Toggle sidebar"
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Welcome back"
+msgstr ""
+
+msgid "XLSX"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "You have been signed out."
+msgstr ""
+
+msgid "You need to be signed in to view this page."
+msgstr ""
+
+msgid "Your account doesn't have permission to do that."
+msgstr ""
+
+msgid "create"
+msgstr ""
+
+msgid "delete"
+msgstr ""
+
+msgid "m@example.com"
+msgstr ""
+
+msgid "no change"
+msgstr ""
+
+msgid "system"
+msgstr ""
+
+msgid "update"
+msgstr ""
+
