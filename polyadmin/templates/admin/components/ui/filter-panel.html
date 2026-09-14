@@ -29,7 +29,7 @@
           :aria-expanded="open ? 'true' : 'false'" aria-haspopup="dialog"
           class="{{ ui('button', 'outline', 'size-sm') }} {{ ui('toolbar', 'item') }}">
     {{ icon("filter", "size-4 shrink-0 " ~ ui('toolbar', 'item-icon')) }}
-    <span class="{{ ui('toolbar', 'item-label') }}">Filters</span>
+    <span class="{{ ui('toolbar', 'item-label') }}">{{ _("Filters") }}</span>
     {% if active_filter_count %}
     <span class="{{ ui('separator', 'vertical') }} mx-1 !h-4"></span>
     <span class="{{ ui('badge', 'secondary') }} {{ ui('filter-panel', 'count') }}">{{ active_filter_count }}</span>
@@ -47,7 +47,7 @@
      claims to be modal while Tab walks straight out into the page
      behind the overlay. It also moves focus into the panel on open and
      back to the trigger on close. #}
-  <div x-show="open" x-cloak x-trap="open" role="dialog" aria-modal="true" aria-label="Filters"
+  <div x-show="open" x-cloak x-trap="open" role="dialog" aria-modal="true" aria-label="{{ _('Filters') }}"
        x-transition:enter="transition ease-in-out duration-300"
        x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
        x-transition:leave="transition ease-in-out duration-300"
@@ -55,8 +55,8 @@
        class="{{ ui('sheet', 'content') }} {{ ui('sheet', 'side-right') }} {{ ui('sheet', 'panel') }}
               {{ ui('sheet', 'width-panel') }} flex flex-col">
     <div class="{{ ui('filter-panel', 'header') }}">
-      <h2 class="{{ ui('filter-panel', 'title') }}">Filters</h2>
-      <button type="button" @click="open = false" aria-label="Close filters"
+      <h2 class="{{ ui('filter-panel', 'title') }}">{{ _("Filters") }}</h2>
+      <button type="button" @click="open = false" aria-label="{{ _('Close filters') }}"
               class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
         {{ icon("close", "size-4") }}
       </button>
@@ -65,7 +65,7 @@
     <div class="{{ ui('filter-panel', 'body') }}">
       {% for control in filter_controls %}
       <div>
-        <h3 class="{{ ui('filter-panel', 'group-label') }}">{{ control.label }}</h3>
+        <h3 class="{{ ui('filter-panel', 'group-label') }}">{{ _(control.label) }}</h3>
         <ul>
           {% for choice in control.choices %}
           <li>
@@ -76,7 +76,7 @@
                       {% if choice.selected %}{{ ui('filter-panel', 'choice-active') }}{% else %}{{ ui('filter-panel', 'choice-inactive') }}{% endif %}">
               <span class="flex size-4 shrink-0 items-center justify-center">
                 {% if choice.selected %}{{ icon("check", "size-4") }}{% endif %}</span>
-              <span class="truncate">{{ choice.label }}</span>
+              <span class="truncate">{{ _(choice.label) }}</span>
             </a>
           </li>
           {% endfor %}
@@ -91,7 +91,7 @@
          hx-get="{{ reset_url }}" hx-target="#resource-list" hx-select="#resource-list"
          hx-swap="outerHTML" hx-push-url="true"
          class="{{ ui('button', 'ghost-muted', 'size-sm') }} w-full">
-        {{ icon("close", "size-4") }} Clear all
+        {{ icon("close", "size-4") }} {{ _("Clear all") }}
       </a>
     </div>
     {% endif %}

@@ -32,9 +32,9 @@
 <span class="{{ ui('text', 'placeholder') }}">{{ empty }}</span>
 {%- elif field.field_type == "boolean" -%}
 {%- if value -%}
-<span class="inline-flex items-center text-emerald-600 dark:text-emerald-400">{{ icon("check", "size-4") }}<span class="sr-only">Yes</span></span>
+<span class="inline-flex items-center text-emerald-600 dark:text-emerald-400">{{ icon("check", "size-4") }}<span class="sr-only">{{ _("Yes") }}</span></span>
 {%- else -%}
-<span class="inline-flex items-center {{ ui('text', 'placeholder') }}">{{ icon("close", "size-4") }}<span class="sr-only">No</span></span>
+<span class="inline-flex items-center {{ ui('text', 'placeholder') }}">{{ icon("close", "size-4") }}<span class="sr-only">{{ _("No") }}</span></span>
 {%- endif -%}
 {%- elif field.field_type == "password" -%}
 <span class="{{ ui('text', 'placeholder') }}">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>

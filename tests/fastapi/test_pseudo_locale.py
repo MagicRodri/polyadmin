@@ -29,7 +29,7 @@ from tests.core.test_model_admin import InMemoryUserAdmin
 from tests.fastapi.test_inlines import make_client as make_inline_client
 from tests.fastapi.test_inlines import seed_org_with_users
 
-SWEEP_AREAS = {"layout": True, "list": False, "forms": False, "detail": False, "errors": False}
+SWEEP_AREAS = {"layout": True, "list": True, "forms": False, "detail": False, "errors": False}
 LOCALE_NAMES = ["English", "Français", "Русский", "Pseudo (en-XA)"]
 VISIBLE_ATTRS = {"placeholder", "aria-label", "title", "alt", "hx-confirm"}
 PSEUDO = re.compile(r"\[[^\[\]]*\]")

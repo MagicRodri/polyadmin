@@ -35,7 +35,7 @@
   {# w-full on both the positioning wrapper and the trigger: a button
      can only fill a box that is itself full width, and the <form>
      above is what the stacked toolbar actually stretches. #}
-  <div class="relative flex w-full lg:inline-flex lg:w-auto" x-data="{ open: false, label: 'Action…' }"
+  <div class="relative flex w-full lg:inline-flex lg:w-auto" x-data='{ open: false, label: {{ _("Action…")|tojson }} }'
        @keydown.escape="open = false" @click.outside="open = false">
     <button type="button" x-ref="trigger" @click="open = !open"
             :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
@@ -55,13 +55,13 @@
       {% for action in actions %}
       <div role="option" tabindex="0"
            data-url="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
-           {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
+           {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %}
            @click="label = $el.textContent.trim(); open = false;
                    let form = $el.closest('form');
                    form.action = $el.dataset.url;
                    form.dataset.confirm = $el.dataset.confirm || '';
                    form.requestSubmit()"
-           class="{{ ui('combobox', 'item') }}">{{ action.label }}</div>
+           class="{{ ui('combobox', 'item') }}">{{ _(action.label) }}</div>
       {% endfor %}
     </div>
   </div>

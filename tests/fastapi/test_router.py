@@ -40,7 +40,10 @@ def test_list_view_paginates():
     # "Showing 11 to 15 of 15" line with a page indicator, a row count,
     # and a rows-per-page control.
     assert "Page 2 of 2" in response.text
-    assert "15 row(s)" in response.text
+    assert "15 rows" in response.text
+    # The selection count is one translated sentence, with {n} left for
+    # Alpine to fill in from the ticked rows.
+    assert 'data-selected-text="{n} of 15 rows selected"' in response.text
     assert "Rows per page" in response.text
 
 

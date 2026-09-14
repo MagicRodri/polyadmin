@@ -25,13 +25,13 @@
       {# One DropdownMenu instead of a button per format: the row of
          export buttons grew with every format added. #}
       {{ dropdown_menu(
-           "Export",
+           _("Export"),
            icon_name="download",
-           text="Export",
+           text=_("Export"),
            full_width=True,
            items=[
-             {"label": "CSV", "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/csv" ~ export_query},
-             {"label": "XLSX", "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/xlsx" ~ export_query},
+             {"label": _("CSV"), "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/csv" ~ export_query},
+             {"label": _("XLSX"), "url": base_path ~ "/" ~ model_admin.get_slug() ~ "/export/xlsx" ~ export_query},
            ],
          ) }}
       {% endif %}
@@ -39,7 +39,7 @@
       <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create"
          class="{{ ui('button') }} {{ ui('button', 'size-sm') }} {{ ui('toolbar', 'item') }}">
         {{ icon("plus", "size-4 " ~ ui('toolbar', 'item-icon')) }}
-        <span class="{{ ui('toolbar', 'item-label') }}">New</span>
+        <span class="{{ ui('toolbar', 'item-label') }}">{{ _("New") }}</span>
       </a>
       {% endif %}
     </div>

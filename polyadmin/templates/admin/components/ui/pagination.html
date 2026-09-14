@@ -17,19 +17,27 @@
   {# The example shows "N of M row(s) selected". Selection is client
      side, so the count is filled in by Alpine from the row checkboxes;
      with no actions declared there are no checkboxes and it degrades to
-     a plain total. #}
+     a plain total.
+
+     The sentence is translated whole, its plural chosen by M, with {n}
+     left for Alpine to fill in. ngettext yields text rather than a JS
+     literal, so the sentence rides in on data-selected-text for x-text
+     to read, and the server renders the n = 0 sentence so the text is
+     right before Alpine runs. #}
   <p class="{{ ui('pagination', 'selection') }}"
      {% if actions %}
      x-data="{ n: 0 }"
      x-init="$el.closest('#resource-list').addEventListener('change', () => {
                n = $el.closest('#resource-list').querySelectorAll('.row-checkbox:checked').length })"
+     data-selected-text="{{ ngettext('%(n)s of %(num)d row selected', '%(n)s of %(num)d rows selected', page.total_count, n='{n}') }}"
+     x-text="$el.dataset.selectedText.replace('{n}', n)"
      {% endif %}>
-    {% if actions %}<span x-text="n">0</span> of {% endif %}{{ page.total_count }} row(s){{ " selected" if actions else "" }}
+    {% if actions %}{{ ngettext("%(n)s of %(num)d row selected", "%(n)s of %(num)d rows selected", page.total_count, n=0) }}{% else %}{{ ngettext("%(num)d row", "%(num)d rows", page.total_count) }}{% endif %}
   </p>
 
   <div class="{{ ui('pagination', 'controls') }}">
     <div class="{{ ui('pagination', 'rows-per-page') }}">
-      <span class="hidden sm:inline">Rows per page</span>
+      <span class="hidden sm:inline">{{ _("Rows per page") }}</span>
       <div class="relative" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
         <button type="button" x-ref="sizeTrigger" @click="open = !open"
                 :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
@@ -50,15 +58,15 @@
     </div>
 
     <div class="{{ ui('pagination', 'page-indicator') }}">
-      Page {{ page.number }} of {{ page.num_pages or 1 }}
+      {{ _("Page %(page)d of %(pages)d", page=page.number, pages=page.num_pages or 1) }}
     </div>
 
     <div class="{{ ui('pagination', 'jumps') }}">
       {% for jump in [
-        {"url": page_urls.first,    "enabled": page.has_previous, "icon": "chevron-double-left",  "label": "First page",    "edge": true},
-        {"url": page_urls.previous, "enabled": page.has_previous, "icon": "chevron-left",         "label": "Previous page", "edge": false},
-        {"url": page_urls.next,     "enabled": page.has_next,     "icon": "chevron-right",        "label": "Next page",     "edge": false},
-        {"url": page_urls.last,     "enabled": page.has_next,     "icon": "chevron-double-right", "label": "Last page",     "edge": true},
+        {"url": page_urls.first,    "enabled": page.has_previous, "icon": "chevron-double-left",  "label": _("First page"),    "edge": true},
+        {"url": page_urls.previous, "enabled": page.has_previous, "icon": "chevron-left",         "label": _("Previous page"), "edge": false},
+        {"url": page_urls.next,     "enabled": page.has_next,     "icon": "chevron-right",        "label": _("Next page"),     "edge": false},
+        {"url": page_urls.last,     "enabled": page.has_next,     "icon": "chevron-double-right", "label": _("Last page"),     "edge": true},
       ] %}
       <a title="{{ jump.label }}" aria-disabled="{{ 'false' if jump.enabled else 'true' }}"
          {% if jump.enabled %}href="{{ jump.url }}" hx-get="{{ jump.url }}" {{ swap | safe }}{% else %}tabindex="-1"{% endif %}
