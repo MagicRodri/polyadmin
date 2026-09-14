@@ -3,7 +3,7 @@
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/inline.html" import render_inline_section with context %}
 {% from "admin/components/icons.html" import icon %}
-{% block title %}{{ model_admin.get_verbose_name() }}{% endblock %}
+{% block title %}{{ _(model_admin.get_verbose_name()) }}{% endblock %}
 {% block content %}
 {# Layout comes from ui("page"), shared with the form, so viewing and
    editing the same record do not jump width or alignment.
@@ -20,7 +20,7 @@
         {# A field's help_text deliberately does not appear here: it
            explains how to fill a field in, which is a question the form
            answers and this page does not ask. See ui/field.html. #}
-        <dt class="text-sm font-medium text-muted-foreground">{{ field.label }}</dt>
+        <dt class="text-sm font-medium text-muted-foreground">{{ _(field.label) }}</dt>
         <dd class="text-sm text-foreground sm:col-span-2">{{ render_field_value(field, field.get_value(object), model_admin.get_empty_value()) }}</dd>
       </div>
       {% endfor %}
@@ -30,7 +30,7 @@
        (core.audit.AuditReader) -- a write-only logger records silently. #}
     {% if history %}
     <div class="{{ ui('history') }}">
-      <h2 class="{{ ui('history', 'title') }}">History</h2>
+      <h2 class="{{ ui('history', 'title') }}">{{ _("History") }}</h2>
       <ul class="divide-y divide-border">
         {% for entry in history %}
         <li class="{{ ui('history', 'row') }}">
@@ -52,7 +52,7 @@
         {% if permissions.can_update %}
         <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/edit"
            class="{{ ui('button', 'outline') }}">
-          {{ icon("edit", "w-4 h-4") }} Edit
+          {{ icon("edit", "w-4 h-4") }} {{ _("Edit") }}
         </a>
         {% endif %}
         {% for action in actions %}
@@ -62,12 +62,12 @@
            the stretch stops at the <form> -- and would otherwise sit
            stunted beside a full-width Edit. #}
         <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
-              {% if action.confirm %}data-confirm="{{ action.confirm }}"{% endif %}
+              {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %}
               onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
           {{ csrf_field(csrf_token) }}
           <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">
           <button type="submit" class="{{ ui('button', 'outline') }} w-full sm:w-auto">
-            {{ action.label }}
+            {{ _(action.label) }}
           </button>
         </form>
         {% endfor %}

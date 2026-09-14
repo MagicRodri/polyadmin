@@ -27,7 +27,7 @@ from polyadmin.core.template_context import (
     form_context,
     list_context,
 )
-from polyadmin.i18n import I18n, LocaleOption, get_locale
+from polyadmin.i18n import I18n, LocaleOption, get_locale, gettext
 from polyadmin.ui import ui
 
 # Imported lazily, not at module level: polyadmin.fastapi.__init__ imports
@@ -355,9 +355,22 @@ def _wide_body(inlines) -> bool:
     return any(inline.get("layout") == "tabular" for inline in inlines or [])
 
 
+def _audit_action(action: str) -> str:
+    """How the History panel names what happened. The framework's own verbs are
+    translated; anything else is the name of the Action that ran, an
+    identifier stored in the log, and stays as it is.
+    """
+    from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
+
+    verbs = {AUDIT_CREATE: gettext("create"), AUDIT_UPDATE: gettext("update"), AUDIT_DELETE: gettext("delete")}
+    return verbs.get(action, action)
+
+
 def _history_for(admin: Any, model_admin: Any, obj: Any) -> list[dict[str, str]]:
     """The record's recent audit entries, or [] when no logger is configured or
-    the one configured cannot read back.
+    the one configured cannot read back. Built in the request's locale:
+    "system" and the framework's verbs are translated here; who did it, and
+    when, are data.
     """
     from polyadmin.core.audit import AuditReader
 
@@ -373,14 +386,15 @@ def _history_for(admin: Any, model_admin: Any, obj: Any) -> list[dict[str, str]]
         )
         return []
     rendered = []
+    system = gettext("system")
     for entry in entries:
-        who = "system"
+        who = system
         principal = entry.principal
         if principal is not None:
             who = getattr(principal, "display_name", None) or str(
-                getattr(principal, "id", "") or "system"
+                getattr(principal, "id", "") or system
             )
         rendered.append(
-            {"when": entry.at.strftime("%Y-%m-%d %H:%M"), "who": who, "what": entry.action}
+            {"when": entry.at.strftime("%Y-%m-%d %H:%M"), "who": who, "what": _audit_action(entry.action)}
         )
     return rendered

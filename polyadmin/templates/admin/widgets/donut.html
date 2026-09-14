@@ -23,7 +23,7 @@
       <template x-if="active === null">
         <div>
           <p class="text-lg font-semibold text-foreground">{{ widget_data.total }}</p>
-          <p class="text-[11px] text-muted-foreground">Total</p>
+          <p class="text-[11px] text-muted-foreground">{{ _("Total") }}</p>
         </div>
       </template>
       {% for slice in widget_data.slices %}
@@ -49,7 +49,7 @@
     </li>
     {% endfor %}
     {% if not widget_data.slices %}
-    <li class="text-sm text-muted-foreground">No data.</li>
+    <li class="text-sm text-muted-foreground">{{ _("No data.") }}</li>
     {% endif %}
   </ul>
 </div>

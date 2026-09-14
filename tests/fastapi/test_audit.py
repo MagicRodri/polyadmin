@@ -1,5 +1,5 @@
 """Audit logging."""
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AuditEntry
 from polyadmin.fastapi.router import create_router
+from polyadmin.i18n import PSEUDO_LOCALE, pseudo
 from tests.conftest import csrf
 from tests.fastapi.test_actions import ActionableUserAdmin
 
@@ -30,9 +31,9 @@ class ReadableLogger(RecordingLogger):
         return [e for e in self.entries if e.resource == resource]
 
 
-def audit_client(logger):
+def audit_client(logger, **admin_kwargs):
     user_admin = ActionableUserAdmin()
-    admin = Admin(model_admins=[user_admin], audit_logger=logger)
+    admin = Admin(model_admins=[user_admin], audit_logger=logger, **admin_kwargs)
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
     return TestClient(app), user_admin
@@ -125,3 +126,20 @@ def test_history_panel_appears_only_for_a_readable_logger():
     page = client2.get(f"/admin/users/{user2.id}").text
     assert ">History<" in page
     assert "update" in page
+
+
+def test_history_panel_translates_the_framework_verbs_but_not_action_names():
+    # "system" and the framework's own verbs are words on the page; an
+    # Action's name is an identifier stored in the log, so it stays as is.
+    logger = ReadableLogger()
+    client, user_admin = audit_client(logger, pseudo_locale=True)
+    user = user_admin.create({"email": "a@example.com"})
+    client.post(f"/admin/users/{user.id}/edit", data={"email": "b@example.com"},
+                headers=csrf(client), follow_redirects=False)
+    logger.entries.append(AuditEntry(at=datetime(2026, 1, 1, tzinfo=UTC), action="mark_active", resource="users", object_pk=user.id))
+
+    client.cookies.set("admin_locale", PSEUDO_LOCALE)
+    page = client.get(f"/admin/users/{user.id}").text
+    assert f">{pseudo('update')}<" in page
+    assert f">{pseudo('system')}<" in page
+    assert ">mark_active<" in page

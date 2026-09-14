@@ -3,7 +3,7 @@
   <thead>
     <tr class="border-b border-border">
       {% for column in widget_data.columns %}
-      <th class="{{ ui('table', 'th-compact') }}">{{ column }}</th>
+      <th class="{{ ui('table', 'th-compact') }}">{{ _(column) }}</th>
       {% endfor %}
     </tr>
   </thead>
@@ -18,6 +18,6 @@
   </tbody>
 </table>
 {% if not widget_data.rows %}
-<p class="text-sm text-muted-foreground">No data.</p>
+<p class="text-sm text-muted-foreground">{{ _("No data.") }}</p>
 {% endif %}
 </div>

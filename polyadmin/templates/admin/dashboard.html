@@ -1,6 +1,6 @@
 {% extends "admin/base.html" %}
 {% from "admin/components/icons.html" import icon %}
-{% block title %}{{ dashboard.title }}{% endblock %}
+{% block title %}{{ _(dashboard.title) }}{% endblock %}
 {% block content %}
 {% set widget_icons = {
   "admin/widgets/metric.html": "metric",
@@ -21,13 +21,13 @@
       <span class="{{ ui('widget', 'icon') }}">
         {{ icon(widget_icons.get(widget.template, "metric"), "w-5 h-5") }}
       </span>
-      <h2 class="{{ ui('widget', 'title') }}">{{ widget.title }}</h2>
+      <h2 class="{{ ui('widget', 'title') }}">{{ _(widget.title) }}</h2>
     </div>
     {% include widget.template %}
   </div>
   {% endfor %}
   {% if not widgets %}
-  <p class="{{ ui('text', 'muted') }}">No widgets configured.</p>
+  <p class="{{ ui('text', 'muted') }}">{{ _("No widgets configured.") }}</p>
   {% endif %}
 </div>
 {% endblock %}

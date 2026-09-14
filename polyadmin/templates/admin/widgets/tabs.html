@@ -20,7 +20,7 @@
     <button type="button" role="tab" @click="active = {{ loop.index0 }}"
             :aria-selected="active === {{ loop.index0 }}"
             :class="active === {{ loop.index0 }} ? '{{ ui('tabs', 'underline-trigger-on') }}' : '{{ ui('tabs', 'underline-trigger-off') }}'"
-            class="{{ ui('tabs', 'underline-trigger') }}">{{ panel.label }}</button>
+            class="{{ ui('tabs', 'underline-trigger') }}">{{ _(panel.label) }}</button>
     {% endfor %}
   </div>
   {% for panel in widget_data.panels %}
@@ -29,6 +29,6 @@
   </div>
   {% endfor %}
   {% else %}
-  <p class="text-sm text-muted-foreground">No panels configured.</p>
+  <p class="text-sm text-muted-foreground">{{ _("No panels configured.") }}</p>
   {% endif %}
 </div>
