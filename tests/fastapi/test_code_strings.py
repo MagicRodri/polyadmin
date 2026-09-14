@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.fastapi.router import create_router
+from polyadmin.i18n import pseudo
 from tests.conftest import csrf
 from tests.core.test_i18n import write_catalog
 from tests.core.test_model_admin import InMemoryUserAdmin
@@ -67,3 +68,21 @@ def test_export_headers_are_translated(tmp_path):
     users.create({"email": "a@example.com"})
     first_line = client.get("/admin/users/export/csv", headers=FR).text.splitlines()[0]
     assert "Courriel" in first_line
+
+
+def test_delete_selected_flash_is_not_double_bracketed_under_pseudo_locale(tmp_path):
+    # R5: build_action_handler re-translates a built-in action's already
+    # -translated result (delete_selected_action returns an ngettext
+    # call's output) before flashing it. Under the pseudo locale that
+    # re-translation must not double-bracket it into "[[...]]".
+    users = InMemoryUserAdmin()
+    users.create({"email": "a@example.com"})
+    admin = Admin(model_admins=[users], pseudo_locale=True)
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+    client.cookies.set("admin_locale", "en-XA")
+    page = client.post("/admin/users/actions/delete_selected", data={"pks": "1"}, headers=csrf(client)).text
+    single = pseudo("Deleted %(num)d record.") % {"num": 1}
+    assert single in page
+    assert pseudo(single) not in page

@@ -93,6 +93,16 @@ def test_pseudo_translator_only_wraps_the_pseudo_locale(tmp_path):
     assert tr.gettext(PSEUDO_LOCALE, "") == ""
 
 
+def test_pseudo_translator_leaves_an_already_pseudo_string_alone():
+    # R5: the adapter re-translates a host string returned from code (an
+    # action's message becoming a flash, a rendered validation error).
+    # Re-wrapping it here would double-bracket it, e.g. "[[Délété...]]".
+    tr = PseudoTranslator(GettextTranslator())
+    already = pseudo("Deleted 1 record.")
+    assert tr.gettext(PSEUDO_LOCALE, already) == already
+    assert tr.ngettext(PSEUDO_LOCALE, already, pseudo("Deleted %(num)d records."), 1) == already
+
+
 def test_parse_accept_language_orders_by_q():
     assert parse_accept_language("ru;q=0.2, fr;q=0.8, de") == ["de", "fr", "ru"]
     assert parse_accept_language("fr;q=0, *") == []

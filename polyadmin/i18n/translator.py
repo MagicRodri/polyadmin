@@ -90,6 +90,12 @@ def pseudo(text: str) -> str:
     return "".join(out)
 
 
+def _is_pseudo(text: str) -> bool:
+    """Whether text already looks like pseudo()'s output -- bracketed
+    top to bottom, not merely containing a bracketed run somewhere."""
+    return len(text) >= 2 and text.startswith("[") and text.endswith("]")
+
+
 class PseudoTranslator:
     """Wraps another Translator, rewriting PSEUDO_LOCALE only."""
 
@@ -99,9 +105,17 @@ class PseudoTranslator:
     def gettext(self, locale: str, message: str) -> str:
         if locale != PSEUDO_LOCALE:
             return self._inner.gettext(locale, message)
+        if _is_pseudo(message):
+            # Already pseudo-translated -- an adapter re-translating a
+            # host string returned from code (an action's message
+            # becoming a flash, a rendered validation error). Wrapping
+            # it again would double-bracket it.
+            return message
         return pseudo(self._inner.gettext(DEFAULT_LOCALE, message)) if message else message
 
     def ngettext(self, locale: str, singular: str, plural: str, n: int) -> str:
         if locale != PSEUDO_LOCALE:
             return self._inner.ngettext(locale, singular, plural, n)
+        if _is_pseudo(singular):
+            return singular
         return pseudo(self._inner.ngettext(DEFAULT_LOCALE, singular, plural, n))
