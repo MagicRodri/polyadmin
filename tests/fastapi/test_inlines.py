@@ -162,7 +162,7 @@ def test_inline_section_placeholder_on_create_page():
 
     response = client.get("/admin/organizations/create")
     assert response.status_code == 200
-    assert "Save Organization to add" in response.text
+    assert "Save to add Users." in response.text
     assert "<table" not in response.text.split('id="inline-users"')[1].split("</div>")[0]
 
 

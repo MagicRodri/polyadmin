@@ -25,7 +25,7 @@
      options      [(value, label, selected), ...]
      placeholder  shown when nothing is chosen
      disabled     bool #}
-{% macro multi_select(name, options, placeholder="Select…", disabled=false) %}
+{% macro multi_select(name, options, placeholder=_("Select…"), disabled=false) %}
 {# Focus stays in the search box -- typing is the point of this control
    -- and the arrow keys move a highlight the input reports through
    aria-activedescendant. Moving real focus into the list would mean you
@@ -50,7 +50,11 @@
       <template x-for="item in selected" :key="item.value">
         <span class="{{ ui('badge', 'secondary') }} {{ ui('multi-select', 'chip') }}">
           <span x-text="item.label"></span>
-          <span role="button" tabindex="0" :aria-label="'Remove ' + item.label"
+          {# Formatted on the server, so a translation's own word order
+             places the {label} marker; Alpine only swaps it for the chip's
+             label, read off the element like every other. #}
+          <span role="button" tabindex="0" data-remove-label="{{ _('Remove %(label)s', label='{label}') }}"
+                :aria-label="$el.dataset.removeLabel.replace('{label}', item.label)"
                 @click.stop="remove(item.value)" @keydown.enter.stop.prevent="remove(item.value)"
                 @keydown.space.stop.prevent="remove(item.value)"
                 class="{{ ui('multi-select', 'chip-remove') }}">
@@ -73,7 +77,7 @@
       {# role=combobox on the input, not the wrapper: the input is what
          holds focus, so it is what has to advertise the popup and name
          the highlighted option. #}
-      <input type="text" x-ref="search" x-model="query" autocomplete="off" placeholder="Search&hellip;"
+      <input type="text" x-ref="search" x-model="query" autocomplete="off" placeholder="{{ _('Search…') }}"
              role="combobox" aria-autocomplete="list" :aria-expanded="open ? 'true' : 'false'"
              :aria-controls="$id('ms-listbox')" :aria-activedescendant="activeId || null"
              @keydown.escape.stop="closeToTrigger()"
@@ -100,7 +104,7 @@
       {# Two different emptinesses, and saying "No matches" for the
          second one would be a lie. #}
       <div x-show="!availableCount()" x-cloak class="{{ ui('combobox', 'empty') }}"
-           x-text="query.trim() ? 'No matches.' : 'Everything is selected.'"></div>
+           x-text='query.trim() ? {{ _("No matches.")|tojson }} : {{ _("Everything is selected.")|tojson }}'></div>
     </div>
   </div>
 </div>

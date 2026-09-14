@@ -14,7 +14,7 @@
                   against each option's value
      placeholder  shown when nothing is selected
      disabled     bool #}
-{% macro select(name, options, selected=none, placeholder="Select…", disabled=false) %}
+{% macro select(name, options, selected=none, placeholder=_("Select…"), disabled=false) %}
 {% set selected_label = namespace(value=none) %}
 {% for value, label in options %}
 {% if value == selected %}{% set selected_label.value = label %}{% endif %}
@@ -63,7 +63,7 @@
          @click="choose($el)"
          class="{{ ui('combobox', 'item') }}">{{ label }}</div>
     {% endfor %}
-    {% if not options %}<div class="{{ ui('combobox', 'empty') }}">No options.</div>{% endif %}
+    {% if not options %}<div class="{{ ui('combobox', 'empty') }}">{{ _("No options.") }}</div>{% endif %}
   </div>
 </div>
 {% endmacro %}

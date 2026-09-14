@@ -26,7 +26,7 @@
          destructive is reserved for buttons, so an error summary does
          not out-shout Save. #}
       <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4">
-        <h5 class="{{ ui('alert', 'title') }}">Couldn't save {{ model_admin.get_verbose_name() }}</h5>
+        <h5 class="{{ ui('alert', 'title') }}">{{ _("Couldn't save %(name)s", name=_(model_admin.get_verbose_name())) }}</h5>
         <div class="{{ ui('alert', 'description') }}">
           {% for error in non_field_errors %}<p>{{ error }}</p>{% endfor %}
         </div>
@@ -43,11 +43,11 @@
         <button type="button" @click="open = !open"
                 :aria-expanded="open ? 'true' : 'false'" :aria-controls="$id('fieldset-body')"
                 class="{{ ui('fieldset', 'trigger') }}">
-          <span class="{{ ui('fieldset', 'title') }}">{{ fieldset.title }}</span>
+          <span class="{{ ui('fieldset', 'title') }}">{{ _(fieldset.title) }}</span>
           {{ icon("chevron-down", ui('fieldset', 'icon')) }}
         </button>
         {% if fieldset.description %}
-        <p class="{{ ui('fieldset', 'description') }}">{{ fieldset.description }}</p>
+        <p class="{{ ui('fieldset', 'description') }}">{{ _(fieldset.description) }}</p>
         {% endif %}
         <div x-show="open" x-collapse :id="$id('fieldset-body')" class="{{ ui('fieldset', 'body') }}">
           {% for name in fieldset.fields %}
@@ -92,16 +92,16 @@
       {% if object is not none and permissions.can_delete %}
       <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ model_admin.get_pk(object) }}/delete"
          class="{{ ui('button', 'destructive-outline') }}">
-        {{ icon("delete", "w-4 h-4") }} Delete
+        {{ icon("delete", "w-4 h-4") }} {{ _("Delete") }}
       </a>
       {% endif %}
       <div class="{{ ui('page', 'actions-primary') }}">
         <button type="submit" form="resource-form" class="{{ ui('button') }}">
-          {{ icon("check", "w-4 h-4") }} Save
+          {{ icon("check", "w-4 h-4") }} {{ _("Save") }}
         </button>
         <button type="submit" form="resource-form" name="_continue" value="1"
                 class="{{ ui('button', 'outline') }}">
-          {{ icon("edit", "w-4 h-4") }} Save and continue editing
+          {{ icon("edit", "w-4 h-4") }} {{ _("Save and continue editing") }}
         </button>
         {# Only where adding another makes sense -- offering it on a form
            the principal may not create from would be a button that
@@ -109,11 +109,11 @@
         {% if permissions.can_create %}
         <button type="submit" form="resource-form" name="_addanother" value="1"
                 class="{{ ui('button', 'outline') }}">
-          {{ icon("plus", "w-4 h-4") }} Save and add another
+          {{ icon("plus", "w-4 h-4") }} {{ _("Save and add another") }}
         </button>
         {% endif %}
         <a href="{{ base_path }}/{{ model_admin.get_slug() }}" class="{{ ui('button', 'ghost-muted') }}">
-          Cancel
+          {{ _("Cancel") }}
         </a>
       </div>
     </div>

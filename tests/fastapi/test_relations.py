@@ -7,6 +7,7 @@ from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
+from tests.core.test_i18n import write_catalog
 
 
 class Organization:
@@ -92,10 +93,10 @@ class UserAdmin(ModelAdmin):
         return obj
 
 
-def make_client():
+def make_client(**admin_kwargs):
     org_admin = OrganizationAdmin()
     user_admin = UserAdmin()
-    admin = Admin(model_admins=[user_admin, org_admin])
+    admin = Admin(model_admins=[user_admin, org_admin], **admin_kwargs)
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
     return TestClient(app), admin, user_admin, org_admin
@@ -291,7 +292,22 @@ def test_many_to_many_renders_searchable_multi_select_not_a_native_multiple():
     # fully rendered, which is what lets the search filter client-side.
     for want in ('data-value="1"', 'data-value="2"', "Acme", "Widgets Inc"):
         assert want in text, f"expected option {want!r} in the page"
-    assert 'placeholder="Search&hellip;"' in text, "expected the search box"
+    assert 'placeholder="Search…"' in text, "expected the search box"
+
+
+def test_multi_select_remove_label_is_formatted_on_the_server(tmp_path):
+    # The chip's "Remove <label>" is one translated sentence: the server
+    # places a {label} marker wherever the translation puts it, and Alpine
+    # only swaps the marker for the chip's label.
+    catalog = write_catalog(tmp_path, "fr", {"Remove %(label)s": "Retirer %(label)s"}, domain="host")
+    client, _, _, org_admin = make_client(catalogs=[(catalog, "host")])
+    org_admin.create({"name": "Acme"})
+
+    for language, want in (("en", "Remove {label}"), ("fr", "Retirer {label}")):
+        text = client.get("/admin/users/create", headers={"Accept-Language": language}).text
+        ms = multi_select_markup(text)
+        assert f'data-remove-label="{want}"' in ms, f"{language}: expected the server-formatted label"
+        assert ':aria-label="$el.dataset.removeLabel.replace(\'{label}\', item.label)"' in ms
 
 
 def test_many_to_many_selection_posts_under_the_field_name():

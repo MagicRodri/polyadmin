@@ -7,10 +7,10 @@
 
 {% macro render_inline_section(inline) %}
 <div id="inline-{{ inline.slug }}" class="mt-8">
-  <h3 class="{{ ui('text', 'heading') }}">{{ inline.label }}</h3>
+  <h3 class="{{ ui('text', 'heading') }}">{{ _(inline.label) }}</h3>
   {% if inline.mode == "placeholder" %}
   <div class="{{ ui('panel', 'dashed') }}">
-    Save {{ model_admin.get_verbose_name() }} to add {{ inline.label|lower }}.
+    {{ _("Save to add %(label)s.", label=_(inline.label)) }}
   </div>
   {% elif inline.mode == "readonly" %}
     {% if inline.layout == "tabular" %}{{ render_inline_readonly_table(inline) }}
@@ -36,14 +36,14 @@
     {% if inline.can_change %}
     <button type="submit"
             class="{{ ui('button', 'size-xs') }}">
-      {{ icon("check", "w-3.5 h-3.5") }} Save
+      {{ icon("check", "w-3.5 h-3.5") }} {{ _("Save") }}
     </button>
     {% endif %}
     {% if inline.can_delete %}
     <button type="button" hx-delete="{{ row.delete_url }}" hx-target="#inline-{{ inline.slug }}"
-            hx-swap="outerHTML swap:0.2s" hx-confirm="Remove this {{ inline.label|lower }}?"
+            hx-swap="outerHTML swap:0.2s" hx-confirm="{{ _('Remove this %(label)s?', label=_(inline.label)) }}"
             class="{{ ui('button', 'ghost-destructive', 'size-xs') }}">
-      {{ icon("delete", "w-3.5 h-3.5") }} Remove
+      {{ icon("delete", "w-3.5 h-3.5") }} {{ _("Remove") }}
     </button>
     {% endif %}
   </div>
@@ -59,12 +59,12 @@
   {% endfor %}
   <button type="submit"
           class="{{ ui('button', 'outline', 'size-xs') }}">
-    {{ icon("plus", "w-3.5 h-3.5") }} Add {{ inline.label[:-1] if inline.label.endswith("s") else inline.label }}
+    {{ icon("plus", "w-3.5 h-3.5") }} {{ _("Add") }}
   </button>
 </form>
 {% endif %}
 {% if not inline.rows and not inline.add_row %}
-<p class="text-sm text-muted-foreground">No {{ inline.label|lower }}.</p>
+<p class="text-sm text-muted-foreground">{{ _("No %(label)s.", label=_(inline.label)) }}</p>
 {% endif %}
 {% endmacro %}
 
@@ -125,7 +125,7 @@
 <table class="min-w-full divide-y divide-border">
   <thead class="bg-muted/50"><tr>
     {% for name in inline.field_names %}
-    <th class="{{ ui('table', 'th-compact') }}">{{ inline.child_admin.get_field(name).label }}</th>
+    <th class="{{ ui('table', 'th-compact') }}">{{ _(inline.child_admin.get_field(name).label) }}</th>
     {% endfor %}
     <th></th>
   </tr></thead>
@@ -142,14 +142,14 @@
         <button type="button" hx-post="{{ row.update_url }}" hx-include="closest tr"
                 hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML"
                 class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
-          {{ icon("check", "w-4 h-4") }}<span class="sr-only">Save</span>
+          {{ icon("check", "w-4 h-4") }}<span class="sr-only">{{ _("Save") }}</span>
         </button>
         {% endif %}
         {% if inline.can_delete %}
         <button type="button" hx-delete="{{ row.delete_url }}" hx-target="#inline-{{ inline.slug }}"
-                hx-swap="outerHTML swap:0.2s" hx-confirm="Remove this {{ inline.label|lower }}?"
+                hx-swap="outerHTML swap:0.2s" hx-confirm="{{ _('Remove this %(label)s?', label=_(inline.label)) }}"
                 class="{{ ui('button', 'ghost-destructive', 'size-icon-sm') }}">
-          {{ icon("delete", "w-4 h-4") }}<span class="sr-only">Remove</span>
+          {{ icon("delete", "w-4 h-4") }}<span class="sr-only">{{ _("Remove") }}</span>
         </button>
         {% endif %}
       </td>
@@ -166,7 +166,7 @@
         <button type="button" hx-post="{{ inline.add_row.create_url }}" hx-include="closest tr"
                 hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML"
                 class="{{ ui('button', 'ghost-muted', 'size-icon-sm') }}">
-          {{ icon("plus", "w-4 h-4") }}<span class="sr-only">Add</span>
+          {{ icon("plus", "w-4 h-4") }}<span class="sr-only">{{ _("Add") }}</span>
         </button>
       </td>
     </tr>
@@ -177,7 +177,7 @@
 {# The empty state sits outside the scroller: there is nothing to
    scroll, and a centred message inside a scrolling box drifts. #}
 {% if not inline.rows and not inline.add_row %}
-<p class="{{ ui('table', 'empty') }}">No {{ inline.label|lower }}.</p>
+<p class="{{ ui('table', 'empty') }}">{{ _("No %(label)s.", label=_(inline.label)) }}</p>
 {% endif %}
 </div>
 {% endmacro %}
@@ -191,14 +191,14 @@
     {% for name in inline.detail_field_names %}
     {% set field = inline.child_admin.get_field(name) %}
     <div class="flex justify-between gap-4 py-1 text-sm">
-      <dt class="text-muted-foreground">{{ field.label }}</dt>
+      <dt class="text-muted-foreground">{{ _(field.label) }}</dt>
       <dd class="text-right">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</dd>
     </div>
     {% endfor %}
   </dl>
 </div>
 {% endfor %}
-{% if not inline.rows %}<p class="text-sm text-muted-foreground">No {{ inline.label|lower }}.</p>{% endif %}
+{% if not inline.rows %}<p class="text-sm text-muted-foreground">{{ _("No %(label)s.", label=_(inline.label)) }}</p>{% endif %}
 {% endmacro %}
 
 {% macro render_inline_readonly_table(inline) %}
@@ -210,7 +210,7 @@
 <table class="min-w-full divide-y divide-border">
   <thead class="bg-muted/50"><tr>
     {% for name in inline.detail_field_names %}
-    <th class="{{ ui('table', 'th-compact') }}">{{ inline.child_admin.get_field(name).label }}</th>
+    <th class="{{ ui('table', 'th-compact') }}">{{ _(inline.child_admin.get_field(name).label) }}</th>
     {% endfor %}
     <th></th>
   </tr></thead>
@@ -231,13 +231,13 @@
       {# The row link is its own column rather than wrapped around the
          first value, which may itself be a relation link. #}
       <td class="px-3 py-2 text-right whitespace-nowrap">
-        <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">View</a>
+        <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ _("View") }}</a>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 </div>
-{% if not inline.rows %}<p class="{{ ui('table', 'empty') }}">No {{ inline.label|lower }}.</p>{% endif %}
+{% if not inline.rows %}<p class="{{ ui('table', 'empty') }}">{{ _("No %(label)s.", label=_(inline.label)) }}</p>{% endif %}
 </div>
 {% endmacro %}

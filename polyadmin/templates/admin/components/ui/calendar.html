@@ -30,11 +30,11 @@
 {% macro calendar() %}
 <div class="{{ ui('calendar') }}">
   <div class="{{ ui('calendar', 'header') }}">
-    <button type="button" @click="shift(-1)" class="{{ ui('calendar', 'nav') }}" aria-label="Previous month">
+    <button type="button" @click="shift(-1)" class="{{ ui('calendar', 'nav') }}" aria-label="{{ _('Previous month') }}">
       {{ icon("chevron-left", "w-4 h-4") }}
     </button>
     <span class="{{ ui('calendar', 'caption') }}" x-text="monthLabel" aria-live="polite"></span>
-    <button type="button" @click="shift(1)" class="{{ ui('calendar', 'nav') }}" aria-label="Next month">
+    <button type="button" @click="shift(1)" class="{{ ui('calendar', 'nav') }}" aria-label="{{ _('Next month') }}">
       {{ icon("chevron-right", "w-4 h-4") }}
     </button>
   </div>
@@ -65,7 +65,7 @@
            class="{{ ui('input') }}">
     <button type="button" @click="toggle()" x-ref="trigger"
             :aria-expanded="open ? 'true' : 'false'"
-            aria-label="Open calendar"
+            aria-label="{{ _('Open calendar') }}"
             {% if disabled %}disabled{% endif %}
             class="{{ ui('button', 'outline', 'size-icon') }}">
       {{ icon("calendar", "w-4 h-4") }}

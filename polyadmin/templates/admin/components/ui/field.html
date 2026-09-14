@@ -36,10 +36,10 @@
   {% endif %}
   <span class="{% if inline %}{{ ui('field', 'row-text') }}{% else %}contents{% endif %}">
   <label for="field-{{ field.name }}" class="{{ ui('field', 'label') }}{% if inline %} {{ ui('field', 'row-label') }}{% endif %}">
-    {{ field.label }}{% if field.required %}<span class="{{ ui('field', 'required') }}" aria-hidden="true">*</span>{% endif %}
+    {{ _(field.label) }}{% if field.required %}<span class="{{ ui('field', 'required') }}" aria-hidden="true">*</span>{% endif %}
   </label>
   {% if inline %}
-  {% if field.help_text %}<p class="{{ ui('field', 'description') }}">{{ field.help_text }}</p>{% endif %}
+  {% if field.help_text %}<p class="{{ ui('field', 'description') }}">{{ _(field.help_text) }}</p>{% endif %}
   {% for error in errors or [] %}<p class="{{ ui('field', 'message') }}">{{ error }}</p>{% endfor %}
   {% endif %}
   </span>
@@ -51,7 +51,7 @@
   {% if readonly_field %}
   <p class="{{ ui('field', 'readonly') }}">{{ value if value not in (none, "") else "&mdash;" | safe }}</p>
   {% elif field.field_type == "text" %}
-  <textarea id="field-{{ field.name }}" name="{{ field.name }}" placeholder="{{ field.placeholder }}" autocomplete="off"
+  <textarea id="field-{{ field.name }}" name="{{ field.name }}" placeholder="{{ _(field.placeholder) }}" autocomplete="off"
             {% if field.required %}required{% endif %}
             {% if field.readonly %}readonly{% endif %}
             {% if field.disabled %}disabled{% endif %}
@@ -65,7 +65,7 @@
   {% elif field.field_type == "enum" %}
   {% set enum_options = namespace(pairs=[]) %}
   {% for choice in field.choices %}{% set enum_options.pairs = enum_options.pairs + [(choice, choice)] %}{% endfor %}
-  {{ select(field.name, enum_options.pairs, selected=value, placeholder="Select…", disabled=field.disabled) }}
+  {{ select(field.name, enum_options.pairs, selected=value, placeholder=_("Select…"), disabled=field.disabled) }}
   {% elif field.field_type in ("foreignkey", "onetoone") and relation and relation.autocomplete %}
   {# Combobox, from shadcn's Popover + cmdk. cmdk filters a client-side
      array, but the point of autocomplete_fields is never loading the
@@ -111,7 +111,7 @@
       {# role=combobox on the input, not the wrapper: the input is what
          holds focus, so it is what has to advertise the popup and name
          the highlighted option. Mirrors ui/multi-select. #}
-      <input x-ref="textInput" type="text" autocomplete="off" placeholder="Search&hellip;"
+      <input x-ref="textInput" type="text" autocomplete="off" placeholder="{{ _('Search…') }}"
              value="{{ relation.selected_label if relation.selected_label is not none else '' }}"
              x-model="query" @focus="open = true"
              role="combobox" aria-autocomplete="list"
@@ -141,10 +141,10 @@
   {% for pk, label in (relation.options if relation else []) %}
   {% set m2m_options.pairs = m2m_options.pairs + [(pk, label, relation and pk in relation.selected_pks)] %}
   {% endfor %}
-  {{ multi_select(field.name, m2m_options.pairs, placeholder="Select…", disabled=field.disabled) }}
+  {{ multi_select(field.name, m2m_options.pairs, placeholder=_("Select…"), disabled=field.disabled) }}
   {% else %}
   <input type="{{ input_types.get(field.field_type, 'text') }}" id="field-{{ field.name }}" name="{{ field.name }}"
-         value="{{ value if value is not none else '' }}" placeholder="{{ field.placeholder }}" autocomplete="off"
+         value="{{ value if value is not none else '' }}" placeholder="{{ _(field.placeholder) }}" autocomplete="off"
          {% if field.required %}required{% endif %}
          {% if field.readonly %}readonly{% endif %}
          {% if field.disabled %}disabled{% endif %}
@@ -154,7 +154,7 @@
   {% endif %}
   {% if not inline %}
   {% if field.help_text %}
-  <p class="{{ ui('field', 'description') }}">{{ field.help_text }}</p>
+  <p class="{{ ui('field', 'description') }}">{{ _(field.help_text) }}</p>
   {% endif %}
   {% for error in errors or [] %}
   <p class="{{ ui('field', 'message') }}">{{ error }}</p>
