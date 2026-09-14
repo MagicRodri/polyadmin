@@ -197,10 +197,13 @@ def test_editing_an_organization_rejects_garbage_and_keeps_original_values():
     assert "Enter a valid date." in edit.text
     assert "Enter a valid number." in edit.text
 
-    # The rejected update must not have touched the record.
+    # The rejected update must not have touched the record. A whole-number
+    # balance renders as "100", not "100.0" (see templating.py's
+    # decimal_display: a float gets the shortest round-trip fixed-point
+    # digits, matching Go, so this is an exact match, not a prefix check).
     detail = client.get(location)
     assert '<time datetime="2018-01-01" data-format="date">2018-01-01</time>' in detail.text
-    assert 'data-value="100' in detail.text
+    assert 'data-value="100"' in detail.text
 
 
 def test_create_organization_with_both_fields_empty_saves_successfully():

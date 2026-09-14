@@ -67,14 +67,43 @@ def iso_datetime(value: Any) -> str | None:
 
 def decimal_display(value: Any) -> str:
     """Fixed-point text for a decimal value -- never the scientific notation
-    plain str() can fall into for a Decimal built from scientific-notation
-    input (e.g. "1e21"), which would throw off the browser-side formatter's
-    fraction-digit count. format(value, "f") keeps the value's own
-    precision, unlike forcing a fixed number of decimal places.
+    plain str() can fall into (a Decimal built from scientific-notation
+    input, or any sufficiently large/small float), which would throw off
+    the browser-side formatter's fraction-digit count.
+
+    A Decimal is shown exactly as the host gave it -- format(value, "f")
+    only changes notation, never precision, so a host's Decimal("12.50")
+    keeps its two places. A float carries no such intended precision (it
+    is what Field.parse_form_value hands back for the "decimal" field
+    type -- see core/field.py), so it is shown with the shortest digit
+    string that round-trips back to the same float, in fixed-point, with
+    no trailing ".0" -- the same contract as Go's decimalText
+    (fiber/render_helpers.go), which uses strconv.FormatFloat(f, 'f', -1,
+    64). Anything else (an int) falls back to plain str().
     """
     if isinstance(value, Decimal):
         return format(value, "f")
+    if isinstance(value, float):
+        return _shortest_fixed_point(value)
     return str(value)
+
+
+def _shortest_fixed_point(value: float) -> str:
+    """The shortest decimal string that round-trips back to `value`, in
+    fixed-point notation, with no forced trailing zero.
+
+    repr(value) is Python's own shortest round-tripping form, but it can
+    be scientific notation for a large/small magnitude (repr(1e21) ==
+    "1e+21"); routing it through Decimal expands that to fixed-point
+    without losing or adding digits. What Decimal's own "f" format does
+    add back is a trailing ".0" for a whole number (Decimal("1E+2") formats
+    as "100", but Decimal("100.0") -- what repr(100.0) produces -- formats
+    as "100.0"), so a fractional part of all zeros is stripped afterwards.
+    """
+    text = format(Decimal(repr(value)), "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
+import pytest
+
 from polyadmin.core.field import DateField, DateTimeField, DecimalField, IntegerField
-from polyadmin.templating import Renderer
+from polyadmin.templating import Renderer, decimal_display
 
 
 def render_value(field, value):
@@ -46,3 +48,35 @@ def test_decimal_never_renders_in_scientific_notation():
     got = render_value(DecimalField("x"), Decimal("1E+21"))
     assert got == '<span data-format="decimal" data-value="1000000000000000000000">1000000000000000000000</span>'
     assert "E+" not in got and "e+" not in got
+
+
+@pytest.mark.parametrize(
+    ("value", "want"),
+    [
+        (100.0, "100"),  # no trailing ".0" -- str(100.0) would render "100.0"
+        (1234.5, "1234.5"),
+        (0.1, "0.1"),
+        (1e21, "1000000000000000000000"),  # not "1e+21"
+        (1e-7, "0.0000001"),  # not "1e-07"
+        (-2.50, "-2.5"),
+    ],
+)
+def test_float_decimals_render_as_shortest_fixed_point(value, want):
+    # Matches Go's decimalText (strconv.FormatFloat(f, 'f', -1, 64)):
+    # the shortest digit string that round-trips to the same float, in
+    # fixed-point, with no forced trailing zero -- Field.parse_form_value
+    # (core/field.py) hands back exactly this type for a "decimal" field,
+    # so any host's float must render identically in both languages.
+    assert decimal_display(value) == want
+
+
+def test_a_whole_number_float_balance_renders_without_a_decimal_point():
+    got = render_value(DecimalField("x"), 100.0)
+    assert got == '<span data-format="decimal" data-value="100">100</span>'
+
+
+def test_a_decimal_keeps_its_own_precision_unlike_a_float():
+    # decimal_display never trims a Decimal's own trailing zeros -- only a
+    # float (which carries no such intent) gets the shortest-form
+    # treatment above.
+    assert decimal_display(Decimal("12.50")) == "12.50"

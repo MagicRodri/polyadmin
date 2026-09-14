@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 
 from models import Organization, OrganizationRepository
 
@@ -92,11 +91,11 @@ def _parse_founded(value):
 def _parse_balance(value):
     """Balance arrives as a float once Field.parse_form_value has already
     coerced it (and _valid_balance has rejected anything it couldn't) --
-    absent/empty is None. Converting through str(value) rather than
-    Decimal(value) directly avoids surfacing float's binary imprecision
-    (Decimal(0.1) is a long ugly repeating value; Decimal(str(0.1)) is
-    the "0.1" a person typed).
+    absent/empty is None, saved as 0.0. No further conversion needed: the
+    model's `balance` is itself a plain float (see models.py), and
+    templating.py's decimal_display already renders a float as fixed-point,
+    shortest round-trip digits -- manufacturing a Decimal here (previously
+    via Decimal(str(value)), to dodge float's binary imprecision) would
+    only add an unnecessary type change with no display benefit.
     """
-    if value is None:
-        return Decimal(0)
-    return Decimal(str(value))
+    return value if value is not None else 0.0
