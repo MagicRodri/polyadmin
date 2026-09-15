@@ -7,6 +7,8 @@ Run with:
 then open http://127.0.0.1:8000/admin
 """
 
+import os
+
 from fastapi import FastAPI
 from models import OrganizationRepository, RoleRepository, UserRepository, seed
 from organization_admin import OrganizationAdmin
@@ -117,6 +119,13 @@ admin = Admin(
     # Not SuperuserAuthorizer: that would deny the viewer account every
     # permission, dashboard included. See session.py.
     authorizer=ReadOnlyForNonSuperusers(),
+    # amelie@example.com carries "fr" in Principal.extra (session.py);
+    # everyone else resolves through the switcher cookie and
+    # Accept-Language instead.
+    locale_resolver=lambda request, p: (p.extra.get("locale") or None) if p else None,
+    # en-XA, bracketed and accented, so a page can be swept for text that
+    # never went through the translator -- see browsertests/test_i18n.py.
+    pseudo_locale=os.environ.get("POLYADMIN_PSEUDO_LOCALE") == "1",
 )
 register_pages(admin, users)
 

@@ -18,6 +18,7 @@ SESSION_SECRET = "browsertests-fixed-secret"
 
 SUPERUSER = ("admin@example.com", "polyadmin")
 VIEWER = ("viewer@example.com", "polyadmin")
+AMELIE = ("amelie@example.com", "polyadmin")
 
 
 def _port_is_free():
@@ -66,7 +67,11 @@ def app_server():
     process = subprocess.Popen(
         [python, "-m", "uvicorn", "main:app", "--port", str(PORT)],
         cwd=EXAMPLE_DIR,
-        env={**os.environ, "ADMIN_SESSION_SECRET": SESSION_SECRET},
+        env={
+            **os.environ,
+            "ADMIN_SESSION_SECRET": SESSION_SECRET,
+            "POLYADMIN_PSEUDO_LOCALE": "1",
+        },
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -112,4 +117,10 @@ def viewer_page(page, app_server):
 
 @pytest.fixture
 def anon_page(page, app_server):
+    return page
+
+
+@pytest.fixture
+def amelie_page(page, app_server):
+    _sign_in(page, AMELIE)
     return page

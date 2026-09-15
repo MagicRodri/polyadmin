@@ -47,13 +47,17 @@ class DemoAccount:
     hash: bytes
     display_name: str
     is_superuser: bool
+    locale: str
 
 
-# Two accounts, not one, so the difference between a superuser and an
-# ordinary signed-in user is visible in the admin.
+# Three accounts, not two, so the difference between a superuser and an
+# ordinary signed-in user is visible in the admin, and so is a principal
+# whose preferred locale the host resolver -- not the switcher cookie or
+# Accept-Language -- decides.
 DEMO_CREDENTIALS = [
-    ("admin@example.com", "polyadmin", "Demo Admin", True),
-    ("viewer@example.com", "polyadmin", "Demo Viewer", False),
+    ("admin@example.com", "polyadmin", "Demo Admin", True, ""),
+    ("viewer@example.com", "polyadmin", "Demo Viewer", False, ""),
+    ("amelie@example.com", "polyadmin", "Amélie", True, "fr"),
 ]
 
 
@@ -110,7 +114,7 @@ class CookieSessionBackend:
     def __init__(self) -> None:
         self._secret = _session_secret()
         self._accounts: dict[str, DemoAccount] = {}
-        for email, password, display_name, is_superuser in DEMO_CREDENTIALS:
+        for email, password, display_name, is_superuser, locale in DEMO_CREDENTIALS:
             salt = secrets.token_bytes(16)
             self._accounts[email] = DemoAccount(
                 email=email,
@@ -118,6 +122,7 @@ class CookieSessionBackend:
                 hash=_derive(password, salt),
                 display_name=display_name,
                 is_superuser=is_superuser,
+                locale=locale,
             )
 
     def verify_credentials(self, request: Any, identifier: str, password: str) -> Principal | None:
@@ -173,6 +178,7 @@ class CookieSessionBackend:
             id=account.email,
             display_name=account.display_name,
             is_superuser=account.is_superuser,
+            extra={"locale": account.locale},
         )
 
     def _sign(self, subject: str, expires_at: int) -> str:
