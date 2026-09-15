@@ -1,17 +1,17 @@
-# French translations for PROJECT.
-# Copyright (C) 2026 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+# French translations of PolyAdmin's framework strings.
 #
+# DRAFT: machine-assisted and not yet reviewed by a native speaker.
+# Corrections are welcome; docs/i18n.md ("Maintaining the framework
+# catalogs") describes how to regenerate and test this file.
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-15 15:20+0500\n"
+"Project-Id-Version: PolyAdmin 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
+"POT-Creation-Date: 2026-09-15 15:29+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Last-Translator: Draft, awaiting native review\n"
 "Language: fr\n"
-"Language-Team: fr <LL@li.org>\n"
+"Language-Team: French (unreviewed draft)\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"

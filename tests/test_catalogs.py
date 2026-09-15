@@ -136,3 +136,11 @@ def test_placeholder_checker_catches_a_changed_conversion():
 def test_placeholder_checker_accepts_a_faithful_translation():
     message = Message(("%(num)d row", "%(num)d rows"), string=("%(num)d ligne", "%(num)d lignes"))
     assert not placeholder_mismatches(message)
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_catalog_header_names_the_project_and_its_draft_status(locale):
+    cat = catalog(locale)
+    assert cat.project == "PolyAdmin"
+    assert "DRAFT" in cat.header_comment
+    assert "PROJECT" not in cat.header_comment and "EMAIL@ADDRESS" not in str(cat.last_translator)

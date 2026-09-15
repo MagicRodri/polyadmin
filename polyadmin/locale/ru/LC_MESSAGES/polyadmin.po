@@ -1,17 +1,17 @@
-# Russian translations for PROJECT.
-# Copyright (C) 2026 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+# Russian translations of PolyAdmin's framework strings.
 #
+# DRAFT: machine-assisted and not yet reviewed by a native speaker.
+# Corrections are welcome; docs/i18n.md ("Maintaining the framework
+# catalogs") describes how to regenerate and test this file.
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-15 15:20+0500\n"
+"Project-Id-Version: PolyAdmin 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
+"POT-Creation-Date: 2026-09-15 15:29+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
-"Language-Team: ru <LL@li.org>\n"
+"Language-Team: Russian (unreviewed draft)\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
