@@ -83,7 +83,7 @@ def create_router(
 
     @router.get("", include_in_schema=False)
     async def index(request: Request) -> HTMLResponse:
-        principal, error = authorize(admin, request, base_path, DASHBOARD_VIEW)
+        principal, error = await authorize(admin, request, base_path, DASHBOARD_VIEW)
         if error:
             return error
 

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -197,3 +199,37 @@ def test_per_object_permission_hides_controls_on_the_detail_page():
     # Viewing someone else's record is refused outright by this rule,
     # which is itself the per-object view check doing its job.
     assert client.get(f"/admin/users/{theirs.id}").status_code == 403
+
+
+class AsyncAuthenticator:
+    """An Authenticator backed by something that needs an event loop --
+    the shape a real HTTP-backed one would take."""
+
+    def __init__(self, principal):
+        self._principal = principal
+
+    async def authenticate(self, request):
+        await asyncio.sleep(0)
+        return self._principal
+
+
+def test_async_authenticator_is_awaited_through_every_route():
+    """Regression coverage for the async conversion: every route family
+    (list, detail, create, edit, delete, action) must still authenticate
+    correctly when the Authenticator itself is a coroutine function."""
+    client, user_admin = make_client(authenticator=AsyncAuthenticator(Principal(id="u1", is_superuser=True)))
+    user = user_admin.create({"email": "john@example.com"})
+
+    assert client.get("/admin/users").status_code == 200
+    assert client.get(f"/admin/users/{user.id}").status_code == 200
+    assert client.get("/admin/users/create").status_code == 200
+
+
+def test_async_authenticator_still_rejects_when_it_returns_none():
+    class DenyingAsyncAuthenticator:
+        async def authenticate(self, request):
+            await asyncio.sleep(0)
+            return None
+
+    client, _ = make_client(authenticator=DenyingAsyncAuthenticator())
+    assert client.get("/admin/users").status_code == 401

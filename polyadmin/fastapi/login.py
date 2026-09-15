@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.login import NEXT_QUERY_PARAM, safe_next_url
-from polyadmin.fastapi.locale import cached_principal
+from polyadmin.fastapi.locale import acached_principal
 from polyadmin.fastapi.responses import redirect
 from polyadmin.i18n import N_, gettext
 from polyadmin.templating import Renderer
@@ -49,7 +49,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
         # Already signed in: nothing here to do, so honour ?next= and
         # send them on rather than showing a form they would have to
         # pointlessly fill in.
-        if cached_principal(admin, request) is not None:
+        if await acached_principal(admin, request) is not None:
             return RedirectResponse(
                 safe_next_url(request.query_params.get(NEXT_QUERY_PARAM), base_path), status_code=303
             )
