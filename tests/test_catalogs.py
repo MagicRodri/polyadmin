@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-from babel.messages.catalog import Message
+from babel.messages.catalog import Catalog, Message
 from babel.messages.extract import DEFAULT_KEYWORDS, extract_from_dir
 from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
@@ -56,6 +56,29 @@ def test_catalog_is_complete(locale):
     assert not missing, f"{locale}: run pybabel update; missing {missing}"
     assert not empty, f"{locale}: untranslated {empty}"
     assert not unused, f"{locale}: obsolete entries {unused}"
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_babel_check_finds_no_errors(locale):
+    """Babel's own checkers: python-format placeholders and plural-form
+    counts, as `pybabel compile --statistics` would report them."""
+    errors = [(message.id, [str(e) for e in errs]) for message, errs in catalog(locale).check()]
+    assert not errors, f"{locale}: {errors}"
+
+
+def test_babel_check_catches_a_bad_entry():
+    """Proof the check bites: a msgstr naming a placeholder its msgid lacks."""
+    cat = Catalog(locale="fr")
+    cat.add("Save %(name)s", "Enregistrer %(nom)s", flags=["python-format"])
+    assert list(cat.check())
+
+
+def test_translator_comments_reach_the_catalogs():
+    """Extracted with -c Translators:, so the notes written for translators
+    in the code travel with their msgids."""
+    for locale in LOCALES:
+        message = catalog(locale).get("%(name)s created.")
+        assert any("model's name" in comment for comment in message.auto_comments), locale
 
 
 @pytest.mark.parametrize("locale", LOCALES)
