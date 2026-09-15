@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from polyadmin.i18n import N_
+
 
 @dataclass
 class Principal:
@@ -32,7 +34,9 @@ class AllowAllAuthenticator:
     """
 
     def __init__(self, principal: Principal | None = None) -> None:
-        self._principal = principal or Principal(id="anonymous", display_name="Anonymous", is_superuser=True)
+        # N_: the sidebar translates this default name (and only this one
+        # -- a principal's own name is never translated).
+        self._principal = principal or Principal(id="anonymous", display_name=N_("Anonymous"), is_superuser=True)
 
     def authenticate(self, request: Any) -> Principal | None:
         return self._principal

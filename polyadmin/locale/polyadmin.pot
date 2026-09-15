@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-15 10:49+0500\n"
+"POT-Creation-Date: 2026-09-15 15:20+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -67,6 +67,9 @@ msgid "Admin"
 msgstr ""
 
 msgid "All"
+msgstr ""
+
+msgid "Anonymous"
 msgstr ""
 
 #, python-format
@@ -209,6 +212,9 @@ msgstr ""
 msgid "No records."
 msgstr ""
 
+msgid "No resources registered."
+msgstr ""
+
 msgid "No widgets configured."
 msgstr ""
 
@@ -219,6 +225,9 @@ msgid "Open calendar"
 msgstr ""
 
 msgid "Open menu"
+msgstr ""
+
+msgid "Page"
 msgstr ""
 
 #, python-format

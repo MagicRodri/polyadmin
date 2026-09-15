@@ -9,6 +9,7 @@ is built before FastAPI knows where it will be mounted.
 """
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -36,7 +37,7 @@ from polyadmin.fastapi.login import build_login_handlers, build_logout_handler
 from polyadmin.fastapi.pages import build_page_handler
 from polyadmin.fastapi.responses import clear_flash, pop_flash
 from polyadmin.fastapi.static import mount_static
-from polyadmin.i18n import I18n
+from polyadmin.i18n import I18n, gettext
 from polyadmin.templating import Renderer
 
 DEFAULT_EXPORTERS = [CSVExporter(), XLSXExporter()]
@@ -106,7 +107,7 @@ def create_router(
         for model_admin in admin.model_admins:
             if model_admin.can_view:
                 return RedirectResponse(f"{base_path}/{model_admin.get_slug()}")
-        return HTMLResponse("<p>No resources registered.</p>")
+        return HTMLResponse(f"<p>{escape(gettext('No resources registered.'))}</p>")
 
     for model_admin in admin.model_admins:
         prefix = f"/{model_admin.get_slug()}"

@@ -99,7 +99,10 @@
 
   {# -- SidebarFooter: the block's NavUser -- #}
   {% if principal %}
+  {# Principal names are never translated, except the framework's own
+     default (AllowAllAuthenticator's "Anonymous"). #}
   {% set display_name = principal.display_name or principal.id %}
+  {% if display_name == "Anonymous" %}{% set display_name = _(display_name) %}{% endif %}
   <div class="{{ ui('sidebar', 'footer') }}">
     <div class="relative" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
       <button type="button" x-ref="userTrigger" @click="open = !open"

@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from polyadmin.i18n import N_
+
 # String-quoted forward ref: PageContext lives in the FastAPI adapter
 # (polyadmin.fastapi.pages), and core must not import adapter code.
 # Handlers are async, matching every other FastAPI adapter handler in
@@ -48,7 +50,9 @@ class AdminPage:
 
 
 def _default_label(path: str) -> str:
-    last = path.strip("/").rsplit("/", 1)[-1] or "page"
+    last = path.strip("/").rsplit("/", 1)[-1]
+    if not last:
+        return N_("Page")
     return last.replace("-", " ").replace("_", " ").title()
 
 

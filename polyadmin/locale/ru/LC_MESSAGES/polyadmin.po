@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-15 10:49+0500\n"
+"POT-Creation-Date: 2026-09-15 15:20+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -72,6 +72,9 @@ msgstr "Администрирование"
 
 msgid "All"
 msgstr "Все"
+
+msgid "Anonymous"
+msgstr "Аноним"
 
 #, python-format
 msgid "Are you sure you want to delete this %(name)s? This action cannot be undone."
@@ -214,6 +217,9 @@ msgstr "Нет недавней активности."
 msgid "No records."
 msgstr "Нет записей."
 
+msgid "No resources registered."
+msgstr "Нет зарегистрированных ресурсов."
+
 msgid "No widgets configured."
 msgstr "Виджеты не настроены."
 
@@ -225,6 +231,9 @@ msgstr "Открыть календарь"
 
 msgid "Open menu"
 msgstr "Открыть меню"
+
+msgid "Page"
+msgstr "Страница"
 
 #, python-format
 msgid "Page %(page)d of %(pages)d"

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
+from polyadmin.core.auth import AllowAllAuthenticator
 from polyadmin.fastapi.router import create_router
 from polyadmin.i18n import pseudo
 from tests.conftest import csrf
@@ -106,3 +107,29 @@ def test_russian_flash_round_trips_in_an_ascii_cookie():
     assert flash, "no flash cookie was set"
     assert flash[0].isascii(), flash[0]
     assert "запись создана" in client.get(response.headers["location"]).text
+
+
+def test_framework_defaults_are_translated():
+    """The framework's own fallback strings -- a root page's default label,
+    AllowAllAuthenticator's default display name, the empty admin's notice
+    -- are framework strings like any other and come out translated.
+    Mirrors Go's TestFrameworkDefaultsAreTranslated."""
+
+    async def root_page(ctx):
+        return ctx.render_string("")
+
+    admin = Admin(model_admins=[InMemoryUserAdmin()], authenticator=AllowAllAuthenticator())
+    admin.route("/", root_page)
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+    client.cookies.set("admin_locale", "ru")
+    page = client.get("/admin/users").text
+    assert 'class="truncate">Страница</span>' in page
+    assert "Аноним" in page
+
+    app = FastAPI()
+    app.include_router(create_router(Admin(), base_path="/admin"), prefix="/admin")
+    empty = TestClient(app)
+    empty.cookies.set("admin_locale", "ru")
+    assert "Нет зарегистрированных ресурсов." in empty.get("/admin").text
