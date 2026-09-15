@@ -49,11 +49,15 @@ def test_empty_msgid_is_not_the_catalog_header(tmp_path):
     assert tr.gettext("fr", "") == ""
 
 
-def test_host_catalog_overrides_later_ones(tmp_path):
-    first = write_catalog(tmp_path / "a", "fr", {"Save": "Sauvegarder"}, domain="host")
+def test_later_host_catalog_overrides_earlier_ones(tmp_path):
+    """Ruling R8: later wins, as in Go -- standard override layering."""
+    first = write_catalog(tmp_path / "a", "fr", {"Save": "Sauvegarder", "Cancel": "Laisser tomber"}, domain="host")
     second = write_catalog(tmp_path / "b", "fr", {"Save": "Enregistrer"}, domain="other")
     tr = GettextTranslator([(first, "host"), (second, "other")])
-    assert tr.gettext("fr", "Save") == "Sauvegarder"
+    assert tr.gettext("fr", "Save") == "Enregistrer"
+    # An earlier catalog still answers what a later one lacks, ahead of
+    # the framework's own ("Annuler").
+    assert tr.gettext("fr", "Cancel") == "Laisser tomber"
 
 
 def test_russian_plural_forms(tmp_path):

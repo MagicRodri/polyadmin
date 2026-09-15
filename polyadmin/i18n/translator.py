@@ -32,12 +32,15 @@ def _catalog_locales(localedir: Path, domain: str) -> set[str]:
 class GettextTranslator:
     """The default Translator: gettext catalogs, host ahead of framework.
 
-    `catalogs` are (localedir, domain) pairs, consulted in order before the
-    framework's own, so a host can translate its strings and reword ours.
+    `catalogs` are (localedir, domain) pairs layered over the framework's
+    own: a later entry overrides an earlier one with the same msgid, and
+    every host catalog overrides the framework's, so a host can translate
+    its strings and reword ours.
     """
 
     def __init__(self, catalogs: Iterable[tuple[str | Path, str]] = ()) -> None:
-        sources = [(Path(localedir), domain) for localedir, domain in catalogs]
+        # Lookup order: the last host catalog first, the framework's last.
+        sources = [(Path(localedir), domain) for localedir, domain in catalogs][::-1]
         sources.append((FRAMEWORK_LOCALE_DIR, DOMAIN))
         found = {DEFAULT_LOCALE}
         for localedir, domain in sources:
