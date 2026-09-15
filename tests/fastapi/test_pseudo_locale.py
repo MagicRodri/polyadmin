@@ -33,7 +33,14 @@ from tests.fastapi.test_login import FakeLoginBackend
 
 SWEEP_AREAS = {"layout": True, "list": True, "forms": True, "detail": True, "errors": True}
 LOCALE_NAMES = ["English", "Français", "Русский", "Pseudo (en-XA)"]
-VISIBLE_ATTRS = {"placeholder", "aria-label", "title", "alt", "hx-confirm"}
+# Plus the data-* attributes whose text Alpine puts on screen.
+VISIBLE_ATTRS = {
+    "placeholder", "aria-label", "title", "alt", "hx-confirm",
+    "data-text", "data-confirm", "data-selected-text", "data-remove-label",
+}
+# The markers Alpine fills in client-side (the selection count, a removed
+# option's label): not English, whether bracketed or not.
+MARKER = re.compile(r"\{(?:n|label)\}")
 PSEUDO = re.compile(r"\[[^\[\]]*\]")
 LETTER = re.compile(r"[^\W\d_]")
 
@@ -68,6 +75,7 @@ def untranslated(page, allow=()):
             rest = stripped
         for value in allow:
             rest = rest.replace(value, "")
+        rest = MARKER.sub("", rest)
         if LETTER.search(rest):
             out.append(text)
     return out
@@ -78,6 +86,12 @@ def test_untranslated_helper():
 <body x-data="{ open: a > b }"><p>[Šàvé]</p><p>Save</p><input placeholder="Search"><td>a@example.com</td>
 <span>[Délété [Üšér]]</span><button aria-label="[Çlöšé]"></button></body></html>"""
     assert sorted(untranslated(page, ["a@example.com"])) == ["Save", "Search"]
+
+    # Text Alpine shows from data-* attributes counts too; its {n} and
+    # {label} markers are filled in client-side and are not English.
+    page = """<div data-text="Copied" data-confirm="[Déléţé?]" data-selected-text="{n} of 3 selected"
+data-remove-label="[Rémövé {label}]"></div><p data-selected-text="[{n} öf 3]">{label}</p>"""
+    assert sorted(untranslated(page)) == ["Copied", "{n} of 3 selected"]
 
 
 def main_client(tmp_path):
