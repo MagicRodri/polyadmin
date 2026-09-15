@@ -16,6 +16,12 @@ class Principal:
     extra: dict[str, Any] = field(default_factory=dict)
 ```
 
+`authenticate` may also be `async def`, returning a coroutine that
+resolves to a `Principal | None` -- the adapter awaits it when it is one.
+Combining an async `Authenticator` with a configured `locale_resolver` is
+not supported: the locale resolver reads the principal on a path that
+cannot await.
+
 `request` is intentionally untyped — PolyAdmin's core doesn't know or
 care whether the adapter hands it a FastAPI `Request` or anything else;
 only the adapter (and your own `Authenticator` implementation) needs to

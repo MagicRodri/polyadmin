@@ -215,6 +215,15 @@ never issues a database query:
 | `update(obj, data)` | POST edit, after validation passes |
 | `delete(obj)` | POST/DELETE delete |
 
+Any of these five, plus `list_page`, may be `async def` instead of a plain
+function -- useful for a ModelAdmin backed by an async HTTP client. The
+FastAPI adapter awaits whichever ones are coroutine functions and calls the
+rest directly, so a ModelAdmin may mix sync and async hooks freely. This
+support does not (yet) extend to a ModelAdmin used as a relation target
+(`ForeignKeyField`/`autocomplete_fields`) or referenced by an `Inline`:
+those render through a still-synchronous path, so an async-hooked
+ModelAdmin cannot be used there.
+
 `data` is a `dict[str, Any]` keyed by field name, already coerced to
 each field's Python type (an `IntegerField` submission arrives as `int`,
 a `BooleanField` as `bool`, and so on).
