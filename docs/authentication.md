@@ -122,6 +122,11 @@ it cannot enforce for you:
   you return. The admin renders one message for both; a backend that
   leaks the difference undoes that.
 
+Any of `verify_credentials`, `begin_session`, `end_session` may also be
+`async def` -- useful for a backend whose credential check hits an async
+database or service. The adapter awaits whichever ones are coroutine
+functions, so a `LoginBackend` may mix sync and async methods freely.
+
 ## No authenticator configured
 
 If `Admin` isn't given an `authenticator` at all, every request is

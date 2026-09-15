@@ -1,5 +1,7 @@
 """The login page and its gate."""
 
+import asyncio
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -245,3 +247,75 @@ def test_logout_lands_on_a_page_confirming_it(client):
 def test_logout_rejects_get(client, backend):
     assert client.get("/admin/logout").status_code == 405
     assert backend.ends == 0
+
+
+class AsyncFakeLoginBackend:
+    """Every LoginBackend method is a coroutine function -- the shape a
+    real database- or HTTP-backed login (e.g. checking credentials
+    against an async ORM session) actually takes."""
+
+    def __init__(self, password="correct horse"):
+        self.password = password
+        self.begins = 0
+        self.ends = 0
+
+    async def verify_credentials(self, request, identifier, password):
+        await asyncio.sleep(0)
+        if identifier != "demo@example.com" or password != self.password:
+            return None
+        return Principal(id="demo", display_name="Demo Admin", is_superuser=True)
+
+    async def begin_session(self, request, principal, response):
+        await asyncio.sleep(0)
+        self.begins += 1
+        response.set_cookie(SESSION_COOKIE, "demo", path="/")
+
+    async def end_session(self, request, response):
+        await asyncio.sleep(0)
+        self.ends += 1
+        response.delete_cookie(SESSION_COOKIE, path="/")
+
+    def authenticate(self, request):
+        if not request.cookies.get(SESSION_COOKIE):
+            return None
+        return Principal(id="demo", display_name="Demo Admin", is_superuser=True)
+
+
+def _async_backend_client():
+    backend = AsyncFakeLoginBackend()
+    return _client(
+        Admin(model_admins=[InMemoryUserAdmin()], authenticator=backend, login_backend=backend)
+    ), backend
+
+
+def test_async_verify_credentials_and_begin_session_are_awaited():
+    client, backend = _async_backend_client()
+    response = client.post(
+        "/admin/login",
+        data={"identifier": "demo@example.com", "password": "correct horse"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 303
+    assert backend.begins == 1
+
+
+def test_async_verify_credentials_rejects_bad_password():
+    client, backend = _async_backend_client()
+    response = client.post(
+        "/admin/login",
+        data={"identifier": "demo@example.com", "password": "wrong"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 401
+    assert backend.begins == 0
+
+
+def test_async_end_session_is_awaited_on_logout():
+    client, backend = _async_backend_client()
+    client.post(
+        "/admin/login",
+        data={"identifier": "demo@example.com", "password": "correct horse"},
+        headers=csrf(client),
+    )
+    client.post("/admin/logout", headers=csrf(client))
+    assert backend.ends == 1

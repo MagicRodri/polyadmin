@@ -33,6 +33,11 @@ class LoginBackend(Protocol):
     Passing one to `Admin(login_backend=...)` is the switch: without it the
     login routes are never mounted and an unauthenticated request gets a 401.
     `request` is untyped because core must not know what a fastapi.Request is.
+
+    Any of the three methods may also be `async def` -- the FastAPI adapter
+    awaits whichever ones are coroutine functions, so a backend may mix
+    sync and async methods freely (e.g. an async verify_credentials against
+    a database alongside a sync, in-memory begin_session/end_session).
     """
 
     def verify_credentials(self, request: Any, identifier: str, password: str) -> Any:

@@ -7,6 +7,7 @@ import logging
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.admin import Admin
 from polyadmin.core.login import NEXT_QUERY_PARAM, safe_next_url
 from polyadmin.fastapi.locale import acached_principal
@@ -65,7 +66,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
         password = str(form.get("password") or "")
         next_url = safe_next_url(request.query_params.get(NEXT_QUERY_PARAM), base_path)
 
-        principal = admin.login_backend.verify_credentials(request, identifier, password)
+        principal = await maybe_await(admin.login_backend.verify_credentials(request, identifier, password))
         if principal is None:
             # 401, not 200: a failed sign-in is a failed sign-in, and the
             # status is what a log or a rate limiter in front of this
@@ -79,7 +80,7 @@ def build_login_handlers(admin: Admin, renderer: Renderer, base_path: str):
             # signatures differ: Fiber's ctx is both request and
             # response, while Starlette has no "current response" to
             # reach for -- see core/login.py.
-            admin.login_backend.begin_session(request, principal, response)
+            await maybe_await(admin.login_backend.begin_session(request, principal, response))
         except Exception as exc:  # noqa: BLE001 -- see below
             # The credentials were right but the session could not be
             # stored, so the visitor is not signed in and must not be
@@ -98,7 +99,7 @@ def build_logout_handler(admin: Admin, base_path: str):
     async def logout(request: Request) -> Response:
         response = redirect(request, f"{base_path}/login?signedout=1")
         try:
-            admin.login_backend.end_session(request, response)
+            await maybe_await(admin.login_backend.end_session(request, response))
         except Exception as exc:  # noqa: BLE001 -- see below
             # Nothing useful to offer the visitor here: they asked to
             # leave, and the most likely reason this failed is that there
