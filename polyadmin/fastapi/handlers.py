@@ -23,6 +23,7 @@ from polyadmin.core.query import ListRequest, apply_defaults, list_objects
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.errors import forbidden, not_found
+from polyadmin.fastapi.locale import cached_principal
 from polyadmin.fastapi.relations import (
     compute_relation_options,
     compute_relation_permissions,
@@ -449,9 +450,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
         if action is None:
             return not_found(request, admin, base_path)
 
-        principal = None
-        if admin.authenticator is not None:
-            principal = admin.authenticator.authenticate(request)
+        principal = cached_principal(admin, request)
         if (
             action.permission
             and admin.authorizer is not None

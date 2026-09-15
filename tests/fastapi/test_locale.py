@@ -5,8 +5,11 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.auth import Principal
 from polyadmin.fastapi.router import create_router
 from polyadmin.i18n import get_locale
+from tests.conftest import csrf
 from tests.core.test_i18n import write_catalog
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.fastapi.test_actions import ActionableUserAdmin
+from tests.fastapi.test_login import FakeLoginBackend
 
 HELLO = '{% extends "admin/base.html" %}{% block content %}<p id="greeting">{{ _("Hello") }}</p><p id="lang">{{ locale }}</p>{% endblock %}'
 
@@ -112,3 +115,31 @@ def test_error_pages_use_the_request_locale():
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
     page = TestClient(app).get("/admin/users/999", headers={"Accept-Language": "ru"}).text
     assert '<html lang="ru"' in page
+
+
+def _counting_client(tmp_path, **admin_kwargs):
+    auth = CountingAuthenticator()
+    users = ActionableUserAdmin()
+    users.create({"email": "a@example.com", "is_active": True})
+    admin = Admin(model_admins=[users], authenticator=auth, **admin_kwargs)
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), auth
+
+
+def test_an_action_authenticates_once(tmp_path):
+    client, auth = _counting_client(tmp_path)
+    response = client.post(
+        "/admin/users/actions/deactivate", data={"pks": "1"}, headers=csrf(client), follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert auth.calls == 1
+
+
+def test_the_login_page_authenticates_once(tmp_path):
+    backend = FakeLoginBackend()
+    client, auth = _counting_client(
+        tmp_path, login_backend=backend, locale_resolver=lambda request, principal: None
+    )
+    client.get("/admin/login", follow_redirects=False)
+    assert auth.calls == 1
