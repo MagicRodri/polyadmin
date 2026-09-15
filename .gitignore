@@ -12,3 +12,6 @@ dist/
 # Editors / OS
 .DS_Store
 .idea/
+
+# Isolated worktrees for in-progress work
+.worktrees/
