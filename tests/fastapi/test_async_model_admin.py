@@ -73,3 +73,42 @@ def test_delete_post_awaits_async_get_object_and_async_delete():
     response = client.request("DELETE", f"/admin/users/{user.id}/delete", headers=csrf(client))
     assert response.status_code == 200
     assert asyncio.run(user_admin.get_object(user.id)) is None
+
+
+class AsyncListPageUserAdmin(InMemoryUserAdmin):
+    async def list_page(self, list_request):
+        await asyncio.sleep(0)
+        objects = list(self._store.values())
+        return objects, len(objects)
+
+
+def test_list_view_awaits_an_async_list_page():
+    user_admin = AsyncListPageUserAdmin()
+    user_admin.create({"email": "async-list@example.com"})
+    admin = Admin(model_admins=[user_admin], authenticator=AllowAllAuthenticator())
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+
+    response = client.get("/admin/users")
+    assert response.status_code == 200
+    assert "async-list@example.com" in response.text
+
+
+def test_bulk_action_select_all_awaits_an_async_list_page():
+    user_admin = AsyncListPageUserAdmin()
+    user_admin.create({"email": "a@example.com"})
+    user_admin.create({"email": "b@example.com"})
+    admin = Admin(model_admins=[user_admin], authenticator=AllowAllAuthenticator())
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+
+    response = client.post(
+        "/admin/users/actions/delete_selected",
+        data={"_select_all": "1"},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 303)
+    assert len(user_admin._store) == 0

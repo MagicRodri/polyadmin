@@ -20,7 +20,7 @@ from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
-from polyadmin.core.query import ListRequest, apply_defaults, list_objects
+from polyadmin.core.query import ListRequest, alist_objects, apply_defaults
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.errors import forbidden, not_found
@@ -149,7 +149,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         # otherwise page_of would size the control from the raw request
         # and disagree with the rows fetched.
         list_request = apply_defaults(model_admin, _parse_list_request(request.query_params))
-        objects, total = list_objects(model_admin, list_request)
+        objects, total = await alist_objects(model_admin, list_request)
         page = page_of(objects, total, list_request)
 
         if is_htmx_request(request):
@@ -485,7 +485,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
         if select_all:
             list_request = _parse_list_request_from_form(form)
             list_request.unlimited = True
-            objects, _ = list_objects(model_admin, list_request)
+            objects, _ = await alist_objects(model_admin, list_request)
         else:
             objects = [obj for pk in pks if (obj := await maybe_await(model_admin.get_object(pk))) is not None]
         if not objects:
@@ -534,7 +534,7 @@ def build_lookup_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
         # afterwards, so a list_page applies it in its own query instead
         # of returning the whole table to trim.
         list_request = ListRequest(search=query or None, page=1, page_size=LOOKUP_LIMIT)
-        objects, _ = list_objects(model_admin, list_request)
+        objects, _ = await alist_objects(model_admin, list_request)
         options = [
             (model_admin.get_pk(obj), display_field.get_value(obj) if display_field else model_admin.get_pk(obj))
             for obj in objects
@@ -559,7 +559,7 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
         # whichever page the user happened to be looking at.
         list_request = _parse_list_request(request.query_params)
         list_request.unlimited = True
-        objects, _ = list_objects(model_admin, list_request)
+        objects, _ = await alist_objects(model_admin, list_request)
         columns = list(model_admin.list_display)
         # Computed here, not inside the generator: the route wrapper resets
         # the locale context variable as soon as this handler returns, and
