@@ -131,30 +131,62 @@
   // Dates and decimals are rendered as ISO values and formatted here, in
   // the page's locale, so both implementations display them identically.
   // A date-only value is built from its parts: new Date("YYYY-MM-DD")
-  // parses as UTC midnight, the previous day west of Greenwich.
+  // parses as UTC midnight, the previous day west of Greenwich. The
+  // Date constructor maps years 0-99 onto 1900-1999, so the year is set
+  // again with setFullYear, which does not.
+  //
+  // One Intl formatter per format, built on first use. Each value is
+  // formatted on its own: an unknown lang or an option out of range
+  // throws, and that leaves the one value in its ISO form rather than
+  // aborting the page. A decimal goes to NumberFormat as its string, which
+  // engines that support it format exactly (a Number would round past 15
+  // or so digits); older ones convert it to a Number themselves.
   window.polyadminFormat = function (root) {
-    var lang = document.documentElement.lang || undefined;
+    var lang = document.documentElement.lang || undefined, cache = {};
+    function formatter(key, make) {
+      if (!Object.prototype.hasOwnProperty.call(cache, key)) cache[key] = make();
+      return cache[key];
+    }
     root.querySelectorAll("time[data-format]").forEach(function (el) {
-      var iso = el.getAttribute("datetime"), d, m;
-      if (el.dataset.format === "date") {
-        m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-        if (!m) return;
-        d = new Date(+m[1], +m[2] - 1, +m[3]);
-        el.textContent = new Intl.DateTimeFormat(lang, { dateStyle: "medium" }).format(d);
-      } else {
-        m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(iso);
-        if (!m) return;
-        d = /(Z|[+-]\d{2}:\d{2})$/.test(iso)
-          ? new Date(iso)
-          : new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
-        el.textContent = new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(d);
+      try {
+        var iso = el.getAttribute("datetime"), d, m;
+        if (el.dataset.format === "date") {
+          m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+          if (!m) return;
+          d = new Date(+m[1], +m[2] - 1, +m[3]);
+          d.setFullYear(+m[1], +m[2] - 1, +m[3]);
+          el.textContent = formatter("date", function () {
+            return new Intl.DateTimeFormat(lang, { dateStyle: "medium" });
+          }).format(d);
+        } else {
+          m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(iso);
+          if (!m) return;
+          if (/(Z|[+-]\d{2}:\d{2})$/.test(iso)) {
+            d = new Date(iso);
+          } else {
+            d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+            d.setFullYear(+m[1], +m[2] - 1, +m[3]);
+          }
+          el.textContent = formatter("datetime", function () {
+            return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" });
+          }).format(d);
+        }
+      } catch (err) {
+        // Keep the ISO text.
       }
     });
     root.querySelectorAll('[data-format="decimal"]').forEach(function (el) {
-      var raw = el.dataset.value, n = Number(raw);
-      if (raw === "" || !isFinite(n)) return;
-      var digits = (raw.split(".")[1] || "").length;
-      el.textContent = new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+      try {
+        var raw = el.dataset.value;
+        if (raw === "" || !isFinite(Number(raw))) return;
+        // NumberFormat accepts at most 20 fraction digits.
+        var digits = Math.min((raw.split(".")[1] || "").length, 20);
+        el.textContent = formatter("decimal" + digits, function () {
+          return new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+        }).format(raw);
+      } catch (err) {
+        // Keep the raw text.
+      }
     });
   };
   document.addEventListener("DOMContentLoaded", function () { window.polyadminFormat(document); });
