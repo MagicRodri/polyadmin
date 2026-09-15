@@ -1,9 +1,12 @@
+import asyncio
+
 from polyadmin.core.field import StringField
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.query import (
     DEFAULT_PAGE_SIZE,
     ListRequest,
+    alist_objects,
     execute_list_query,
     list_objects,
 )
@@ -130,3 +133,61 @@ def test_an_explicit_sort_beats_the_default():
 def test_no_default_ordering_leaves_the_source_order_alone():
     objects, _ = list_objects(_ordered_admin(None), ListRequest(unlimited=True))
     assert _names(objects) == "charlie,alpha,bravo"
+
+
+class AsyncListPageUserAdmin(InMemoryUserAdmin):
+    """A list_page that is itself a coroutine function, and a get_queryset
+    that must never run when list_page is present -- same contract as the
+    sync QueryingUserAdmin in tests/fastapi/test_list_querier.py."""
+
+    def __init__(self):
+        super().__init__()
+        self.queryset_calls = 0
+        self._rows = [self.create({"email": "async-page@example.com"})]
+
+    def get_queryset(self):
+        self.queryset_calls += 1
+        return [self.create({"email": "SHOULD-NOT-APPEAR@example.com"})]
+
+    async def list_page(self, list_request):
+        await asyncio.sleep(0)
+        return self._rows, 1
+
+
+def test_alist_objects_awaits_an_async_list_page():
+    admin = AsyncListPageUserAdmin()
+    rows, total = asyncio.run(alist_objects(admin, ListRequest()))
+    assert rows == admin._rows
+    assert total == 1
+    assert admin.queryset_calls == 0
+
+
+class AsyncQuerysetUserAdmin(InMemoryUserAdmin):
+    """No list_page: get_queryset itself is the coroutine function, so the
+    in-memory search/filter/order/paginate tail still runs on its result."""
+
+    async def get_queryset(self):
+        await asyncio.sleep(0)
+        return list(self._store.values())
+
+
+def test_alist_objects_awaits_an_async_get_queryset_then_paginates_in_memory():
+    admin = AsyncQuerysetUserAdmin()
+    admin.create({"email": "b@example.com"})
+    admin.create({"email": "a@example.com"})
+
+    rows, total = asyncio.run(alist_objects(admin, ListRequest(ordering="email")))
+    assert [r.email for r in rows] == ["a@example.com", "b@example.com"]
+    assert total == 2
+
+
+def test_alist_objects_still_works_with_fully_sync_hooks():
+    """Backward compatibility: a plain sync ModelAdmin behaves identically
+    through alist_objects as through list_objects."""
+    admin = InMemoryUserAdmin()
+    admin.create({"email": "john@example.com"})
+
+    sync_rows, sync_total = list_objects(admin, ListRequest())
+    async_rows, async_total = asyncio.run(alist_objects(admin, ListRequest()))
+    assert async_rows == sync_rows
+    assert async_total == sync_total

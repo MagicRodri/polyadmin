@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
+from polyadmin.core._async import maybe_await
+
 # The size assumed when a request names none, matching the handlers'
 # query-string default so a hand-built ListRequest pages like a parsed
 # one.
@@ -135,6 +137,28 @@ def list_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any]
     if hasattr(model_admin, "list_page"):
         return model_admin.list_page(list_request)
     objects = execute_list_query(model_admin, model_admin.get_queryset(), list_request)
+    total = len(objects)
+    offset, limit = list_request.window()
+    offset = min(offset, total)
+    end = total if limit == 0 else min(offset + limit, total)
+    return objects[offset:end], total
+
+
+async def alist_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any], int]:
+    """Async counterpart of list_objects, for a ModelAdmin whose list_page or
+    get_queryset is a coroutine function.
+
+    list_objects stays the sync entrypoint used by the relation-options and
+    inline-listing paths, which run outside any event loop and never await
+    it -- a ModelAdmin with async hooks is not usable as a relation target
+    or inline child until those paths grow their own async counterpart.
+    This one is used only by the FastAPI handlers, which already run inside
+    the request's own event loop.
+    """
+    list_request = apply_defaults(model_admin, list_request)
+    if hasattr(model_admin, "list_page"):
+        return await maybe_await(model_admin.list_page(list_request))
+    objects = execute_list_query(model_admin, await maybe_await(model_admin.get_queryset()), list_request)
     total = len(objects)
     offset, limit = list_request.window()
     offset = min(offset, total)
