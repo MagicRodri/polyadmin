@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
@@ -192,7 +193,7 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "view"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is None:
             return not_found(request, admin, base_path)
         # The record's own page: per-object rules decide whether it
@@ -272,7 +273,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     base_path=base_path,
                 )
             return HTMLResponse(html, status_code=422)
-        obj = model_admin.create(data)
+        obj = await maybe_await(model_admin.create(data))
         record_audit(admin, principal, model_admin, AUDIT_CREATE, obj)
         # "Save and add another" goes back to an empty form, checked
         # before building the record's URL since it never uses one.
@@ -301,7 +302,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "update"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is None:
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
@@ -322,7 +323,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "update"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is None:
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
@@ -357,7 +358,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     base_path=base_path,
                 )
             return HTMLResponse(html, status_code=422)
-        model_admin.update(obj, data)
+        await maybe_await(model_admin.update(obj, data))
         record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
         # Translators: %(name)s is the model's name. French and Russian
         # nouns carry gender, so phrase around agreement.
@@ -383,7 +384,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is None:
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
@@ -402,11 +403,11 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
-            model_admin.delete(obj)
+            await maybe_await(model_admin.delete(obj))
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
         # Translators: %(name)s is the model's name. French and Russian
@@ -423,11 +424,11 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "delete"), model_admin)
         if error:
             return error
-        obj = model_admin.get_object(pk)
+        obj = await maybe_await(model_admin.get_object(pk))
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
-            model_admin.delete(obj)
+            await maybe_await(model_admin.delete(obj))
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         return HTMLResponse("")
 
@@ -486,7 +487,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             list_request.unlimited = True
             objects, _ = list_objects(model_admin, list_request)
         else:
-            objects = [obj for pk in pks if (obj := model_admin.get_object(pk)) is not None]
+            objects = [obj for pk in pks if (obj := await maybe_await(model_admin.get_object(pk))) is not None]
         if not objects:
             response = redirect(request, redirect_to)
             set_flash(response, "warning", gettext("No items selected."))
@@ -591,7 +592,7 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
-        parent_obj = model_admin.get_object(pk)
+        parent_obj = await maybe_await(model_admin.get_object(pk))
         if parent_obj is None:
             return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
@@ -615,7 +616,7 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             )
             return HTMLResponse(html, status_code=422)
 
-        child_admin.create(data)
+        await maybe_await(child_admin.create(data))
         html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
         return HTMLResponse(html)
 
@@ -626,14 +627,14 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
-        parent_obj = model_admin.get_object(pk)
+        parent_obj = await maybe_await(model_admin.get_object(pk))
         if parent_obj is None:
             return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
         _, error = await authorize(admin, request, base_path, resource_permission(inline.child, "update"), child_admin)
         if error:
             return error
-        child_obj = child_admin.get_object(child_pk)
+        child_obj = await maybe_await(child_admin.get_object(child_pk))
         if child_obj is None:
             return not_found(request, admin, base_path)
 
@@ -653,7 +654,7 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             )
             return HTMLResponse(html, status_code=422)
 
-        child_admin.update(child_obj, data)
+        await maybe_await(child_admin.update(child_obj, data))
         html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
         return HTMLResponse(html)
 
@@ -664,16 +665,16 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(parent_slug, "update"), model_admin)
         if error:
             return error
-        parent_obj = model_admin.get_object(pk)
+        parent_obj = await maybe_await(model_admin.get_object(pk))
         if parent_obj is None:
             return not_found(request, admin, base_path)
         child_admin = admin.get_model_admin(inline.child)
         _, error = await authorize(admin, request, base_path, resource_permission(inline.child, "delete"), child_admin)
         if error:
             return error
-        child_obj = child_admin.get_object(child_pk)
+        child_obj = await maybe_await(child_admin.get_object(child_pk))
         if child_obj is not None:
-            child_admin.delete(child_obj)
+            await maybe_await(child_admin.delete(child_obj))
 
         html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
         return HTMLResponse(html)
