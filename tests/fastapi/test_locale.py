@@ -45,6 +45,22 @@ def test_locale_cookie_beats_accept_language(tmp_path):
     assert '<p id="greeting">Hello</p>' in page
 
 
+def test_switcher_off_ignores_the_locale_cookie(tmp_path):
+    """Ruling R7: with the switcher off nothing in the admin can change the
+    cookie, so a leftover one (it lives a year) must not beat the resolver
+    or the browser's language."""
+    client, _ = hello_client(tmp_path, locale_switcher=False, locale_resolver=lambda request, principal: "fr")
+    client.cookies.set("admin_locale", "ru")
+    page = client.get("/admin/hello").text
+    assert '<html lang="fr"' in page
+    assert "Bonjour" in page
+
+    (tmp_path / "plain").mkdir()
+    client, _ = hello_client(tmp_path / "plain", locale_switcher=False)
+    client.cookies.set("admin_locale", "ru")
+    assert '<html lang="fr"' in client.get("/admin/hello", headers={"Accept-Language": "fr"}).text
+
+
 class CountingAuthenticator:
     def __init__(self):
         self.calls = 0

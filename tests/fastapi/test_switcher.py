@@ -77,7 +77,20 @@ def test_no_switcher_with_one_locale(switcher_client):
 
 
 def test_no_switcher_when_disabled(switcher_client):
-    assert 'action="/admin/locale"' not in switcher_client(locale_switcher=False).get("/admin/users").text
+    client = switcher_client(locale_switcher=False)
+    assert 'action="/admin/locale"' not in client.get("/admin/users").text
+    response = client.post("/admin/locale", data={"locale": "fr"}, headers=csrf(client), follow_redirects=False)
+    assert response.status_code in (404, 405)
+    assert "admin_locale" not in response.headers.get("set-cookie", "")
+
+
+def test_locale_cookie_is_secure_over_https(switcher_client):
+    https = TestClient(switcher_client().app, base_url="https://testserver")
+    response = https.post("/admin/locale", data={"locale": "fr"}, headers=csrf(https), follow_redirects=False)
+    assert "secure" in response.headers["set-cookie"].lower()
+    plain = switcher_client()
+    response = plain.post("/admin/locale", data={"locale": "fr"}, headers=csrf(plain), follow_redirects=False)
+    assert "secure" not in response.headers["set-cookie"].lower()
 
 
 def test_switcher_renders_on_the_login_page(tmp_path):

@@ -32,16 +32,25 @@ def cached_principal(admin: Any, request: Request) -> Any:
     return cached
 
 
+def switcher_on(admin: Any, i18n: I18n) -> bool:
+    """Whether the language switcher (and its route) is on: enabled, and
+    more than one locale to choose from."""
+    return bool(admin.locale_switcher) and len(i18n.supported) > 1
+
+
 def resolve_request_locale(admin: Any, i18n: I18n, request: Request) -> str:
+    """The request's locale. The admin_locale cookie counts only while the
+    switcher is on: with it off nothing in the admin can change the
+    cookie, so a leftover one must not override the resolver or the
+    browser."""
     resolver = None
     if admin.locale_resolver is not None:
 
         def resolver() -> str | None:
             return admin.locale_resolver(request, cached_principal(admin, request))
 
-    return i18n.resolve(
-        request.cookies.get(LOCALE_COOKIE_NAME), resolver, request.headers.get("accept-language")
-    )
+    cookie = request.cookies.get(LOCALE_COOKIE_NAME) if switcher_on(admin, i18n) else None
+    return i18n.resolve(cookie, resolver, request.headers.get("accept-language"))
 
 
 def make_admin_route(admin: Any, base_path: str, i18n: I18n, renderer: Any) -> type[APIRoute]:

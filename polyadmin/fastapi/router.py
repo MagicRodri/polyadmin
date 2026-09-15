@@ -31,7 +31,7 @@ from polyadmin.fastapi.handlers import (
     build_lookup_handler,
 )
 from polyadmin.fastapi.inlines import validate_inlines
-from polyadmin.fastapi.locale import build_locale_handler, make_admin_route
+from polyadmin.fastapi.locale import build_locale_handler, make_admin_route, switcher_on
 from polyadmin.fastapi.login import build_login_handlers, build_logout_handler
 from polyadmin.fastapi.pages import build_page_handler
 from polyadmin.fastapi.responses import clear_flash, pop_flash
@@ -75,7 +75,7 @@ def create_router(
             include_in_schema=False,
         )
 
-    if admin.locale_switcher and len(i18n.supported) > 1:
+    if switcher_on(admin, i18n):
         router.add_api_route(
             LOCALE_PATH, build_locale_handler(i18n, base_path), methods=["POST"], include_in_schema=False
         )
