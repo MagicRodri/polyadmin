@@ -80,3 +80,29 @@ def test_a_decimal_keeps_its_own_precision_unlike_a_float():
     # float (which carries no such intent) gets the shortest-form
     # treatment above.
     assert decimal_display(Decimal("12.50")) == "12.50"
+
+
+def render_input(field, value):
+    env = Renderer().env
+    template = env.from_string(
+        '{% from "admin/components/ui/field.html" import render_form_input %}{{ render_form_input(field, value, []) }}'
+    )
+    return template.render(field=field, value=value, base_path="/admin")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "want"),
+    [
+        # A date or datetime-local input discards anything but its own ISO
+        # form: str() of an aware datetime carries an offset (and a space),
+        # which datetime-local rejects.
+        (DateField("x"), date(2019, 3, 1), 'value="2019-03-01"'),
+        (DateField("x"), datetime(2019, 3, 1, 9, 5, tzinfo=timezone.utc), 'value="2019-03-01"'),
+        (DateTimeField("x"), datetime(2019, 3, 1, 9, 5, 30, tzinfo=timezone(timedelta(hours=2))), 'value="2019-03-01T09:05"'),
+        (DateTimeField("x"), datetime(2019, 3, 1, 9, 5, 30), 'value="2019-03-01T09:05"'),  # noqa: DTZ001 -- naive on purpose
+        (DateField("x"), None, 'value=""'),
+        (DateField("x"), "2019-03-01", 'value="2019-03-01"'),
+    ],
+)
+def test_date_inputs_are_filled_with_their_iso_form(field, value, want):
+    assert want in render_input(field, value)

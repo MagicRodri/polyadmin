@@ -109,7 +109,7 @@
   {% endfor %}
 </select>
 {% else %}
-<input type="text" name="{{ field.name }}" value="{{ value if value is not none else '' }}" autocomplete="off" class="{{ field_classes }}">
+<input type="text" name="{{ field.name }}" value="{{ value|form_value(field.field_type) }}" autocomplete="off" class="{{ field_classes }}">
 {% endif %}
 {% for error in errors or [] %}
 <p class="{{ ui('text', 'error') }}">{{ error }}</p>

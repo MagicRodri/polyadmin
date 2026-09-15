@@ -49,7 +49,8 @@
      nothing posted. The handler refuses the name too -- omitting the
      input here is presentation, not protection. #}
   {% if readonly_field %}
-  <p class="{{ ui('field', 'readonly') }}">{{ value if value not in (none, "") else "&mdash;" | safe }}</p>
+  {% set shown = value|form_value(field.field_type) %}
+  <p class="{{ ui('field', 'readonly') }}">{{ shown if shown else "&mdash;" | safe }}</p>
   {% elif field.field_type == "text" %}
   <textarea id="field-{{ field.name }}" name="{{ field.name }}" placeholder="{{ _(field.placeholder) }}" autocomplete="off"
             {% if field.required %}required{% endif %}
@@ -61,7 +62,7 @@
   {# DatePicker: a native date input (which already posts YYYY-MM-DD
      with no JS and gets the platform picker on mobile) plus the shadcn
      Calendar port in a popover beside it. See components/ui/calendar.html. #}
-  {{ date_picker(field.name, value if value is not none else "", field.required, field.disabled) }}
+  {{ date_picker(field.name, value|form_value(field.field_type), field.required, field.disabled) }}
   {% elif field.field_type == "enum" %}
   {% set enum_options = namespace(pairs=[]) %}
   {% for choice in field.choices %}{% set enum_options.pairs = enum_options.pairs + [(choice, choice)] %}{% endfor %}
@@ -144,7 +145,7 @@
   {{ multi_select(field.name, m2m_options.pairs, placeholder=_("Select…"), disabled=field.disabled) }}
   {% else %}
   <input type="{{ input_types.get(field.field_type, 'text') }}" id="field-{{ field.name }}" name="{{ field.name }}"
-         value="{{ value if value is not none else '' }}" placeholder="{{ _(field.placeholder) }}" autocomplete="off"
+         value="{{ value|form_value(field.field_type) }}" placeholder="{{ _(field.placeholder) }}" autocomplete="off"
          {% if field.required %}required{% endif %}
          {% if field.readonly %}readonly{% endif %}
          {% if field.disabled %}disabled{% endif %}

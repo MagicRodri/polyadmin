@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from main import app
@@ -238,3 +240,42 @@ def test_create_user_end_to_end():
     # The choice field round-trips: ui/select posts through a hidden
     # input, so this is the example's coverage of that widget.
     assert "Pro" in detail.text
+
+
+_FOUNDED_INPUT = re.compile(r'name="founded"\s+value="([^"]*)"')
+
+
+def _founded_form_value(body):
+    """What the edit form's founded input would post back untouched."""
+    match = _FOUNDED_INPUT.search(body)
+    assert match, "the edit form has no founded input"
+    return match.group(1)
+
+
+def _create_organization(founded):
+    response = client.post(
+        "/admin/organizations/create",
+        data={"name": "Form Target", "founded": founded, "balance": "100"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert response.status_code == 303
+    return response.headers["location"]
+
+
+def test_edit_form_fills_founded_with_an_iso_date():
+    location = _create_organization("2019-03-01")
+    assert 'value="2019-03-01"' in client.get(f"{location}/edit").text
+
+
+def test_editing_without_touching_founded_keeps_it():
+    location = _create_organization("2019-03-01")
+    founded = _founded_form_value(client.get(f"{location}/edit").text)
+    edit = client.post(
+        f"{location}/edit",
+        data={"name": "Form Target Renamed", "founded": founded, "balance": "100"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert edit.status_code == 303
+    assert '<time datetime="2019-03-01" data-format="date">2019-03-01</time>' in client.get(location).text

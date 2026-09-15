@@ -65,6 +65,24 @@ def iso_datetime(value: Any) -> str | None:
     return None
 
 
+def form_value(value: Any, field_type: str) -> str:
+    """A field's value as its form control's value attribute.
+
+    A date or datetime-local input discards anything but its own ISO form
+    -- str() of an aware datetime carries an offset and a space -- so a
+    date is written as YYYY-MM-DD and a datetime as YYYY-MM-DDTHH:MM, its
+    wall-clock time, as the input shows it. None is empty; anything else
+    (a string posted back after a validation error) is shown as given.
+    """
+    if value is None:
+        return ""
+    if field_type == "date" and isinstance(value, date):
+        return (value.date() if isinstance(value, datetime) else value).isoformat()
+    if field_type == "datetime" and isinstance(value, datetime):
+        return value.strftime("%Y-%m-%dT%H:%M")
+    return str(value)
+
+
 def decimal_display(value: Any) -> str:
     """Fixed-point text for a decimal value -- never the scientific notation
     plain str() can fall into (a Decimal built from scientific-notation
@@ -173,6 +191,7 @@ class Renderer:
         env.filters["iso_date"] = iso_date
         env.filters["iso_datetime"] = iso_datetime
         env.filters["decimal_display"] = decimal_display
+        env.filters["form_value"] = form_value
         return env
 
     def _switcher(self, locale: str) -> LocaleSwitcher | None:
