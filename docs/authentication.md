@@ -33,7 +33,13 @@ admin = Admin(
 
 `Principal.extra` is a free-form bag for whatever your own `Authorizer`
 needs beyond `is_superuser` (roles, team IDs, scopes, ...) — the core
-never reads it itself.
+never reads it itself. A `locale_resolver` (see
+[`i18n.md`](i18n.md#how-a-requests-locale-is-chosen)) can read it too —
+a per-user language preference stashed in `extra` is a common use —
+since it receives the same `Principal` `authenticate` produced for
+this request. Authentication still runs at most once per request even
+when both the locale resolver and the route's own authorization need
+it: whichever asks first caches the result for the other.
 
 ## Built-in implementations
 

@@ -223,10 +223,17 @@ a `BooleanField` as `bool`, and so on).
 
 `validate(data)` runs every `form_fields` field's own validators
 (required-ness first, then any custom `validators=`) and returns a
-`dict[str, list[str]]` of field name → error messages. A non-empty
-result re-renders the form with those errors instead of calling
-`create`/`update` — those are only ever called with data that already
-passed validation.
+`dict[str, list[str]]` of field name → error messages, already
+translated into the request's locale. A non-empty result re-renders
+the form with those errors instead of calling `create`/`update` —
+those are only ever called with data that already passed validation.
+
+A field validator is a plain callable taking the value and raising
+`ValueError` on a bad one; its message is translated the same way the
+built-in required-field message is — a static English message
+(`raise ValueError("Enter a valid number.")`) only needs a host catalog
+entry, since the framework runs it through `gettext` when the form
+re-renders. See [`i18n.md`](i18n.md#in-code).
 
 ## Search, filters, ordering
 

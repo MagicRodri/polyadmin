@@ -52,6 +52,17 @@ create_router(..., exporters=(CSVExporter(), XLSXExporter(), MyExporter()))
 ```
 
 Any `Exporter` subclass implementing `format`, `content_type`,
-`file_extension()`, and `stream(admin, model_admin, objects, columns)`
-gets its own `/export/{format}` route registered automatically, one per
-resource.
+`file_extension()`, and `stream(admin, model_admin, objects, columns,
+header=None)` gets its own `/export/{format}` route registered
+automatically, one per resource.
+
+`header` carries the already-translated column headers (falling back to
+each field's own `label` when a custom exporter doesn't receive one).
+The handler computes it *before* streaming starts, not inside the
+generator: `StreamingResponse` only iterates the generator after the
+route wrapper has reset the request's locale context variable, so a
+translation attempted from inside `stream` itself would silently fall
+back to English. A custom `Exporter` translating anything else of its
+own has to do the same — read `gettext`/`get_locale()` before
+returning its generator, not from within it. See
+[`i18n.md`](i18n.md#in-code).

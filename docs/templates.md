@@ -44,6 +44,13 @@ option: a widget whose `template` name isn't one of the built-ins is
 looked up across the `template_dirs` directories the same way. See
 [`dashboard.md`](dashboard.md#custom-widgets).
 
+An override translates its own text the same way the framework's own
+templates do — `{{ _("Save") }}`, `{{ _(field.label) }}` — and gets
+`ngettext`/`|tojson`/`{{ locale }}` for free: `jinja2.ext.i18n` is
+installed on every locale's `Environment`, override files included, so
+there's nothing extra to wire up. See
+[`i18n.md`](i18n.md#in-templates).
+
 ## Custom admin page templates
 
 A custom `AdminPage` (see [`routing.md`](routing.md#custom-admin-pages))

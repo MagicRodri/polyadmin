@@ -31,6 +31,8 @@ permissions) and you get:
 - Authentication/authorization hooks gating every route *and* every
   control the templates render
 - CSV and XLSX export
+- Internationalisation: per-request locale, language switcher, French
+  and Russian
 - Toast notifications for every create/update/delete/action
 - Per-resource (and per-widget) template overrides, so an application
   can replace one view's markup without forking the framework
