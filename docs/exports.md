@@ -56,6 +56,12 @@ Any `Exporter` subclass implementing `format`, `content_type`,
 header=None)` gets its own `/export/{format}` route registered
 automatically, one per resource.
 
+**Breaking change for custom exporters:** the export route now always
+calls `stream(..., header=...)` with `header` as a keyword argument, so
+an `Exporter` subclass written against the old four-argument
+`stream(admin, model_admin, objects, columns)` fails with a `TypeError`
+until it accepts `header` (defaulting it to `None` is enough).
+
 `header` carries the already-translated column headers (falling back to
 each field's own `label` when a custom exporter doesn't receive one).
 The handler computes it *before* streaming starts, not inside the

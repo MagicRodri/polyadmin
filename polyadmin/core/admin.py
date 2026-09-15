@@ -58,8 +58,11 @@ class Admin:
         # 401. None leaves both behaviours off -- see core/login.py.
         self.login_backend = login_backend
         # Internationalisation -- see polyadmin/i18n and docs/i18n.md. The
-        # defaults serve English plus every framework catalog, resolved per
-        # request, with the language switcher shown.
+        # defaults serve English plus every framework catalog (fr, ru),
+        # resolved per request, with the language switcher shown.
+        # locale_resolver(request, principal) gets the request's
+        # authenticated principal on every page, login and error pages
+        # included -- None only without a session or an authenticator.
         self.default_locale = default_locale
         self.locales = list(locales)
         self.locale_resolver = locale_resolver
