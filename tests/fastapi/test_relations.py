@@ -307,7 +307,7 @@ def test_multi_select_remove_label_is_formatted_on_the_server(tmp_path):
         text = client.get("/admin/users/create", headers={"Accept-Language": language}).text
         ms = multi_select_markup(text)
         assert f'data-remove-label="{want}"' in ms, f"{language}: expected the server-formatted label"
-        assert ':aria-label="$el.dataset.removeLabel.replace(\'{label}\', item.label)"' in ms
+        assert ':aria-label="$el.dataset.removeLabel.replace(\'{label}\', () => item.label)"' in ms
 
 
 def test_many_to_many_selection_posts_under_the_field_name():

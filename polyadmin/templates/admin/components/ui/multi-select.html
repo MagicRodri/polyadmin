@@ -54,7 +54,7 @@
              places the {label} marker; Alpine only swaps it for the chip's
              label, read off the element like every other. #}
           <span role="button" tabindex="0" data-remove-label="{{ _('Remove %(label)s', label='{label}') }}"
-                :aria-label="$el.dataset.removeLabel.replace('{label}', item.label)"
+                :aria-label="$el.dataset.removeLabel.replace('{label}', () => item.label)"
                 @click.stop="remove(item.value)" @keydown.enter.stop.prevent="remove(item.value)"
                 @keydown.space.stop.prevent="remove(item.value)"
                 class="{{ ui('multi-select', 'chip-remove') }}">

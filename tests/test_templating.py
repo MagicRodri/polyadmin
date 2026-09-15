@@ -1,7 +1,9 @@
+import re
+
 from polyadmin.core.admin import Admin
 from polyadmin.core.pagination import paginate
 from polyadmin.i18n import GettextTranslator, I18n, use_locale
-from polyadmin.templating import Renderer
+from polyadmin.templating import FRAMEWORK_TEMPLATES_DIR, Renderer
 from tests.core.test_i18n import RU_PLURALS, write_catalog
 from tests.core.test_model_admin import InMemoryUserAdmin
 
@@ -163,3 +165,16 @@ def test_ngettext_picks_the_plural_form_and_binds_num(tmp_path):
     # Further placeholders ride alongside the bound count.
     html = render_in("en", """{{ ngettext("%(n)s of %(num)d row", "%(n)s of %(num)d rows", 3, n="<n>") }}""")
     assert html == "&lt;n&gt; of 3 rows"
+
+
+def test_marker_fills_use_a_function_replacement():
+    """String.replace with a string replacement expands "$&", "$1" and the
+    like, so a record label containing "$&" would come out mangled. Every
+    client-side fill of a {marker} must pass a function. Mirrors Go's
+    TestMarkerFillsUseAFunctionReplacement."""
+    fill = re.compile(r"""\.replace\('\{\w+\}',\s*([^,]*?)\)\"""")
+    found = []
+    for path in FRAMEWORK_TEMPLATES_DIR.rglob("*.html"):
+        found += [(path.name, m.group(0), m.group(1).strip()) for m in fill.finditer(path.read_text())]
+    assert len(found) >= 2, "the multi-select's and the pagination's fills"
+    assert all(replacement.startswith("() =>") for _, _, replacement in found), found

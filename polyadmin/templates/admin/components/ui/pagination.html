@@ -30,7 +30,7 @@
      x-init="$el.closest('#resource-list').addEventListener('change', () => {
                n = $el.closest('#resource-list').querySelectorAll('.row-checkbox:checked').length })"
      data-selected-text="{{ ngettext('%(n)s of %(num)d row selected', '%(n)s of %(num)d rows selected', page.total_count, n='{n}') }}"
-     x-text="$el.dataset.selectedText.replace('{n}', n)"
+     x-text="$el.dataset.selectedText.replace('{n}', () => n)"
      {% endif %}>
     {% if actions %}{{ ngettext("%(n)s of %(num)d row selected", "%(n)s of %(num)d rows selected", page.total_count, n=0) }}{% else %}{{ ngettext("%(num)d row", "%(num)d rows", page.total_count) }}{% endif %}
   </p>
