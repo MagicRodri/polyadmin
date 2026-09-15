@@ -48,3 +48,15 @@ def test_safe_redirect_path():
     ]
     for referer, want in cases:
         assert safe_redirect_path(referer, host, base, fallback) == want, referer
+
+    # Mounted at the root every path is "under" the base, so a path that a
+    # browser reads as protocol-relative ("//host", or "/\\host", as
+    # browsers treat "\\" like "/") must be refused on its own.
+    root_cases = [
+        ("https://admin.example.com//evil.example/x", "/"),
+        ("https://admin.example.com/\\evil.example/x", "/"),
+        ("/\\evil.example/x", "/"),
+        ("https://admin.example.com/users?page=2", "/users?page=2"),
+    ]
+    for referer, want in root_cases:
+        assert safe_redirect_path(referer, host, "", "/") == want, referer

@@ -102,3 +102,4 @@ def test_switcher_renders_on_the_login_page(tmp_path):
     client = TestClient(app)
     page = client.get("/admin/login").text
     assert 'action="/admin/locale"' in page
+

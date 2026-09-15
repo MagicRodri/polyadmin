@@ -59,6 +59,11 @@ def safe_redirect_path(referer: str | None, host: str, base_path: str, fallback:
     # foreign netloc.
     if parsed.netloc and parsed.netloc != host:
         return fallback
+    # A path a browser reads as protocol-relative: "//evil.example/x", or
+    # "/\\evil.example/x" (browsers treat "\\" like "/"). Under a root
+    # mount every path passes the base check below, so refuse these first.
+    if parsed.path.startswith(("//", "/\\")):
+        return fallback
     # Exact match, or a child path -- "/adminX" must not pass for "/admin".
     if parsed.path != base_path and not parsed.path.startswith(base_path + "/"):
         return fallback

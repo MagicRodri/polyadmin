@@ -87,7 +87,9 @@ def build_locale_handler(i18n: I18n, base_path: str) -> Callable:
 
     async def handler(request: Request) -> Response:
         form = await request.form()
-        target = safe_redirect_path(request.headers.get("referer"), request.url.netloc, base_path, base_path)
+        # The fallback is the admin root: "/" when mounted at the site root.
+        root = base_path or "/"
+        target = safe_redirect_path(request.headers.get("referer"), request.url.netloc, base_path, root)
         response = redirect(request, target)
         locale = i18n.match(form.get(LOCALE_FORM_FIELD))
         if locale:
