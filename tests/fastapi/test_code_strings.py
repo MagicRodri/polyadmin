@@ -86,3 +86,23 @@ def test_delete_selected_flash_is_not_double_bracketed_under_pseudo_locale(tmp_p
     single = pseudo("Deleted %(num)d record.") % {"num": 1}
     assert single in page
     assert pseudo(single) not in page
+
+
+def test_russian_flash_round_trips_in_an_ascii_cookie():
+    """A cookie value must be ASCII; a translated flash message is not.
+    json.dumps escapes it to \\uXXXX and Starlette quotes the rest, so the
+    Set-Cookie header stays ASCII and reading it back restores the text.
+    Mirrors Go's TestRussianFlashRoundTripsInAnASCIICookie."""
+    users = InMemoryUserAdmin()
+    app = FastAPI()
+    app.include_router(create_router(Admin(model_admins=[users]), base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+    client.cookies.set("admin_locale", "ru")
+    response = client.post(
+        "/admin/users/create", data={"email": "a@example.com"}, headers=csrf(client), follow_redirects=False
+    )
+    assert response.status_code == 303
+    flash = [h for h in response.headers.get_list("set-cookie") if h.startswith("admin_messages=")]
+    assert flash, "no flash cookie was set"
+    assert flash[0].isascii(), flash[0]
+    assert "запись создана" in client.get(response.headers["location"]).text
