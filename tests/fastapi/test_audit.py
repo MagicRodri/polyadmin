@@ -1,5 +1,5 @@
 """Audit logging."""
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -136,7 +136,7 @@ def test_history_panel_translates_the_framework_verbs_but_not_action_names():
     user = user_admin.create({"email": "a@example.com"})
     client.post(f"/admin/users/{user.id}/edit", data={"email": "b@example.com"},
                 headers=csrf(client), follow_redirects=False)
-    logger.entries.append(AuditEntry(at=datetime(2026, 1, 1, tzinfo=UTC), action="mark_active", resource="users", object_pk=user.id))
+    logger.entries.append(AuditEntry(at=datetime(2026, 1, 1, tzinfo=timezone.utc), action="mark_active", resource="users", object_pk=user.id))
 
     client.cookies.set("admin_locale", PSEUDO_LOCALE)
     page = client.get(f"/admin/users/{user.id}").text
