@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-14 22:02+0500\n"
+"POT-Creation-Date: 2026-09-15 10:49+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -34,14 +34,20 @@ msgid_plural "%(n)s of %(num)d rows selected"
 msgstr[0] "%(n)s sur %(num)d ligne sélectionnée"
 msgstr[1] "%(n)s sur %(num)d lignes sélectionnées"
 
+#. Translators: %(name)s is the model's name. French and Russian
+#. nouns carry gender, so phrase around agreement.
 #, python-format
 msgid "%(name)s created."
 msgstr "« %(name)s » : enregistrement créé."
 
+#. Translators: %(name)s is the model's name. French and Russian
+#. nouns carry gender, so phrase around agreement.
 #, python-format
 msgid "%(name)s deleted."
 msgstr "« %(name)s » : enregistrement supprimé."
 
+#. Translators: %(name)s is the model's name. French and Russian
+#. nouns carry gender, so phrase around agreement.
 #, python-format
 msgid "%(name)s updated."
 msgstr "« %(name)s » : enregistrement mis à jour."
@@ -264,9 +270,6 @@ msgstr "Enregistrer et continuer la modification"
 #, python-format
 msgid "Save to add %(label)s."
 msgstr "Enregistrer pour ajouter %(label)s."
-
-msgid "Search..."
-msgstr "Rechercher..."
 
 msgid "Search…"
 msgstr "Rechercher…"
