@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import Request, Response
 from fastapi.routing import APIRoute
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.fastapi.csrf import make_csrf_route
 from polyadmin.fastapi.responses import redirect
@@ -28,6 +29,26 @@ def cached_principal(admin: Any, request: Request) -> Any:
     cached = getattr(request.state, "principal_cache", _UNSET)
     if cached is _UNSET:
         cached = admin.authenticator.authenticate(request)
+        request.state.principal_cache = cached
+    return cached
+
+
+async def acached_principal(admin: Any, request: Request) -> Any:
+    """Async counterpart of cached_principal, for an Authenticator whose
+    authenticate() is a coroutine function.
+
+    Shares the same request.state.principal_cache slot as cached_principal,
+    so whichever one runs first for a given request caches the answer for
+    the other. cached_principal itself is untouched: it is still what the
+    locale_resolver path uses (see resolve_request_locale below), which
+    runs outside any event loop and cannot await -- combining an async
+    Authenticator with a configured locale_resolver is unsupported.
+    """
+    if admin.authenticator is None:
+        return None
+    cached = getattr(request.state, "principal_cache", _UNSET)
+    if cached is _UNSET:
+        cached = await maybe_await(admin.authenticator.authenticate(request))
         request.state.principal_cache = cached
     return cached
 

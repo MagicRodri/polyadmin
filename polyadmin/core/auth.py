@@ -23,7 +23,10 @@ class Principal:
 
 
 class Authenticator(Protocol):
-    def authenticate(self, request: Any) -> Principal | None: ...
+    def authenticate(self, request: Any) -> Principal | None:
+        """May also be `async def`, returning an Awaitable[Principal | None];
+        the FastAPI adapter awaits it via acached_principal when it is."""
+        ...
 
 
 class AllowAllAuthenticator:

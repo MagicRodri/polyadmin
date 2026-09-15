@@ -1,8 +1,12 @@
+import asyncio
+from types import SimpleNamespace
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.auth import Principal
+from polyadmin.fastapi.locale import acached_principal
 from polyadmin.fastapi.router import create_router
 from polyadmin.i18n import get_locale
 from tests.conftest import csrf
@@ -143,3 +147,58 @@ def test_the_login_page_authenticates_once(tmp_path):
     )
     client.get("/admin/login", follow_redirects=False)
     assert auth.calls == 1
+
+
+class AsyncAuthenticator:
+    def __init__(self, principal):
+        self._principal = principal
+        self.calls = 0
+
+    async def authenticate(self, request):
+        self.calls += 1
+        await asyncio.sleep(0)
+        return self._principal
+
+
+def _fake_request():
+    return SimpleNamespace(state=SimpleNamespace())
+
+
+def test_acached_principal_awaits_an_async_authenticator():
+    principal = Principal(id="u1")
+    admin = SimpleNamespace(authenticator=AsyncAuthenticator(principal))
+    request = _fake_request()
+
+    result = asyncio.run(acached_principal(admin, request))
+    assert result is principal
+
+
+def test_acached_principal_caches_within_one_request():
+    authenticator = AsyncAuthenticator(Principal(id="u1"))
+    admin = SimpleNamespace(authenticator=authenticator)
+    request = _fake_request()
+
+    async def call_twice():
+        await acached_principal(admin, request)
+        return await acached_principal(admin, request)
+
+    asyncio.run(call_twice())
+    assert authenticator.calls == 1
+
+
+def test_acached_principal_returns_none_with_no_authenticator():
+    admin = SimpleNamespace(authenticator=None)
+    assert asyncio.run(acached_principal(admin, _fake_request())) is None
+
+
+def test_acached_principal_also_works_with_a_sync_authenticator():
+    """Backward compatibility: a plain sync Authenticator (the common
+    case) still works through the async entrypoint."""
+
+    class SyncAuthenticator:
+        def authenticate(self, request):
+            return Principal(id="sync-u1")
+
+    admin = SimpleNamespace(authenticator=SyncAuthenticator())
+    result = asyncio.run(acached_principal(admin, _fake_request()))
+    assert result.id == "sync-u1"
