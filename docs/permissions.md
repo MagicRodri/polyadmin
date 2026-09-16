@@ -83,6 +83,21 @@ and all three delete routes. The same answer also drives the controls a
 record's own pages show, so a record you may view but not change simply
 has no Edit button.
 
+## Deletes that cascade
+
+A ModelAdmin implementing `delete_preview` reports what a delete would
+take with it (see [`deletes.md`](deletes.md)), and those related records
+are put through the same two checks:
+
+- **A cascade into a type the principal may not delete blocks the whole
+  delete.** Otherwise deleting the parent would be a way around
+  `<slug>.delete` on the child. Both halves count: the child
+  ModelAdmin's own `can_delete`, then the authorizer. A type the admin
+  does not manage has no ModelAdmin to ask and so never blocks.
+- **Related records the principal may not view are counted, not
+  named.** The preview says "3 you can't view" rather than listing them
+  — the size of the delete is not a secret, the records are.
+
 ## Built-in implementations
 
 Same caveat as [`authentication.md`](authentication.md)'s built-in

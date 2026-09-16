@@ -28,6 +28,8 @@ permissions) and you get:
   records that point back at it, Django-admin style
 - Record and bulk Actions, with a shadcn/ui Dialog confirmation step for
   destructive ones
+- Delete previews: the confirmation page says what else a delete takes
+  with it, and protected records block it
 - Authentication/authorization hooks gating every route *and* every
   control the templates render
 - CSV and XLSX export
@@ -130,7 +132,7 @@ allowed by default (fine for exploring locally, not for anything
 real) — see [`docs/authentication.md`](docs/authentication.md)
 and [`docs/permissions.md`](docs/permissions.md) before
 deploying. For everything else a `ModelAdmin` supports (relations,
-filters, actions, a dashboard, exports), see
+filters, actions, a dashboard, exports, delete previews), see
 [`docs/model-admin.md`](docs/model-admin.md); for the UI components and
 theming, [`docs/components.md`](docs/components.md); and for the rest,
 [`docs/`](docs/).
@@ -183,7 +185,8 @@ All 9 implementation phases are done:
 - **FastAPI adapter** (`polyadmin/fastapi/`): `create_router` mounts full CRUD +
   list/detail/create/edit/delete + relation lookup + CSV/XLSX export routes,
   with HTMX partial-swap for list search/filter/sort/pagination and for
-  forms, flash messages surviving a redirect, and auth/permission
+  forms, flash messages surviving a redirect, delete previews (see what a
+  delete takes with it; protected records block it), and auth/permission
   enforcement on every route (also gates which controls the templates show).
 
 See [`examples/fastapi`](examples/fastapi) for a full runnable

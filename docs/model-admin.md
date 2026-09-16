@@ -339,6 +339,17 @@ The handler's return value (a string, or `None`) becomes the success
 toast text, falling back to `"{label} applied to N record(s)."` when
 empty.
 
+A handler may also be `async def` -- useful for one that calls out to an
+async client, such as pushing the selected records to an external system.
+The adapter awaits it when it is one.
+
+The built-in **`delete_selected`** is the one exception to the Dialog. On
+a ModelAdmin that implements `delete_preview` it opens a server-rendered
+confirmation page instead, listing the selected records and what
+deleting them takes with it — see [`deletes.md`](deletes.md). That
+applies to an action of your own named `delete_selected` too: the page
+is keyed on the name.
+
 ## Templates
 
 `list_template`/`detail_template`/`form_template`/`delete_template` name
