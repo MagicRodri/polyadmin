@@ -57,6 +57,9 @@ def test_safe_redirect_path():
         ("https://admin.example.com/\\evil.example/x", "/"),
         ("/\\evil.example/x", "/"),
         ("https://admin.example.com/users?page=2", "/users?page=2"),
+        # urlsplit does not percent-decode, so the path stays encoded and a
+        # browser keeps it on this host.
+        ("https://admin.example.com/%09/evil.example/x", "/%09/evil.example/x"),
     ]
     for referer, want in root_cases:
         assert safe_redirect_path(referer, host, "", "/") == want, referer

@@ -79,7 +79,8 @@ def form_value(value: Any, field_type: str) -> str:
     if field_type == "date" and isinstance(value, date):
         return (value.date() if isinstance(value, datetime) else value).isoformat()
     if field_type == "datetime" and isinstance(value, datetime):
-        return value.strftime("%Y-%m-%dT%H:%M")
+        # isoformat, not strftime: glibc's %Y does not zero-pad years below 1000.
+        return value.replace(tzinfo=None).isoformat(timespec="minutes")
     return str(value)
 
 

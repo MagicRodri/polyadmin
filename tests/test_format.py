@@ -100,6 +100,7 @@ def render_input(field, value):
         (DateField("x"), datetime(2019, 3, 1, 9, 5, tzinfo=timezone.utc), 'value="2019-03-01"'),
         (DateTimeField("x"), datetime(2019, 3, 1, 9, 5, 30, tzinfo=timezone(timedelta(hours=2))), 'value="2019-03-01T09:05"'),
         (DateTimeField("x"), datetime(2019, 3, 1, 9, 5, 30), 'value="2019-03-01T09:05"'),  # noqa: DTZ001 -- naive on purpose
+        (DateTimeField("x"), datetime(99, 3, 1, 10, 30), 'value="0099-03-01T10:30"'),  # noqa: DTZ001 -- naive on purpose
         (DateField("x"), None, 'value=""'),
         (DateField("x"), "2019-03-01", 'value="2019-03-01"'),
     ],
