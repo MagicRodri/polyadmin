@@ -87,7 +87,7 @@ def test_render_delete_confirmation():
 
     html = Renderer().render_delete(admin, user_admin, user)
 
-    assert "Are you sure you want to delete this User?" in html
+    assert "Delete «john@example.com»?" in html
 
 
 def test_application_override_takes_precedence(tmp_path):

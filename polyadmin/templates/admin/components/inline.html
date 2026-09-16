@@ -4,9 +4,13 @@
 {% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/delete-preview.html" import delete_refusal %}
 
 {% macro render_inline_section(inline) %}
 <div id="inline-{{ inline.slug }}" class="mt-8">
+  {# Set only by the inline delete route, when the child's delete_preview
+     refused; undefined (and so falsy) everywhere else. #}
+  {% if refusal %}<div class="mb-3">{{ delete_refusal(refusal) }}</div>{% endif %}
   <h3 class="{{ ui('text', 'heading') }}">{{ _(inline.label) }}</h3>
   {% if inline.mode == "placeholder" %}
   <div class="{{ ui('panel', 'dashed') }}">

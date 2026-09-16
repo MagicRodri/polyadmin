@@ -140,7 +140,7 @@ def test_delete_get_renders_confirmation():
     user = user_admin.create({"email": "john@example.com"})
     response = client.get(f"/admin/users/{user.id}/delete")
     assert response.status_code == 200
-    assert "Are you sure" in response.text
+    assert "Delete «" in response.text
 
 
 def test_delete_post_removes_and_redirects_to_list():

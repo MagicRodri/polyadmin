@@ -173,6 +173,15 @@
               </a>
               {% endif %}
               {% if permissions.can_delete %}
+              {% if previews_deletes %}
+              {# A previewing resource has something to say before the
+                 delete, so the row leads to the page that says it. #}
+              <a
+                href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete"
+                role="menuitem"
+                class="{{ ui('dropdown', 'item') }} text-destructive hover:bg-destructive/10"
+              >{{ icon("delete", "w-4 h-4 shrink-0") }}<span class="truncate">{{ _("Delete") }}</span></a>
+              {% else %}
               <button
                 type="button"
                 role="menuitem"
@@ -183,6 +192,7 @@
                 hx-swap="outerHTML swap:0.2s"
                 hx-confirm="{{ _('Delete this %(name)s?', name=_(model_admin.get_verbose_name())) }}"
               >{{ icon("delete", "w-4 h-4 shrink-0") }}<span class="truncate">{{ _("Delete") }}</span></button>
+              {% endif %}
               {% endif %}
             </div>
           </div>

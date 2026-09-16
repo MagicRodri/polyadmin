@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from polyadmin.core.admin import Admin
+from polyadmin.core.delete import ResolvedDeletePreview, previews_deletes
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
 from polyadmin.core.query import ListRequest
@@ -285,6 +286,9 @@ def list_context(
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "page": page,
         "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.get_actions()],
+        # A previewing resource has something to say before the delete, so
+        # the row's Delete leads to the page that says it.
+        "previews_deletes": previews_deletes(model_admin),
         "list_display": list(model_admin.list_display),
         # "cells", not "values" -- the latter collides with dict.values,
         # the built-in method, when accessed via Jinja's dot notation.
@@ -419,6 +423,32 @@ def dashboard_context(
     }
 
 
+def delete_preview_view(preview: ResolvedDeletePreview | None, base_path: str) -> dict[str, Any]:
+    """The delete preview as the templates see it (docs/deletes.md): headings
+    translated, records labelled and linked, nothing the principal may not
+    view named. None renders as an empty, unblocked preview."""
+    preview = preview or ResolvedDeletePreview()
+
+    def group(g):
+        items = [
+            {
+                "label": _object_label(g.model_admin, obj),
+                "url": f"{base_path}/{g.model_admin.get_slug()}/{g.model_admin.get_pk(obj)}",
+            }
+            for obj in g.visible
+        ]
+        items += [{"label": text, "url": None} for text in g.texts]
+        heading = gettext("%(label)s (%(num)d)") % {"label": gettext(g.label), "num": g.total}
+        return {"heading": heading, "items": items, "more": g.more, "hidden": g.hidden}
+
+    return {
+        "cascades": [group(g) for g in preview.cascades],
+        "protected": [group(g) for g in preview.protected],
+        "denied": ", ".join(gettext(label) for label in preview.denied_types),
+        "blocked": preview.blocked,
+    }
+
+
 def delete_context(
     admin: Admin,
     model_admin: ModelAdmin,
@@ -428,6 +458,7 @@ def delete_context(
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
     csrf_token: str = "",
+    preview: ResolvedDeletePreview | None = None,
 ) -> dict[str, Any]:
     slug = model_admin.get_slug()
     breadcrumbs = [
@@ -439,4 +470,6 @@ def delete_context(
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
+        "object_label": _object_label(model_admin, obj),
+        "preview": delete_preview_view(preview, base_path),
     }

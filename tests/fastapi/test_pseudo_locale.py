@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.dashboard import Dashboard
+from polyadmin.core.delete import DeleteGroup, DeletePreview
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.core.widget import (
     Activity,
@@ -27,6 +28,7 @@ from polyadmin.fastapi.router import create_router
 from polyadmin.i18n import PSEUDO_LOCALE
 from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin
+from tests.fastapi.test_delete_preview import NoteAdmin, PreviewUserAdmin
 from tests.fastapi.test_inlines import make_client as make_inline_client
 from tests.fastapi.test_inlines import seed_org_with_users
 from tests.fastapi.test_login import FakeLoginBackend
@@ -135,6 +137,34 @@ def inline_client(tmp_path):
     return client, ["a@example.com", "Acme", "PO", *LOCALE_NAMES]
 
 
+def preview_client(tmp_path):
+    """Every delete-preview string at once: a cascade larger than its sample, a
+    record hidden from the viewer, a type the viewer may not delete, and an
+    unmanaged protected type."""
+    notes = NoteAdmin()
+
+    def preview(objects):
+        return DeletePreview(
+            cascades=[DeleteGroup(resource="notes", objects=list(notes._store.values()), total=7)],
+            protected=[DeleteGroup(label="Invoices", objects=["INV-1"])],
+        )
+
+    class Authorizer:
+        def can(self, principal, permission, resource):
+            if permission == "notes.view" and getattr(resource, "email", "") == "n2@example.com":
+                return False
+            return permission != "notes.delete"
+
+    users = PreviewUserAdmin(preview)
+    users.create({"email": "a@example.com"})
+    notes.create({"email": "n1@example.com"})
+    notes.create({"email": "n2@example.com"})
+    admin = Admin(model_admins=[users, notes], authorizer=Authorizer(), pseudo_locale=True)
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), ["a@example.com", "n1@example.com", "INV-1", "PO", *LOCALE_NAMES]
+
+
 def login_client(tmp_path):
     backend = FakeLoginBackend()
     admin = Admin(
@@ -169,6 +199,7 @@ PAGES = [
     ("forms", "inline edit", "/admin/organizations/1/edit", {}, inline_client, _get),
     ("detail", "detail", "/admin/users/1", {}, main_client, _get),
     ("detail", "delete", "/admin/users/1/delete", {}, main_client, _get),
+    ("detail", "delete preview", "/admin/users/1/delete", {}, preview_client, _get),
     ("detail", "inline detail", "/admin/organizations/1", {}, inline_client, _get),
     ("detail", "dashboard", "/admin", {}, main_client, _get),
     ("errors", "not found", "/admin/users/999", {}, main_client, _get),

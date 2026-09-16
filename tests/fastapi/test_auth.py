@@ -229,7 +229,6 @@ def test_async_authenticator_still_rejects_when_it_returns_none():
     class DenyingAsyncAuthenticator:
         async def authenticate(self, request):
             await asyncio.sleep(0)
-            return None
 
     client, _ = make_client(authenticator=DenyingAsyncAuthenticator())
     assert client.get("/admin/users").status_code == 401

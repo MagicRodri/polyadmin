@@ -1,0 +1,37 @@
+{# The delete preview (docs/deletes.md): what else a delete takes out, and
+   why it may be refused. The delete page and the delete_selected
+   confirmation page call delete_preview(); an inline section whose Remove
+   was refused calls delete_refusal() on its own. #}
+{% macro delete_group(group) %}
+<section class="{{ ui('panel') }}">
+  <h3 class="{{ ui('text', 'heading') }}">{{ group.heading }}</h3>
+  <ul class="mt-2 flex flex-col gap-1 text-sm">
+    {% for item in group["items"] %}
+    <li>{% if item.url %}<a href="{{ item.url }}" class="{{ ui('text', 'link') }}">{{ item.label }}</a>{% else %}{{ item.label }}{% endif %}</li>
+    {% endfor %}
+    {% if group.more %}<li class="{{ ui('text', 'muted') }}">{{ ngettext("…and %(num)d more", "…and %(num)d more", group.more) }}</li>{% endif %}
+    {% if group.hidden %}<li class="{{ ui('text', 'muted') }}">{{ ngettext("%(num)d you can't view", "%(num)d you can't view", group.hidden) }}</li>{% endif %}
+  </ul>
+</section>
+{% endmacro %}
+
+{% macro delete_refusal(preview) %}
+<div role="alert" class="{{ ui('alert', 'destructive') }}">
+  <p class="{{ ui('alert', 'title') }}">{{ _("This can't be deleted") }}</p>
+  {% if preview.denied %}<p class="{{ ui('alert', 'description') }}">{{ _("Your account doesn't have permission to delete: %(types)s", types=preview.denied) }}</p>{% endif %}
+  {% if preview.protected %}
+  <p class="{{ ui('alert', 'description') }} mt-2">{{ _("These records must be removed first:") }}</p>
+  <div class="mt-2 flex flex-col gap-2">{% for group in preview.protected %}{{ delete_group(group) }}{% endfor %}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro delete_preview(preview) %}
+{% if preview.cascades %}
+<div class="mt-4">
+  <h2 class="{{ ui('text', 'heading') }}">{{ _("This will also delete") }}</h2>
+  <div class="mt-2 flex flex-col gap-2">{% for group in preview.cascades %}{{ delete_group(group) }}{% endfor %}</div>
+</div>
+{% endif %}
+{% if preview.blocked %}<div class="mt-4">{{ delete_refusal(preview) }}</div>{% endif %}
+{% endmacro %}

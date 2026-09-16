@@ -379,16 +379,20 @@ class Renderer:
         *,
         base_path: str = "/admin",
         redisplay: dict[str, Any] | None = None,
+        refusal: dict[str, Any] | None = None,
     ) -> str:
         """Renders one inline section standalone: the response body for the inline
         create/update/delete routes, swapped into `#inline-{child_slug}` by
-        htmx.
+        htmx. `refusal` explains a Remove the child's delete_preview blocked.
         """
         from polyadmin.fastapi.inlines import build_inline_context
 
         sections = build_inline_context(admin, principal, model_admin, obj, "edit", base_path, redisplay=redisplay)
         section = next(s for s in sections if s["slug"] == inline.child)
-        return self.render("admin/components/inline_fragment.html", {"admin": admin, "base_path": base_path, "inline": section})
+        return self.render(
+            "admin/components/inline_fragment.html",
+            {"admin": admin, "base_path": base_path, "inline": section, "refusal": refusal},
+        )
 
     def render_dashboard(
         self,
@@ -443,8 +447,9 @@ class Renderer:
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
         csrf_token: str = "",
+        preview: Any = None,
     ) -> str:
-        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
+        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token, preview=preview)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)
 
 

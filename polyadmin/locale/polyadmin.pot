@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-15 15:29+0500\n"
+"POT-Creation-Date: 2026-09-16 11:21+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(label)s (%(num)d)"
+msgstr ""
 
 #, python-format
 msgid "%(label)s applied to %(num)d record."
@@ -57,6 +61,12 @@ msgid_plural "%(num)d rows"
 msgstr[0] ""
 msgstr[1] ""
 
+#, python-format
+msgid "%(num)d you can't view"
+msgid_plural "%(num)d you can't view"
+msgstr[0] ""
+msgstr[1] ""
+
 msgid "Action…"
 msgstr ""
 
@@ -70,10 +80,6 @@ msgid "All"
 msgstr ""
 
 msgid "Anonymous"
-msgstr ""
-
-#, python-format
-msgid "Are you sure you want to delete this %(name)s? This action cannot be undone."
 msgstr ""
 
 msgid "Asc"
@@ -128,6 +134,10 @@ msgstr ""
 
 #, python-format
 msgid "Delete this %(name)s?"
+msgstr ""
+
+#, python-format
+msgid "Delete «%(label)s»?"
 msgstr ""
 
 #, python-format
@@ -340,7 +350,19 @@ msgid_plural "All %(num)d on this page are selected."
 msgstr[0] ""
 msgstr[1] ""
 
+msgid "These records must be removed first:"
+msgstr ""
+
+msgid "This action cannot be undone."
+msgstr ""
+
+msgid "This can't be deleted"
+msgstr ""
+
 msgid "This page expired before the form was submitted. Reload and try again."
+msgstr ""
+
+msgid "This will also delete"
 msgstr ""
 
 msgid "Toggle dark mode"
@@ -370,6 +392,10 @@ msgstr ""
 msgid "You need to be signed in to view this page."
 msgstr ""
 
+#, python-format
+msgid "Your account doesn't have permission to delete: %(types)s"
+msgstr ""
+
 msgid "Your account doesn't have permission to do that."
 msgstr ""
 
@@ -390,4 +416,10 @@ msgstr ""
 
 msgid "update"
 msgstr ""
+
+#, python-format
+msgid "…and %(num)d more"
+msgid_plural "…and %(num)d more"
+msgstr[0] ""
+msgstr[1] ""
 

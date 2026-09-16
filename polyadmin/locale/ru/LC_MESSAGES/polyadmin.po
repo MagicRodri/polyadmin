@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-15 15:29+0500\n"
+"POT-Creation-Date: 2026-09-16 11:21+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -17,6 +17,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(label)s (%(num)d)"
+msgstr "%(label)s (%(num)d)"
 
 #, python-format
 msgid "%(label)s applied to %(num)d record."
@@ -61,6 +65,13 @@ msgstr[0] "%(num)d строка"
 msgstr[1] "%(num)d строки"
 msgstr[2] "%(num)d строк"
 
+#, python-format
+msgid "%(num)d you can't view"
+msgid_plural "%(num)d you can't view"
+msgstr[0] "%(num)d запись, недоступная вам"
+msgstr[1] "%(num)d записи, недоступные вам"
+msgstr[2] "%(num)d записей, недоступных вам"
+
 msgid "Action…"
 msgstr "Действие…"
 
@@ -75,10 +86,6 @@ msgstr "Все"
 
 msgid "Anonymous"
 msgstr "Аноним"
-
-#, python-format
-msgid "Are you sure you want to delete this %(name)s? This action cannot be undone."
-msgstr "Подтвердите удаление записи «%(name)s». Это действие нельзя отменить."
 
 msgid "Asc"
 msgstr "По возрастанию"
@@ -133,6 +140,10 @@ msgstr "Удалить выбранные записи? Это действие 
 #, python-format
 msgid "Delete this %(name)s?"
 msgstr "Удалить «%(name)s»?"
+
+#, python-format
+msgid "Delete «%(label)s»?"
+msgstr "Удалить «%(label)s»?"
 
 #, python-format
 msgid "Deleted %(num)d record."
@@ -348,8 +359,20 @@ msgstr[0] "%(num)d запись на этой странице выбрана."
 msgstr[1] "Все %(num)d записи на этой странице выбраны."
 msgstr[2] "Все %(num)d записей на этой странице выбраны."
 
+msgid "These records must be removed first:"
+msgstr "Сначала нужно удалить эти записи:"
+
+msgid "This action cannot be undone."
+msgstr "Это действие нельзя отменить."
+
+msgid "This can't be deleted"
+msgstr "Удаление невозможно"
+
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr "Срок действия страницы истёк до отправки формы. Обновите страницу и попробуйте снова."
+
+msgid "This will also delete"
+msgstr "Также будут удалены"
 
 msgid "Toggle dark mode"
 msgstr "Переключить тёмную тему"
@@ -378,6 +401,10 @@ msgstr "Вы вышли из системы."
 msgid "You need to be signed in to view this page."
 msgstr "Чтобы просмотреть эту страницу, войдите в систему."
 
+#, python-format
+msgid "Your account doesn't have permission to delete: %(types)s"
+msgstr "У вашей учётной записи нет права удалять: %(types)s"
+
 msgid "Your account doesn't have permission to do that."
 msgstr "У вашей учётной записи нет прав для этого действия."
 
@@ -398,4 +425,11 @@ msgstr "система"
 
 msgid "update"
 msgstr "изменение"
+
+#, python-format
+msgid "…and %(num)d more"
+msgid_plural "…and %(num)d more"
+msgstr[0] "…и ещё %(num)d"
+msgstr[1] "…и ещё %(num)d"
+msgstr[2] "…и ещё %(num)d"
 

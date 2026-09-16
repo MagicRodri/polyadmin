@@ -1,25 +1,28 @@
 {% extends "admin/base.html" %}
 {% from "admin/components/csrf-field.html" import csrf_field %}
 {% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/delete-preview.html" import delete_preview %}
 {% block title %}{{ _("Delete %(name)s", name=_(model_admin.get_verbose_name())) }}{% endblock %}
 {% block content %}
 <form method="post" class="{{ ui('panel', 'form') }} max-w-xl">
   {{ csrf_field(csrf_token) }}
-  <div class="mb-4 flex items-start gap-3">
+  <div class="flex items-start gap-3">
     <span class="inline-flex shrink-0 items-center justify-center rounded-full bg-destructive/10 p-2 text-destructive">
       {{ icon("delete", "w-5 h-5") }}
     </span>
-    <p class="mt-1.5 {{ ui('text', 'muted') }}">
-      {{ _("Are you sure you want to delete this %(name)s? This action cannot be undone.", name=_(model_admin.get_verbose_name())) }}
-    </p>
+    <div class="mt-1.5">
+      <p class="{{ ui('text', 'heading') }}">{{ _("Delete «%(label)s»?", label=object_label) }}</p>
+      <p class="mt-1 {{ ui('text', 'muted') }}">{{ _("This action cannot be undone.") }}</p>
+    </div>
   </div>
-  <div class="flex flex-col gap-2 sm:flex-row">
-    <button type="submit" class="{{ ui('button', 'destructive') }}">
+  {{ delete_preview(preview) }}
+  <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+    {% if not preview.blocked %}
+    <button type="submit" id="delete-confirm" class="{{ ui('button', 'destructive') }}">
       {{ icon("delete", "w-4 h-4") }} {{ _("Delete") }}
     </button>
-    <a href="{{ base_path }}/{{ model_admin.get_slug() }}" class="{{ ui('button', 'outline') }}">
-      {{ _("Cancel") }}
-    </a>
+    {% endif %}
+    <a href="{{ base_path }}/{{ model_admin.get_slug() }}" class="{{ ui('button', 'outline') }}">{{ _("Cancel") }}</a>
   </div>
 </form>
 {% endblock %}

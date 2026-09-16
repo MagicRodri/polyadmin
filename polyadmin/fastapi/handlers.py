@@ -17,10 +17,12 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
+from polyadmin.core.delete import resolve_delete_preview
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
 from polyadmin.core.query import ListRequest, alist_objects, apply_defaults
+from polyadmin.core.template_context import delete_preview_view
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.errors import forbidden, not_found
@@ -389,6 +391,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
             return forbidden(request, admin, base_path)
+        preview = resolve_delete_preview(admin, model_admin, principal, [obj])
         html = renderer.render_delete(
             admin,
             model_admin,
@@ -396,6 +399,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             base_path=base_path,
             principal=principal,
             csrf_token=request.state.csrf_token,
+            preview=preview,
         )
         return HTMLResponse(html)
 
@@ -407,6 +411,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
+            if resolve_delete_preview(admin, model_admin, principal, [obj]).blocked:
+                # Back to the delete page, which says why; redirect() sends
+                # HX-Redirect for the htmx route and a 303 otherwise.
+                return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
             await maybe_await(model_admin.delete(obj))
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
@@ -428,6 +436,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
+            if resolve_delete_preview(admin, model_admin, principal, [obj]).blocked:
+                # Back to the delete page, which says why; redirect() sends
+                # HX-Redirect for the htmx route and a 303 otherwise.
+                return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
             await maybe_await(model_admin.delete(obj))
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         return HTMLResponse("")
@@ -674,6 +686,16 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return error
         child_obj = await maybe_await(child_admin.get_object(child_pk))
         if child_obj is not None:
+            preview = resolve_delete_preview(admin, child_admin, principal, [child_obj])
+            if preview.blocked:
+                # 200 with the rebuilt section and the reason on top: htmx
+                # would drop a 4xx body, and a redirect would lose the
+                # parent form's unsaved edits.
+                html = renderer.render_inline_fragment(
+                    admin, principal, model_admin, parent_obj, inline, base_path=base_path,
+                    refusal=delete_preview_view(preview, base_path),
+                )
+                return HTMLResponse(html)
             await maybe_await(child_admin.delete(child_obj))
 
         html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
