@@ -102,7 +102,7 @@ dashboard = Dashboard(
 
 sessions = CookieSessionBackend()
 admin = Admin(
-    model_admins=[UserAdmin(users, organizations, roles), OrganizationAdmin(organizations), RoleAdmin(roles)],
+    model_admins=[UserAdmin(users, organizations, roles), OrganizationAdmin(organizations, users), RoleAdmin(roles, users)],
     dashboard=dashboard,
     # Cookie sessions over an in-memory user table (session.py). One
     # object serves as both halves: login_backend is what mounts the

@@ -279,3 +279,36 @@ def test_editing_without_touching_founded_keeps_it():
     )
     assert edit.status_code == 303
     assert '<time datetime="2019-03-01" data-format="date">2019-03-01</time>' in client.get(location).text
+# The msgids carry a straight apostrophe and autoescape turns it into
+# "&#39;"; the assertions match the markup, not what the browser shows.
+def test_organization_delete_page_lists_its_users():
+    page = client.get("/admin/organizations/4/delete").text  # Initech: samir
+    assert "This will also delete" in page and "User (1)" in page and "samir@example.com" in page
+
+
+def test_deleting_an_organization_deletes_its_users():
+    import main
+
+    org = main.organizations.create(name="Doomed Org")
+    main.users.create(email="doomed@example.com", organization=org)
+    response = client.post(f"/admin/organizations/{org.id}/delete", headers=csrf(), follow_redirects=False)
+    assert response.status_code == 303
+    assert main.organizations.get(org.id) is None
+    assert all(u.email != "doomed@example.com" for u in main.users.list())
+
+
+def test_an_assigned_role_cannot_be_deleted():
+    import main
+
+    page = client.get("/admin/roles/2/delete").text  # Billing
+    assert "This can&#39;t be deleted" in page and "jane@example.com" in page
+    client.post("/admin/roles/2/delete", headers=csrf(), follow_redirects=False)
+    assert main.roles.get(2) is not None
+
+
+def test_an_unassigned_role_can_be_deleted():
+    import main
+
+    role = main.roles.create(name="Temporary")
+    client.post(f"/admin/roles/{role.id}/delete", headers=csrf(), follow_redirects=False)
+    assert main.roles.get(role.id) is None

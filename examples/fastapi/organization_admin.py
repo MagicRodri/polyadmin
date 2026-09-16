@@ -3,9 +3,16 @@ from __future__ import annotations
 
 from datetime import date
 
-from models import Organization, OrganizationRepository
+from models import Organization, OrganizationRepository, UserRepository
 
-from polyadmin import DateField, DecimalField, ModelAdmin, StringField
+from polyadmin import (
+    DateField,
+    DecimalField,
+    DeleteGroup,
+    DeletePreview,
+    ModelAdmin,
+    StringField,
+)
 from polyadmin.core.inline import TabularInline
 
 
@@ -49,9 +56,24 @@ class OrganizationAdmin(ModelAdmin):
     # create/detail/edit pages -- see docs/inlines.md.
     inlines = [TabularInline("users", "organization")]
 
-    def __init__(self, repository: OrganizationRepository) -> None:
+    def __init__(self, repository: OrganizationRepository, users: UserRepository) -> None:
         super().__init__()
         self.repository = repository
+        self.users = users
+
+    def delete_preview(self, objects):
+        """An organization's users go with it (see delete) -- docs/deletes.md."""
+        members = self._members(objects)
+        return DeletePreview(cascades=[DeleteGroup(resource="users", objects=members, total=len(members))])
+
+    def delete(self, obj):
+        for user in self._members([obj]):
+            self.users.delete(user)
+        self.repository.delete(obj)
+
+    def _members(self, objects):
+        doomed = {o.id for o in objects}
+        return self.users.matching(lambda u: u.organization is not None and u.organization.id in doomed)
 
     def get_queryset(self):
         return self.repository.list()

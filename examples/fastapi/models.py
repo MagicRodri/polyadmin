@@ -36,6 +36,9 @@ class OrganizationRepository:
     def get(self, pk: int) -> Organization | None:
         return self._organizations.get(pk)
 
+    def delete(self, organization: Organization) -> None:
+        del self._organizations[organization.id]
+
     def create(self, *, name: str, founded: date | None = None, balance: float = 0.0) -> Organization:
         organization = Organization(id=next(self._ids), name=name, founded=founded, balance=balance)
         self._organizations[organization.id] = organization
@@ -71,6 +74,9 @@ class RoleRepository:
 
     def get(self, pk: int) -> Role | None:
         return self._roles.get(pk)
+
+    def delete(self, role: Role) -> None:
+        del self._roles[role.id]
 
     def create(self, *, name: str) -> Role:
         role = Role(id=next(self._ids), name=name)
@@ -145,6 +151,11 @@ class UserRepository:
 
     def delete(self, user: User) -> None:
         del self._users[user.id]
+
+    def matching(self, keep) -> list[User]:
+        """The users keep accepts, in id order, so a preview's sample does not
+        reshuffle between requests."""
+        return sorted((u for u in self._users.values() if keep(u)), key=lambda u: u.id)
 
 
 def seed(

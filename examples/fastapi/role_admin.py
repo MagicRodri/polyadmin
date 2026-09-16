@@ -9,9 +9,9 @@ anything else.
 
 from __future__ import annotations
 
-from models import Role, RoleRepository
+from models import Role, RoleRepository, UserRepository
 
-from polyadmin import ModelAdmin, StringField
+from polyadmin import DeleteGroup, DeletePreview, ModelAdmin, StringField
 
 
 class RoleAdmin(ModelAdmin):
@@ -25,9 +25,25 @@ class RoleAdmin(ModelAdmin):
     search_fields = ["name"]
     fields = [StringField("name", required=True)]
 
-    def __init__(self, repository: RoleRepository) -> None:
+    def __init__(self, repository: RoleRepository, users: UserRepository) -> None:
         super().__init__()
         self.repository = repository
+        self.users = users
+
+    def delete_preview(self, objects):
+        """A role still held by anyone is protected (docs/deletes.md)."""
+        holders = self._holders(objects)
+        return DeletePreview(protected=[DeleteGroup(resource="users", objects=holders, total=len(holders))])
+
+    def delete(self, obj):
+        # Storage keeps its own rule too, as a foreign-key constraint would.
+        if self._holders([obj]):
+            raise ValueError(f"Role {obj.name!r} is still assigned.")
+        self.repository.delete(obj)
+
+    def _holders(self, objects):
+        doomed = {r.id for r in objects}
+        return self.users.matching(lambda u: any(r.id in doomed for r in u.roles))
 
     def get_queryset(self):
         return self.repository.list()
