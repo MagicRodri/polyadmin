@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-16 11:21+0500\n"
+"POT-Creation-Date: 2026-09-16 12:20+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -125,6 +125,12 @@ msgstr ""
 #, python-format
 msgid "Delete %(name)s"
 msgstr ""
+
+#, python-format
+msgid "Delete %(num)d record?"
+msgid_plural "Delete %(num)d records?"
+msgstr[0] ""
+msgstr[1] ""
 
 msgid "Delete selected"
 msgstr ""
@@ -307,6 +313,9 @@ msgid_plural "Select all %(num)d matching"
 msgstr[0] ""
 msgstr[1] ""
 
+msgid "Selected records"
+msgstr ""
+
 msgid "Select…"
 msgstr ""
 
@@ -349,6 +358,9 @@ msgid "The %(num)d on this page is selected."
 msgid_plural "All %(num)d on this page are selected."
 msgstr[0] ""
 msgstr[1] ""
+
+msgid "The selection changed since you reviewed it."
+msgstr ""
 
 msgid "These records must be removed first:"
 msgstr ""

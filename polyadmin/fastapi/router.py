@@ -139,7 +139,7 @@ def create_router(
             if model_admin.get_actions():
                 router.add_api_route(
                     f"{prefix}/actions/{{action_name}}",
-                    build_action_handler(admin, model_admin, base_path),
+                    build_action_handler(admin, model_admin, renderer, base_path),
                     methods=["POST"],
                 )
             router.add_api_route(

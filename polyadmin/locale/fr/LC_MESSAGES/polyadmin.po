@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-16 11:21+0500\n"
+"POT-Creation-Date: 2026-09-16 12:20+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: fr\n"
@@ -126,6 +126,12 @@ msgstr "Supprimer"
 #, python-format
 msgid "Delete %(name)s"
 msgstr "Supprimer %(name)s"
+
+#, python-format
+msgid "Delete %(num)d record?"
+msgid_plural "Delete %(num)d records?"
+msgstr[0] "Supprimer %(num)d enregistrement ?"
+msgstr[1] "Supprimer %(num)d enregistrements ?"
 
 msgid "Delete selected"
 msgstr "Supprimer la sélection"
@@ -308,6 +314,9 @@ msgid_plural "Select all %(num)d matching"
 msgstr[0] "Sélectionner le %(num)d élément correspondant"
 msgstr[1] "Sélectionner tous les %(num)d éléments correspondants"
 
+msgid "Selected records"
+msgstr "Enregistrements sélectionnés"
+
 msgid "Select…"
 msgstr "Sélectionner…"
 
@@ -350,6 +359,9 @@ msgid "The %(num)d on this page is selected."
 msgid_plural "All %(num)d on this page are selected."
 msgstr[0] "Le %(num)d de cette page est sélectionné."
 msgstr[1] "Tous les %(num)d de cette page sont sélectionnés."
+
+msgid "The selection changed since you reviewed it."
+msgstr "La sélection a changé depuis votre vérification."
 
 msgid "These records must be removed first:"
 msgstr "Ces enregistrements doivent d'abord être supprimés :"

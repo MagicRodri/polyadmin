@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% from "admin/components/csrf-field.html" import csrf_field %}
+{% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/delete-preview.html" import delete_preview %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/delete_selected" class="{{ ui('panel', 'form') }} max-w-xl">
+  {{ csrf_field(csrf_token) }}
+  <input type="hidden" name="_confirmed" value="1">
+  <input type="hidden" name="_return" value="{{ selection.return_to }}">
+  {% if selection.select_all %}
+  <input type="hidden" name="_select_all" value="1">
+  <input type="hidden" name="_fingerprint" value="{{ selection.fingerprint }}">
+  <input type="hidden" name="search" value="{{ selection.list_request.search or '' }}">
+  <input type="hidden" name="sort" value="{{ selection.list_request.ordering or '' }}">
+  {% for name, value in selection.list_request.filters.items() %}<input type="hidden" name="filter[{{ name }}]" value="{{ value }}">
+  {% endfor %}
+  {% else %}
+  {% for pk in selection.pks %}<input type="hidden" name="pks" value="{{ pk }}">
+  {% endfor %}
+  {% endif %}
+  {% if selection.changed %}
+  <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4"><p class="{{ ui('alert', 'description') }}">{{ _("The selection changed since you reviewed it.") }}</p></div>
+  {% endif %}
+  <div class="flex items-start gap-3">
+    <span class="inline-flex shrink-0 items-center justify-center rounded-full bg-destructive/10 p-2 text-destructive">{{ icon("delete", "w-5 h-5") }}</span>
+    <div class="mt-1.5">
+      <p class="{{ ui('text', 'heading') }}">{{ heading }}</p>
+      <p class="mt-1 {{ ui('text', 'muted') }}">{{ _("This action cannot be undone.") }}</p>
+    </div>
+  </div>
+  <section class="{{ ui('panel') }} mt-4">
+    <h3 class="{{ ui('text', 'heading') }}">{{ _("Selected records") }}</h3>
+    <ul class="mt-2 flex flex-col gap-1 text-sm">
+      {% for item in items %}
+      <li>{% if item.url %}<a href="{{ item.url }}" class="{{ ui('text', 'link') }}">{{ item.label }}</a>{% else %}{{ item.label }}{% endif %}</li>
+      {% endfor %}
+      {% if more %}<li class="{{ ui('text', 'muted') }}">{{ ngettext("…and %(num)d more", "…and %(num)d more", more) }}</li>{% endif %}
+    </ul>
+  </section>
+  {{ delete_preview(preview) }}
+  <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+    {% if not preview.blocked %}
+    <button type="submit" id="delete-confirm" class="{{ ui('button', 'destructive') }}">{{ icon("delete", "w-4 h-4") }} {{ _("Delete") }}</button>
+    {% endif %}
+    <a href="{{ selection.return_to }}" class="{{ ui('button', 'outline') }}">{{ _("Cancel") }}</a>
+  </div>
+</form>
+{% endblock %}

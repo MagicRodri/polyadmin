@@ -13,12 +13,17 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import urlencode
 
+from polyadmin.core.action import DELETE_SELECTED_NAME
 from polyadmin.core.admin import Admin
-from polyadmin.core.delete import ResolvedDeletePreview, previews_deletes
+from polyadmin.core.delete import (
+    DELETE_PREVIEW_SAMPLE,
+    ResolvedDeletePreview,
+    previews_deletes,
+)
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
 from polyadmin.core.query import ListRequest
-from polyadmin.i18n import gettext
+from polyadmin.i18n import gettext, ngettext
 
 
 def default_permissions(model_admin: ModelAdmin) -> dict[str, bool]:
@@ -285,7 +290,7 @@ def list_context(
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "page": page,
-        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.get_actions()],
+        "actions": _action_infos(model_admin),
         # A previewing resource has something to say before the delete, so
         # the row's Delete leads to the page that says it.
         "previews_deletes": previews_deletes(model_admin),
@@ -346,7 +351,7 @@ def detail_context(
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
-        "actions": [{"name": a.name, "label": a.label, "confirm": a.confirm} for a in model_admin.get_actions()],
+        "actions": _action_infos(model_admin),
         "permissions": permissions or default_permissions(model_admin),
         "relation_permissions": relation_permissions or {},
     }
@@ -421,6 +426,50 @@ def dashboard_context(
         "dashboard": dashboard,
         "widgets": widgets,
     }
+
+
+def delete_selected_context(
+    admin: Admin,
+    model_admin: ModelAdmin,
+    selection: dict[str, Any],
+    preview: Any,
+    *,
+    base_path: str = "/admin",
+    principal: Any = None,
+    csrf_token: str = "",
+) -> dict[str, Any]:
+    """The delete_selected confirmation page. `selection` carries objects,
+    select_all, pks, list_request, fingerprint, return_to, changed, and the
+    already permission-checked `items` (built by the adapter, since core must
+    not import one)."""
+    slug = model_admin.get_slug()
+    objects = selection["objects"]
+    breadcrumbs = [
+        *category_breadcrumb(model_admin.category),
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
+        {"label": gettext("Delete"), "url": None, "active": True},
+    ]
+    heading = ngettext("Delete %(num)d record?", "Delete %(num)d records?", len(objects)) % {"num": len(objects)}
+    return {
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, breadcrumbs=breadcrumbs),
+        "heading": heading,
+        "items": selection["items"],
+        "more": max(len(objects) - DELETE_PREVIEW_SAMPLE, 0),
+        "selection": selection,
+        "preview": delete_preview_view(preview, base_path),
+    }
+
+
+def _action_infos(model_admin: ModelAdmin) -> list[dict[str, Any]]:
+    """The actions as the bulk bar and detail page see them. delete_selected on
+    a ModelAdmin that previews deletes gets the server's confirmation page
+    instead of the modal (docs/deletes.md)."""
+    previews = previews_deletes(model_admin)
+    infos = []
+    for a in model_admin.get_actions():
+        preview = previews and a.name == DELETE_SELECTED_NAME
+        infos.append({"name": a.name, "label": a.label, "confirm": None if preview else a.confirm, "preview": preview})
+    return infos
 
 
 def delete_preview_view(preview: ResolvedDeletePreview | None, base_path: str) -> dict[str, Any]:

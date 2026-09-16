@@ -13,11 +13,12 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from polyadmin.core._async import maybe_await
+from polyadmin.core.action import DELETE_SELECTED_NAME
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
-from polyadmin.core.delete import resolve_delete_preview
+from polyadmin.core.delete import previews_deletes, resolve_delete_preview
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
@@ -25,6 +26,7 @@ from polyadmin.core.query import ListRequest, alist_objects, apply_defaults
 from polyadmin.core.template_context import delete_preview_view
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
+from polyadmin.fastapi.deletes import RETURN_FIELD, confirm_delete_selected
 from polyadmin.fastapi.errors import forbidden, not_found
 from polyadmin.fastapi.locale import acached_principal
 from polyadmin.fastapi.relations import (
@@ -447,7 +449,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     return delete_get, delete_post, delete_htmx
 
 
-def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
+def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
     """POST /{slug}/actions/{action_name}, running an Action over the objects
     named by the `pks` form field. One route for both entry points: the list's
     bulk-select form posts every checked row, a detail page's action button
@@ -485,6 +487,10 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             base_path,
             f"{base_path}/{slug}",
         )
+        # A confirmed delete_selected posts from its own confirmation page, so
+        # it carries the original target in _return (validated the same way).
+        if form.get(RETURN_FIELD):
+            redirect_to = safe_redirect_path(form.get(RETURN_FIELD), request.url.netloc, base_path, f"{base_path}/{slug}")
         # "Select all N matching" posts the filters instead of the pks: a
         # checkbox only reaches the rows on screen. The set is resolved
         # server-side from the same query the list was showing.
@@ -494,6 +500,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             set_flash(response, "warning", gettext("No items selected."))
             return response
 
+        list_request = None
         if select_all:
             list_request = _parse_list_request_from_form(form)
             list_request.unlimited = True
@@ -504,6 +511,12 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, base_path: str):
             response = redirect(request, redirect_to)
             set_flash(response, "warning", gettext("No items selected."))
             return response
+        if action.name == DELETE_SELECTED_NAME and previews_deletes(model_admin):
+            page = confirm_delete_selected(
+                request, form, admin, model_admin, renderer, principal, objects, select_all, redirect_to, list_request, base_path
+            )
+            if page is not None:
+                return page
         message = action.handler(model_admin, objects, principal)
         # One entry per record, not per action: the log's question is
         # "what happened to this record", and a bulk run over 500 rows is

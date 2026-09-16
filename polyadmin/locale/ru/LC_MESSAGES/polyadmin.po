@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-16 11:21+0500\n"
+"POT-Creation-Date: 2026-09-16 12:20+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -130,6 +130,13 @@ msgstr "Удалить"
 #, python-format
 msgid "Delete %(name)s"
 msgstr "Удалить %(name)s"
+
+#, python-format
+msgid "Delete %(num)d record?"
+msgid_plural "Delete %(num)d records?"
+msgstr[0] "Удалить %(num)d запись?"
+msgstr[1] "Удалить %(num)d записи?"
+msgstr[2] "Удалить %(num)d записей?"
 
 msgid "Delete selected"
 msgstr "Удалить выбранное"
@@ -314,6 +321,9 @@ msgstr[0] "Выбрать %(num)d совпадающую запись"
 msgstr[1] "Выбрать все %(num)d совпадающие записи"
 msgstr[2] "Выбрать все %(num)d совпадающих записей"
 
+msgid "Selected records"
+msgstr "Выбранные записи"
+
 msgid "Select…"
 msgstr "Выбрать…"
 
@@ -358,6 +368,9 @@ msgid_plural "All %(num)d on this page are selected."
 msgstr[0] "%(num)d запись на этой странице выбрана."
 msgstr[1] "Все %(num)d записи на этой странице выбраны."
 msgstr[2] "Все %(num)d записей на этой странице выбраны."
+
+msgid "The selection changed since you reviewed it."
+msgstr "Выбор изменился с момента проверки."
 
 msgid "These records must be removed first:"
 msgstr "Сначала нужно удалить эти записи:"

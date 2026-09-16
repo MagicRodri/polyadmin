@@ -62,7 +62,7 @@
            the stretch stops at the <form> -- and would otherwise sit
            stunted beside a full-width Edit. #}
         <form method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
-              {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %}
+              {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %} {% if action.preview %}data-preview{% endif %}
               onsubmit="return window.adminConfirmSubmit(event, this, this.dataset.confirm)">
           {{ csrf_field(csrf_token) }}
           <input type="hidden" name="pks" value="{{ model_admin.get_pk(object) }}">

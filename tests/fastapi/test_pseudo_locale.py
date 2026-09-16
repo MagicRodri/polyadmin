@@ -182,6 +182,10 @@ def _get(client, path, headers):
     return client.get(path, headers=headers)
 
 
+def _confirm_delete_selected(client, path, headers):
+    return client.post(path, data={"pks": "1"}, headers={**csrf(client), **headers})
+
+
 def _failed_login(client, path, headers):
     return client.post(
         path,
@@ -200,6 +204,7 @@ PAGES = [
     ("detail", "detail", "/admin/users/1", {}, main_client, _get),
     ("detail", "delete", "/admin/users/1/delete", {}, main_client, _get),
     ("detail", "delete preview", "/admin/users/1/delete", {}, preview_client, _get),
+    ("detail", "delete_selected confirmation", "/admin/users/actions/delete_selected", {}, preview_client, _confirm_delete_selected),
     ("detail", "inline detail", "/admin/organizations/1", {}, inline_client, _get),
     ("detail", "dashboard", "/admin", {}, main_client, _get),
     ("errors", "not found", "/admin/users/999", {}, main_client, _get),

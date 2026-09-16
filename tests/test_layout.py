@@ -22,6 +22,7 @@ SHARED_LAYOUT = {
     "admin/resource/detail.html",
     "admin/resource/form.html",
     "admin/resource/delete.html",
+    "admin/resource/delete_selected.html",
     "admin/components/list_content.html",
     "admin/components/search.html",
     "admin/components/form_wrapper.html",

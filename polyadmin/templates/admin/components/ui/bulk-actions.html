@@ -55,7 +55,7 @@
       {% for action in actions %}
       <div role="option" tabindex="0"
            data-url="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}"
-           {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %}
+           {% if action.confirm %}data-confirm="{{ _(action.confirm) }}"{% endif %} {% if action.preview %}data-preview{% endif %}
            @click="label = $el.textContent.trim(); open = false;
                    let form = $el.closest('form');
                    form.action = $el.dataset.url;

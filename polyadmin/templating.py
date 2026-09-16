@@ -26,6 +26,7 @@ from polyadmin.core.query import DEFAULT_EMPTY_VALUE, ListRequest
 from polyadmin.core.template_context import (
     dashboard_context,
     delete_context,
+    delete_selected_context,
     detail_context,
     form_context,
     list_context,
@@ -451,6 +452,20 @@ class Renderer:
     ) -> str:
         context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token, preview=preview)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)
+
+    def render_delete_selected(
+        self,
+        admin: Admin,
+        model_admin: ModelAdmin,
+        selection: dict[str, Any],
+        preview: Any,
+        *,
+        base_path: str = "/admin",
+        principal: Any = None,
+        csrf_token: str = "",
+    ) -> str:
+        context = delete_selected_context(admin, model_admin, selection, preview, base_path=base_path, principal=principal, csrf_token=csrf_token)
+        return self.render_candidates(model_admin.get_template_candidates("delete_selected"), context)
 
 
 # A summary of recent activity, not an audit browser: a logger wanting the
