@@ -85,6 +85,11 @@
         {% set sorted_by = sort_controls[name] %}
         <th scope="col" class="{{ ui('table', 'th') }}"
             {% if sorted_by.direction == "asc" %}aria-sort="ascending"{% elif sorted_by.direction == "desc" %}aria-sort="descending"{% endif %}>
+          {% if not sorted_by.sortable %}
+          {# Outside sortable_by: a plain label, with no menu and no sort
+             URLs to hand-type either -- the server drops them. #}
+          <span class="inline-flex h-8 items-center">{{ _(model_admin.get_field(name).label) }}</span>
+          {% else %}
           <div class="relative inline-flex" x-data="{ open: false }"
                @keydown.escape="open = false" @click.outside="open = false">
             <button type="button" x-ref="sort{{ loop.index }}" @click="open = !open"
@@ -115,6 +120,7 @@
               </a>
             </div>
           </div>
+          {% endif %}
         </th>
         {% endfor %}
         <th scope="col" class="w-8"></th>
@@ -141,7 +147,13 @@
         {% endif %}
         {% for name in list_display %}
         <td class="{{ ui('table', 'cell') }}">
-          {{ render_field_value(model_admin.get_field(name), row.cells[name], model_admin.get_empty_value()) }}
+          {% set rendered = render_field_value(model_admin.get_field(name), row.cells[name], model_admin.get_empty_value()) %}
+          {#- A cell named by list_display_links links to the record, unless it
+              already contains an anchor -- a relation, chiefly. Nesting <a> in
+              <a> is invalid HTML that browsers silently restructure. -#}
+          {% if permissions.can_view and name in linked_columns and "<a " not in rendered %}
+          <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}{{ list_query }}" class="{{ ui('text', 'link') }}">{{ rendered }}</a>
+          {%- else %}{{ rendered }}{% endif %}
         </td>
         {% endfor %}
         <td class="{{ ui('table', 'cell') }} text-right">
@@ -163,12 +175,12 @@
                  x-transition:leave-end="opacity-0 scale-95"
                  class="{{ ui('dropdown', 'content') }} w-32">
               {% if permissions.can_view %}
-              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
+              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}{{ list_query }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
                 {{ icon("view", "w-4 h-4 shrink-0") }}<span class="truncate">{{ _("View") }}</span>
               </a>
               {% endif %}
               {% if permissions.can_update %}
-              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/edit" role="menuitem" class="{{ ui('dropdown', 'item') }}">
+              <a href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/edit{{ list_query }}" role="menuitem" class="{{ ui('dropdown', 'item') }}">
                 {{ icon("edit", "w-4 h-4 shrink-0") }}<span class="truncate">{{ _("Edit") }}</span>
               </a>
               {% endif %}
@@ -177,7 +189,7 @@
               {# A previewing resource has something to say before the
                  delete, so the row leads to the page that says it. #}
               <a
-                href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete"
+                href="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete{{ list_query }}"
                 role="menuitem"
                 class="{{ ui('dropdown', 'item') }} text-destructive hover:bg-destructive/10"
               >{{ icon("delete", "w-4 h-4 shrink-0") }}<span class="truncate">{{ _("Delete") }}</span></a>
@@ -187,7 +199,7 @@
                 role="menuitem"
                 @click="open = false"
                 class="{{ ui('dropdown', 'item') }} text-destructive hover:bg-destructive/10"
-                hx-delete="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete"
+                hx-delete="{{ base_path }}/{{ model_admin.get_slug() }}/{{ row.pk }}/delete{{ list_query }}"
                 hx-target="#row-{{ row.pk }}"
                 hx-swap="outerHTML swap:0.2s"
                 hx-confirm="{{ _('Delete this %(name)s?', name=_(model_admin.get_verbose_name())) }}"

@@ -14,6 +14,7 @@ from polyadmin.core.widget import (
     Timeline,
 )
 from polyadmin.fastapi.router import create_router
+from polyadmin.ui import ui
 from tests.core.test_model_admin import InMemoryUserAdmin
 
 
@@ -162,3 +163,50 @@ def test_dashboard_renders_timeline():
     response = client.get("/admin")
     assert "2h ago" in response.text
     assert "User created" in response.text
+
+
+def test_a_long_widget_scrolls_inside_its_own_card():
+    """The dashboard is a grid, so a card that grows with its content
+    drags every card in its row to the same height. The body is bounded
+    instead, and scrolls with the themed scrollbar."""
+    rows = [{"email": f"user{i}@example.com"} for i in range(200)]
+    client, _ = make_client(Dashboard(widgets=[Table("Recent", columns=["email"], rows=rows)]))
+    response = client.get("/admin")
+
+    body = ui("widget", "body")
+    assert body in response.text, "the widget body is not the bounded scroll box"
+    assert "max-h-" in body and "overflow-y-auto" in body
+    # theme.html styles the bar; a bare overflow box would show the
+    # browser's own, which is what the rest of the admin avoids.
+    assert "ui-scroll-area" in body
+
+
+def test_a_widget_never_scrolls_sideways():
+    """A card is a fixed column of the dashboard grid. Content wider
+    than it has to wrap, not hand the reader a second scrollbar."""
+    rows = [{"email": "a-very-long-address-that-would-not-fit@example.com"}]
+    client, _ = make_client(Dashboard(widgets=[Table("Recent", columns=["email"], rows=rows)]))
+    response = client.get("/admin")
+
+    assert "overflow-x-hidden" in ui("widget", "body"), "a widget body can still scroll sideways"
+    section = response.text[response.text.index(ui("widget", "body")) :]
+    section = section[: section.index("</table>")]
+    assert "whitespace-nowrap" not in section.split("<tbody")[1], (
+        "the cells still hold their line instead of wrapping"
+    )
+    assert "break-words" in section, "a long unbroken value would still push the card sideways"
+
+
+def test_a_widget_owns_only_one_scroll_box():
+    """A table widget used to bring its own overflow container, which
+    inside the bounded body meant two nested scrollers -- and, on a wide
+    table, two visible scrollbars."""
+    client, _ = make_client(
+        Dashboard(widgets=[Table("Recent", columns=["email"], rows=[{"email": "a@example.com"}])])
+    )
+    response = client.get("/admin")
+    body = response.text[response.text.index(ui("widget", "body")) :]
+    section = body[: body.index("</table>")]
+    assert "overflow-x-auto" not in section, "the table widget still nests its own scroller"
+    # Bounded as it is, the header stays put while the rows move.
+    assert "sticky top-0" in section

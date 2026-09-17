@@ -13,7 +13,7 @@
    exactly the 3rem collapsed width, so nothing slides sideways as the
    width animates.
 
-   md:relative, not md:static, undoes the sheet's `fixed`: the rail is
+   md:sticky, not md:static, undoes the sheet's `fixed`: the rail is
    absolutely positioned against the aside, and a static aside handed it
    to the page, parking it on the viewport's right edge.
 
@@ -21,13 +21,34 @@
    `icon` rides in on that context; csrf_field does not, since base.html
    has no form of its own, so the sign-out form imports it here. #}
 {% from "admin/components/csrf-field.html" import csrf_field %}
+
+{# The footer's identity block: avatar, name and role. Its own macro
+   because the footer renders it in two shapes -- as the trigger of the
+   user menu, and, with no session to sign out of, as a plain row with
+   nothing to open.
+
+   Principal names are never translated, except the framework's own
+   default (AllowAllAuthenticator's "Anonymous"). #}
+{% macro sidebar_user(principal) %}
+{% set display_name = principal.display_name or principal.id %}
+{% if display_name == "Anonymous" %}{% set display_name = _(display_name) %}{% endif %}
+<span class="{{ ui('avatar') }} size-8 rounded-lg">
+  <span class="{{ ui('avatar', 'fallback') }} rounded-lg">{{ display_name[:2] | upper }}</span>
+</span>
+<span x-show="!collapsed" class="grid flex-1 text-left leading-tight">
+  <span class="truncate font-medium text-foreground">{{ display_name }}</span>
+  <span class="truncate text-xs text-muted-foreground">
+    {{ _("Superuser") if principal.is_superuser else _("Signed in") }}
+  </span>
+</span>
+{% endmacro %}
 <aside x-cloak
        :class="[
          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
          collapsed ? '{{ ui('sidebar', 'collapsed') }}' : '{{ ui('sidebar', 'expanded') }}'
        ]"
        class="{{ ui('sheet', 'content') }} {{ ui('sheet', 'side-left') }} {{ ui('sidebar') }}
-              !w-72 md:!w-auto md:relative md:!transform-none md:shadow-none">
+              !w-72 md:!w-auto md:sticky md:top-0 md:h-screen md:!transform-none md:shadow-none">
 
   {# -- SidebarHeader: the block's TeamSwitcher slot -- #}
   <div class="{{ ui('sidebar', 'header') }}">
@@ -99,55 +120,35 @@
 
   {# -- SidebarFooter: the block's NavUser -- #}
   {% if principal %}
-  {# Principal names are never translated, except the framework's own
-     default (AllowAllAuthenticator's "Anonymous"). #}
-  {% set display_name = principal.display_name or principal.id %}
-  {% if display_name == "Anonymous" %}{% set display_name = _(display_name) %}{% endif %}
   <div class="{{ ui('sidebar', 'footer') }}">
+    {% if can_sign_out %}
     <div class="relative" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
       <button type="button" x-ref="userTrigger" @click="open = !open"
               :aria-expanded="open ? 'true' : 'false'" aria-haspopup="menu"
               :class="open ? 'bg-accent text-accent-foreground' : ''"
               class="{{ ui('nav-item') }} {{ ui('nav-item', 'inactive') }} {{ ui('nav-item', 'size-lg') }}">
-        <span class="{{ ui('avatar') }} size-8 rounded-lg">
-          <span class="{{ ui('avatar', 'fallback') }} rounded-lg">{{ display_name[:2] | upper }}</span>
-        </span>
-        <span x-show="!collapsed" class="grid flex-1 text-left leading-tight">
-          <span class="truncate font-medium text-foreground">{{ display_name }}</span>
-          <span class="truncate text-xs text-muted-foreground">
-            {{ _("Superuser") if principal.is_superuser else _("Signed in") }}
-          </span>
-        </span>
+        {{ sidebar_user(principal) }}
         <span x-show="!collapsed">{{ icon("chevrons-up-down", "ml-auto size-4") }}</span>
       </button>
-      {# side="right" like the block's desktop placement -- the footer
-         is at the very bottom, so a downward menu would open offscreen. #}
+      {# side="right" like the block's desktop placement -- the footer is
+         at the very bottom, so a downward menu would open offscreen.
+
+         The menu holds actions only. The trigger it opens from sits
+         directly beside it and already shows who you are, so repeating
+         the name and role in here was a header that told the reader
+         nothing they could not already see. #}
       <div x-show="open" x-cloak role="menu"
            x-anchor.right-end.offset.8="$refs.userTrigger"
            x-transition:enter="transition ease-out duration-150"
            x-transition:enter-start="opacity-0 scale-95"
            x-transition:enter-end="opacity-100 scale-100"
            class="{{ ui('dropdown', 'content') }} min-w-56">
-        <div class="{{ ui('dropdown', 'label') }} flex items-center gap-2">
-          <span class="{{ ui('avatar') }} size-8 rounded-lg">
-            <span class="{{ ui('avatar', 'fallback') }} rounded-lg">{{ display_name[:2] | upper }}</span>
-          </span>
-          <span class="grid flex-1 leading-tight">
-            <span class="truncate font-medium text-foreground">{{ display_name }}</span>
-            <span class="truncate text-xs font-normal text-muted-foreground">
-              {{ _("Superuser") if principal.is_superuser else _("Signed in") }}
-            </span>
-          </span>
-        </div>
-        <div class="{{ ui('dropdown', 'separator') }}"></div>
         {# No Dashboard entry here: the nav above already opens with
            one, and a second link to the same place inside the user menu
            is just noise. #}
-        {# Only when there is a session to end. A form, not a link: a
-           logout reachable by GET is one any <img src> on the internet
-           can fire at a signed-in admin, so it posts and carries the
-           CSRF token. #}
-        {% if can_sign_out %}
+        {# A form, not a link: a logout reachable by GET is one any
+           <img src> on the internet can fire at a signed-in admin, so
+           it posts and carries the CSRF token. #}
         <form method="post" action="{{ base_path }}/logout">
           {{ csrf_field(csrf_token) }}
           <button type="submit" role="menuitem" class="{{ ui('dropdown', 'item') }} w-full">
@@ -155,9 +156,16 @@
             <span>{{ _("Sign out") }}</span>
           </button>
         </form>
-        {% endif %}
       </div>
     </div>
+    {% else %}
+    {# No login backend, so there is no session to end and nothing else
+       the menu would hold: the footer is just who you are, and opening
+       an empty menu would be a dead end. #}
+    <div class="{{ ui('nav-item') }} {{ ui('nav-item', 'inactive') }} {{ ui('nav-item', 'size-lg') }}">
+      {{ sidebar_user(principal) }}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 

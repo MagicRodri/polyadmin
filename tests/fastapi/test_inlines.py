@@ -184,7 +184,7 @@ def test_inline_section_readonly_on_detail_page():
     assert "<input" not in section
 
 
-def test_readonly_tabular_inline_links_each_row_from_a_trailing_view_column():
+def test_readonly_tabular_inline_links_each_row_from_its_primary_key():
     client, org_admin, user_admin = make_client()
     org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
@@ -195,12 +195,20 @@ def test_readonly_tabular_inline_links_each_row_from_a_trailing_view_column():
     row = table.split("<tbody")[1].split("</tr>")[0]
     cells = row.split("<td")[1:]
 
-    # Its own column, not a link wrapped around the first value: that
-    # value may itself be a relation, and <a> inside <a> is invalid.
-    assert f'href="/admin/users/{users[0].id}"' in cells[-1]
-    assert ">View</a>" in cells[-1]
-    assert "/admin/users/" not in cells[0]
+    # The id cell opens the record, so there is no trailing View column.
+    assert f'href="/admin/users/{users[0].id}"' in cells[0]
+    assert ">View</a>" not in row
     assert header_cells == len(cells), "the header and the row disagree on the column count"
+
+
+def test_a_readonly_inline_never_nests_a_link_in_a_relation_cell():
+    """The reason the row link used to be its own column: a relation cell
+    renders as a link already, and <a> inside <a> is invalid."""
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = client.get(f"/admin/organizations/{org.id}").text.split('id="inline-users"')[1]
+    assert f'class="{ui("text", "link")}"><a' not in section
 
 
 def test_inline_create_adds_row_and_returns_section_fragment():

@@ -5,7 +5,11 @@
    Hovering a slice or its legend row highlights both and swaps the
    ring's centre label. `active` is compared against a plain loop index,
    never a label, so nothing dynamic is interpolated into the Alpine
-   expression. #}
+   expression.
+
+   The legend row's highlight stops at the card's content edge rather
+   than bleeding into its padding: the card body is a bounded scroll box
+   (dashboard.html), so that bleed was 8px of horizontal overflow. #}
 <div x-data="{ active: null }" class="flex flex-col items-center gap-6 sm:flex-row">
   <div class="relative h-36 w-36 shrink-0">
     <svg viewBox="0 0 36 36" class="h-36 w-36">
@@ -38,7 +42,7 @@
   </div>
   <ul class="w-full space-y-1 text-sm">
     {% for slice in widget_data.slices %}
-    <li class="-mx-2 flex items-center justify-between gap-2 rounded-md px-2 py-1 transition-colors"
+    <li class="flex items-center justify-between gap-2 rounded-md px-2 py-1 transition-colors"
         :class="active === {{ loop.index0 }} ? 'bg-muted/50' : ''"
         @mouseenter="active = {{ loop.index0 }}" @mouseleave="active = null">
       <span class="flex items-center gap-2 text-foreground">

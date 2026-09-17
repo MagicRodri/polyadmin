@@ -166,11 +166,20 @@ def seed(
     # Founded in the same month for every organization: Task 15's browser
     # test checks that this date renders with a French month name under
     # the fr locale, and it doesn't matter which organization it looks at.
+    # Acme keeps March 2019: a browser test pins "Mar 1, 2019" as a data
+    # value and checks the same date renders "mars" under fr. The others
+    # spread out, so the date drill-down has years and months to walk.
     founded = date(2019, 3, 1)
     acme = organizations.create(name="Acme Corp", founded=founded, balance=1234.5)
-    widgets = organizations.create(name="Widgets Inc", founded=founded, balance=1234.5)
-    globex = organizations.create(name="Globex Corporation", founded=founded, balance=1234.5)
-    initech = organizations.create(name="Initech", founded=founded, balance=1234.5)
+    widgets = organizations.create(name="Widgets Inc", founded=date(2021, 6, 15), balance=1234.5)
+    globex = organizations.create(name="Globex Corporation", founded=date(2023, 11, 2), balance=1234.5)
+    initech = organizations.create(name="Initech", founded=date(2023, 11, 20), balance=1234.5)
+    for i in range(5, 25):
+        organizations.create(
+            name=f"Org {i:02d} Holdings",
+            founded=date(2019 + i % 5, 1 + (i * 3) % 12, 1 + (i * 7) % 28),
+            balance=float(1000 + i * 137),
+        )
 
     # Enough roles that the multi-select's search box has something to
     # do -- the control only earns its keep past the point where
@@ -191,3 +200,20 @@ def seed(
     users.create(email="peter@example.com", is_active=True, plan="Enterprise", organization=globex, roles=[support])
     users.create(email="samir@example.com", is_active=True, plan="Free", organization=initech)
     users.create(email="milton@example.com", is_active=False, plan="Free", organization=None)
+
+    # Enough rows to fill a viewport and give pagination, filters and the
+    # date drill-down something to work on. The seven named users above are
+    # what the tests assert against, so the filler deliberately avoids
+    # Initech (whose cascade count is asserted) and the Auditor role (whose
+    # being unheld is asserted), and is generated rather than listed.
+    plans = ("Free", "Pro", "Enterprise")
+    filler_orgs = (acme, widgets, globex, None)
+    filler_roles = (None, [support], [billing], [administrator], [security, support])
+    for i in range(len(users.list()) + 1, 201):
+        users.create(
+            email=f"user{i:03d}@example.com",
+            is_active=i % 4 != 0,
+            plan=plans[i % len(plans)],
+            organization=filler_orgs[i % len(filler_orgs)],
+            roles=filler_roles[i % len(filler_roles)],
+        )

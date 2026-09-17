@@ -11,7 +11,7 @@ template to translate, so each string is translated once.
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from polyadmin.core.action import DELETE_SELECTED_NAME
 from polyadmin.core.admin import Admin
@@ -22,7 +22,13 @@ from polyadmin.core.delete import (
 )
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
-from polyadmin.core.query import ListRequest
+from polyadmin.core.query import (
+    LIST_TOKEN_FIELD,
+    ListRequest,
+    is_sortable,
+    links_to_record,
+    with_list_token,
+)
 from polyadmin.i18n import gettext, ngettext
 
 
@@ -133,6 +139,17 @@ def _filter_controls(model_admin: ModelAdmin, list_request: ListRequest, base_pa
     return controls
 
 
+def _filter_choice_url(
+    model_admin: ModelAdmin, list_request: ListRequest, base_path: str, name: str, value: str
+) -> str:
+    """The list URL with one filter set to `value`, or cleared when it is
+    empty -- every other parameter carried over."""
+    filters = {other: v for other, v in list_request.filters.items() if other != name}
+    if value:
+        filters[name] = value
+    return _list_url(model_admin, list_request, base_path, filters=filters)
+
+
 def _sort_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> dict[str, Any]:
     """Per-column ascending/descending URLs and the current direction,
     for the sortable column-header dropdowns."""
@@ -142,6 +159,8 @@ def _sort_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path
         direction = "asc" if ordering == name else ("desc" if ordering == f"-{name}" else None)
         controls[name] = {
             "direction": direction,
+            # Outside sortable_by: the header renders as a plain label.
+            "sortable": is_sortable(model_admin, name),
             "asc_url": _list_url(model_admin, list_request, base_path, ordering=name),
             "desc_url": _list_url(model_admin, list_request, base_path, ordering=f"-{name}"),
         }
@@ -219,6 +238,13 @@ def category_breadcrumb(category: str | None) -> list[dict[str, Any]]:
     return [{"label": gettext(category), "url": None, "active": False}]
 
 
+def _list_crumb_url(model_admin: ModelAdmin, base_path: str, list_token: str) -> str:
+    """The breadcrumb back to the list: the one the page was reached from when
+    preserve_filters handed us a token, the bare list otherwise. This is where
+    a user actually returns, so it is the crumb that matters most."""
+    return list_token or f"{base_path}/{model_admin.get_slug()}"
+
+
 def base_context(
     admin: Admin,
     *,
@@ -229,11 +255,15 @@ def base_context(
     active_nav_key: str | None = None,
     principal: Any = None,
     csrf_token: str = "",
+    list_token: str = "",
 ) -> dict[str, Any]:
     if active_nav_key is None and model_admin is not None:
         active_nav_key = f"resource:{model_admin.get_slug()}"
     return {
         "admin": admin,
+        # The list this page was reached from -- preserve_filters
+        # (docs/lists.md). Forms post it back in a hidden field.
+        "list_token": list_token,
         "model_admin": model_admin,
         "base_path": base_path,
         "messages": messages or [],
@@ -294,11 +324,24 @@ def list_context(
         # A previewing resource has something to say before the delete, so
         # the row's Delete leads to the page that says it.
         "previews_deletes": previews_deletes(model_admin),
+        # Which cells link to the record -- list_display_links.
+        "linked_columns": [name for name in model_admin.list_display if links_to_record(model_admin, name)],
+        # "?_list=<this list>" for the pages reached from here, so they lead
+        # back into the list as it was left -- preserve_filters. Empty when
+        # the ModelAdmin has it off.
+        "list_query": (
+            f"?{LIST_TOKEN_FIELD}={quote(_list_url(model_admin, list_request, base_path, page=list_request.page), safe='')}"
+            if model_admin.preserve_filters
+            else ""
+        ),
         "list_display": list(model_admin.list_display),
         # "cells", not "values" -- the latter collides with dict.values,
         # the built-in method, when accessed via Jinja's dot notation.
         "rows": [
-            {"pk": model_admin.get_pk(obj), "cells": model_admin.get_list_display_values(obj)}
+            {
+                "pk": model_admin.get_pk(obj),
+                "cells": model_admin.get_list_display_values(obj),
+            }
             for obj in page.items
         ],
         "search": list_request.search or "",
@@ -341,14 +384,15 @@ def detail_context(
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
     csrf_token: str = "",
+    list_token: str = "",
 ) -> dict[str, Any]:
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{model_admin.get_slug()}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
         {"label": _object_label(model_admin, obj), "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
         "actions": _action_infos(model_admin),
@@ -371,6 +415,7 @@ def form_context(
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
     csrf_token: str = "",
+    list_token: str = "",
 ) -> dict[str, Any]:
     slug = model_admin.get_slug()
     if obj is not None:
@@ -380,16 +425,19 @@ def form_context(
 
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
     ]
     if obj is not None:
-        breadcrumbs.append({"label": _object_label(model_admin, obj), "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"})
+        breadcrumbs.append({
+            "label": _object_label(model_admin, obj),
+            "url": with_list_token(f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token),
+        })
         breadcrumbs.append({"label": gettext("Edit"), "url": None, "active": True})
     else:
         breadcrumbs.append({"label": gettext("New"), "url": None, "active": True})
 
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
         "object": obj,
         "data": data,
         "errors": errors or {},
@@ -400,6 +448,20 @@ def form_context(
         # undeclared case.
         "fieldsets": model_admin.get_fieldsets(),
         "form_action": form_action,
+        # save_as: only on an existing record, since there is nothing to copy
+        # from on a create form.
+        "allow_save_as": model_admin.save_as and obj is not None,
+        # prepopulated_fields, for the behaviour in theme.html. Empty on an
+        # edit form -- an existing record's slug is a real identifier, and
+        # rewriting it from the title is how links rot.
+        "prepopulated": (
+            {
+                target: {"from": list(sources), "unicode": target in model_admin.prepopulated_unicode}
+                for target, sources in model_admin.prepopulated_fields.items()
+            }
+            if obj is None
+            else {}
+        ),
         "relation_options": relation_options or {},
         # The edit form offers Delete, so it needs the detail page's
         # permission map: otherwise the button renders for a principal the
@@ -508,16 +570,17 @@ def delete_context(
     principal: Any = None,
     csrf_token: str = "",
     preview: ResolvedDeletePreview | None = None,
+    list_token: str = "",
 ) -> dict[str, Any]:
     slug = model_admin.get_slug()
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
-        {"label": _object_label(model_admin, obj), "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"},
+        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
+        {"label": _object_label(model_admin, obj), "url": with_list_token(f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token)},
         {"label": gettext("Delete"), "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
         "object": obj,
         "object_label": _object_label(model_admin, obj),
         "preview": delete_preview_view(preview, base_path),

@@ -139,9 +139,10 @@ def test_blocked_htmx_delete_redirects_to_the_delete_page():
 def test_list_row_delete_links_to_the_page_only_when_previewing():
     client, _, _ = make(protected_invoices)
     page = client.get("/admin/users").text
-    assert 'href="/admin/users/1/delete"' in page and 'hx-delete="/admin/users/1/delete"' not in page
+    # Both forms carry the list they came from -- preserve_filters.
+    assert 'href="/admin/users/1/delete?_list=' in page and 'hx-delete="/admin/users/1/delete?_list=' not in page
     plain = TestClient(_plain_app()).get("/admin/users").text
-    assert 'hx-delete="/admin/users/1/delete"' in plain
+    assert 'hx-delete="/admin/users/1/delete?_list=' in plain
 
 
 class PreviewingInlineUserAdmin(inl.UserAdmin):

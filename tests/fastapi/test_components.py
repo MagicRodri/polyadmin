@@ -146,15 +146,14 @@ def test_stacked_toolbar_controls_put_the_label_left_and_the_icon_right():
     icon_class = ui("toolbar", "item-icon")
     page = _filterable_page()
 
-    # Filters, the action select, Export and New each get a label that
-    # takes the slack.
-    assert page.count(label) >= 4, (
+    # Filters, the action select and Export each get a label that takes the
+    # slack. New is deliberately icon-only and so is not one of them.
+    assert page.count(label) >= 3, (
         f"expected each stacked control's label to take the slack, found {page.count(label)}"
     )
-    # Filters' and New's leading icons plus Export's icon+chevron move to
-    # the trailing edge; the action select's chevron is already last and
-    # needs no reorder.
-    assert page.count(icon_class) >= 4, (
+    # Filters' leading icon plus Export's icon+chevron move to the trailing
+    # edge; the action select's chevron is already last and needs no reorder.
+    assert page.count(icon_class) >= 3, (
         f"expected leading icons to move to the trailing edge, found {page.count(icon_class)}"
     )
 
@@ -481,3 +480,54 @@ def test_field_without_a_description_renders_none(described_client):
     # Three fields, one of which has help text.
     page = described_client.get("/admin/tasks/1/edit").text
     assert page.count(ui("field", "description")) == 1
+
+
+def _icon_path(name: str) -> str:
+    """The `d` of one icon in components/icons.html, so a test can look
+    for that glyph in a page without re-stating the path here."""
+    from pathlib import Path
+
+    import polyadmin
+
+    source = (Path(polyadmin.__file__).parent / "templates/admin/components/icons.html").read_text()
+    line = next(line for line in source.splitlines() if line.strip().startswith(f'"{name}":'))
+    return line.split('"')[3]
+
+
+def test_toasts_are_the_sonner_toaster():
+    """The anatomy that makes these toasts Sonner's rather than a
+    generic stack: its column geometry, a queue that can pause a toast's
+    timer, an icon per level, and a close button with a name."""
+    user_admin = InMemoryUserAdmin()
+    user_admin.create({"email": "a@example.com"})
+    admin = Admin(model_admins=[user_admin])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    page = TestClient(app).get("/admin/users").text
+
+    # Sonner's own measurements: 14px between toasts, and a 356px column
+    # inside a 32px offset from the viewport's edge.
+    toast_list = ui("toast", "list")
+    for want in ("gap-[14px]", "sm:w-[420px]", "sm:p-8"):
+        assert want in toast_list, f"the toast column is not Sonner's geometry: missing {want!r}"
+    # The timer pauses while the pointer rests on a toast -- without a
+    # queue that owns the timers, hovering could not hold one open.
+    for want in ('x-data="adminToaster()"', '@mouseenter="pause(toast)"', '@mouseleave="resume(toast)"'):
+        assert want in page, f"the toaster cannot pause a toast on hover: missing {want!r}"
+    # One glyph per level, and none for a plain toast.
+    assert _icon_path("check-circle") in page and _icon_path("x-circle") in page
+    assert "x-show=\"toast.type !== 'default'\"" in page, (
+        "a plain toast should carry no icon, as Sonner's does not"
+    )
+    # The close button used to be unlabelled, which left it nameless to
+    # a screen reader.
+    assert 'aria-label="Close"' in page, "the toast's close button has no accessible name"
+
+
+def test_the_page_indicator_never_wraps():
+    """shadcn fixes the indicator at w-[100px], which a translated
+    "Page 1 of 8" overflows in most languages -- Russian's wrapped onto
+    a second line, pushing the jump buttons out of the footer's row."""
+    indicator = ui("pagination", "page-indicator")
+    assert "min-w-[100px]" in indicator, f"the indicator's width is not a floor: {indicator!r}"
+    assert "whitespace-nowrap" in indicator, f"a long translation can still wrap: {indicator!r}"

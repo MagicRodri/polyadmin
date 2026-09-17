@@ -289,9 +289,12 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         },
     },
 
-    # A restyle of the existing PinesUI-derived queue in toasts.html,
-    # which already has Sonner's shape (teleported stack, per-type icon,
-    # auto-dismiss).
+    # Sonner, the toaster shadcn/ui ships. Its geometry is kept as it
+    # ships: a 356px column in the viewport's corner, 14px between toasts,
+    # 16px of padding, 13px text, and a close button parked half outside
+    # the top-left corner. What is dropped is Sonner's collapsed
+    # peek-stack, which is choreography for an app raising toasts
+    # continuously -- see toasts.html.
     "toast": {
         "parts": {
             # pointer-events-none is load-bearing: the viewport spans a
@@ -299,20 +302,28 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             # sticky action bar in that same corner, so it would otherwise
             # swallow clicks on Save. Each toast re-enables pointer events
             # for itself.
+            #
+            # The padding is Sonner's offset from the viewport edge (32px,
+            # 16px below `sm`), so the column inside it is exactly the
+            # 356px Sonner uses.
             "list": (
-                "pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex max-h-screen "
-                "flex-col gap-2 p-4 sm:inset-x-auto sm:right-0 sm:bottom-0 md:max-w-[420px]"
+                "pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex flex-col "
+                "gap-[14px] p-4 sm:inset-x-auto sm:right-0 sm:bottom-0 sm:w-[420px] sm:p-8"
             ),
             "root": (
-                "pointer-events-auto group relative flex w-full items-start gap-3 overflow-hidden "
-                "rounded-md border border-border bg-background p-4 pr-8 text-foreground shadow-lg"
+                "pointer-events-auto group relative flex w-full items-center gap-1.5 "
+                "rounded-lg border border-border bg-background p-4 text-foreground shadow-lg"
             ),
-            "title": "text-sm font-semibold leading-none",
-            "description": "mt-1.5 text-sm leading-snug opacity-90",
+            "icon": "flex size-4 shrink-0 items-center justify-center",
+            "title": "text-[13px] font-medium leading-tight",
+            "description": "mt-1 text-[13px] leading-snug text-muted-foreground",
+            # Sonner parks the close button on the toast's top-left corner,
+            # half outside it, and only reveals it on hover.
             "close": (
-                "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 "
-                "transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none "
-                "focus:ring-2 focus:ring-ring group-hover:opacity-100"
+                "absolute left-0 top-0 flex size-5 -translate-x-1/3 -translate-y-1/3 items-center "
+                "justify-center rounded-full border border-border bg-background text-foreground/60 "
+                "opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none "
+                "focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
             ),
         },
     },
@@ -491,7 +502,13 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "selection": "flex-1 text-sm text-muted-foreground",
             "controls": "flex items-center gap-4 lg:gap-8",
             "rows-per-page": "flex items-center gap-2 text-sm font-medium",
-            "page-indicator": "flex w-[100px] items-center justify-center text-sm font-medium",
+            # shadcn fixes this at w-[100px]; a translated "Page 1 of 8"
+            # is wider than that in most languages, so the width is a
+            # floor and the label never wraps to a second line.
+            "page-indicator": (
+                "flex min-w-[100px] items-center justify-center whitespace-nowrap "
+                "text-sm font-medium"
+            ),
             "jumps": "flex items-center gap-2",
             # The two outer jumps (first/last) are hidden on small
             # screens in the example -- prev/next are enough there.
@@ -559,7 +576,11 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
         "base": "relative",
         "parts": {
             "trigger": "flex items-center gap-2 rounded-md border border-input bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-            "content": "absolute z-50 mt-1 max-h-[280px] w-full overflow-y-auto rounded-md border border-border bg-popover py-1 text-sm text-popover-foreground shadow-md",
+            # ui-scroll-area, so a long option list scrolls behind the same
+            # thin token-coloured bar the rest of the admin uses rather than
+            # the platform's own chunky one -- as close as CSS gets to Radix
+            # drawing its own over a hidden native one.
+            "content": "ui-scroll-area absolute z-50 mt-1 max-h-[280px] w-full overflow-y-auto rounded-md border border-border bg-popover py-1 text-sm text-popover-foreground shadow-md",
             "item": "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-1.5 text-popover-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
             # Handed to classList.add()/remove() by the arrow-key
             # handler, so this must stay a single space-free class.
@@ -624,6 +645,17 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "header": "mb-3 flex items-center gap-3",
             "icon": "inline-flex shrink-0 items-center justify-center rounded-lg bg-muted p-2 text-foreground",
             "title": "text-sm font-medium text-muted-foreground",
+            # The content area. The dashboard is a grid, so a card that
+            # grows with its content drags every other card in its row to
+            # the same height; bounding the body instead keeps a long list
+            # inside its own card and scrolls it there, with theme.html's
+            # .ui-scroll-area styling the bar.
+            #
+            # It scrolls in one direction only. A card is a fixed column of
+            # a grid, so anything wider than it is a widget that has to
+            # wrap, not a second scrollbar to drag: widgets/table.html
+            # wraps its cells rather than holding them on one line.
+            "body": "ui-scroll-area max-h-80 overflow-y-auto overflow-x-hidden",
             "span-lg": "sm:col-span-2 xl:col-span-3",
             "bar-track": "h-2 w-full rounded-full bg-muted",
             "bar-fill": "h-2 rounded-full bg-primary",

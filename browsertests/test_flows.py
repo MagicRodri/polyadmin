@@ -196,18 +196,37 @@ def test_inline_table_shows_its_row_actions(admin_page):
         }"""
     )
     assert overflow <= 0, f"the inline table overflows its card by {overflow}px"
-    row_link = admin_page.locator("#inline-users table tbody tr td:last-child a", has_text="View").first
+    # The row opens from its primary key's own cell; there is no trailing
+    # View column any more.
+    row_link = admin_page.locator("#inline-users table tbody tr td").first.locator("a").first
     expect(row_link).to_be_visible()
+    expect(admin_page.locator("#inline-users a", has_text="View")).to_have_count(0)
 
 
-def test_inline_selects_are_not_clipped(admin_page):
+def test_inline_relation_controls_are_not_clipped(admin_page):
+    """The row's relation controls are the admin's own select and
+    multi-select, and their popovers are portalled out of the row -- a
+    row clips anything taller than itself."""
     admin_page.goto(f"{ADMIN_URL}/organizations/1/edit")
+    triggers = admin_page.locator("#inline-users button[aria-haspopup=listbox]")
+    expect(triggers.first).to_be_visible()
+
+    triggers.first.click()
+    panel = admin_page.locator("body > [class*=bg-popover]").first
+    expect(panel).to_be_visible()
     clipped = admin_page.evaluate(
-        """() => [...document.querySelectorAll('#inline-users select:not([multiple])')]
-            .filter(select => select.scrollWidth > Math.ceil(select.getBoundingClientRect().width))
-            .length"""
+        """() => {
+            const panel = document.querySelector('body > [class*=bg-popover]');
+            let el = panel.parentElement;
+            while (el && el !== document.documentElement) {
+                const cs = getComputedStyle(el);
+                if (cs.overflowY !== 'visible' || cs.overflowX !== 'visible') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }"""
     )
-    assert clipped == 0, "a select is narrower than its widest option"
+    assert not clipped, "the row's popover is inside a clipping ancestor"
 
 
 def test_no_admin_page_scrolls_sideways(admin_page):
@@ -227,4 +246,92 @@ def test_sidebar_rail_sits_on_the_sidebar_edge(admin_page):
     sidebar_edge = sidebar["x"] + sidebar["width"]
     assert abs(rail_centre - sidebar_edge) <= 2, (
         f"the rail is centred at {rail_centre}px, the sidebar ends at {sidebar_edge}px"
+    )
+
+
+def test_a_long_dashboard_widget_scrolls_inside_its_own_card(admin_page):
+    """The example's "Recent users" table lists every seeded user. Its
+    card has to scroll rather than grow: in a grid, one tall card
+    stretches every card beside it to match."""
+    admin_page.goto(ADMIN_URL)
+    card_body = admin_page.locator("div.ui-scroll-area:has(table)").first
+    expect(card_body).to_be_visible()
+
+    overflow = card_body.evaluate("el => el.scrollHeight - el.clientHeight")
+    assert overflow > 0, "the widget fits its card; the assertions below would be vacuous"
+
+    header_before = admin_page.locator("div.ui-scroll-area:has(table) thead").first.bounding_box()["y"]
+    card_body.evaluate("el => { el.scrollTop = el.scrollHeight }")
+    assert card_body.evaluate("el => el.scrollTop") > 0, "the card's body does not scroll"
+    header_after = admin_page.locator("div.ui-scroll-area:has(table) thead").first.bounding_box()["y"]
+    assert abs(header_after - header_before) <= 1, "the columns scrolled away with the rows"
+
+    # And no card was stretched to the table's full height.
+    heights = admin_page.eval_on_selector_all(
+        "div.ui-scroll-area", "els => els.map(el => el.getBoundingClientRect().height)"
+    )
+    assert max(heights) <= 320, f"a widget body grew to {max(heights)}px"
+
+
+def test_a_flash_message_becomes_a_toast(admin_page):
+    """Saving leaves a flash message behind; the toaster raises it."""
+    admin_page.goto(f"{ADMIN_URL}/users/create")
+    admin_page.fill("#field-email", unique_email())
+    admin_page.click("button[type=submit][form=resource-form]")
+
+    expect(admin_page.locator("body > ol[aria-label] > li")).to_have_count(1)
+
+
+def test_a_toast_is_sonner_shaped_and_waits_while_hovered(admin_page):
+    """Sonner's own geometry and its hover-to-hold timer. The toast is
+    raised by hand rather than by a save, so these assertions are not
+    racing a four-second timer that started with the page load."""
+    admin_page.goto(f"{ADMIN_URL}/users")
+    admin_page.evaluate("() => window.toast('Saved', { type: 'success', description: 'Two rows changed.' })")
+
+    toast = admin_page.locator("body > ol[aria-label] > li").first
+    expect(toast).to_be_visible()
+    box = toast.bounding_box()
+    viewport = admin_page.viewport_size
+    assert round(box["width"]) == 356, f"Sonner's toast is 356px wide; this one is {box['width']}px"
+    assert viewport["width"] - (box["x"] + box["width"]) <= 40, "the toast is not in the right-hand corner"
+    assert viewport["height"] - (box["y"] + box["height"]) <= 40, "the toast is not in the bottom corner"
+
+    # The four-second timer holds while the pointer rests on it.
+    toast.hover()
+    admin_page.wait_for_timeout(4500)
+    expect(toast).to_be_visible()
+
+    # Sonner parks the close button on the top-left corner, not inside
+    # the toast's right edge.
+    close = toast.locator("button")
+    assert close.bounding_box()["x"] < box["x"] + 20
+    close.click()
+    expect(admin_page.locator("body > ol[aria-label] > li")).to_have_count(0)
+
+
+def test_no_dashboard_widget_scrolls_sideways(admin_page):
+    """A card is a fixed column of the grid, so its content wraps rather
+    than handing the reader a sideways scrollbar inside the card."""
+    admin_page.goto(ADMIN_URL)
+    overflows = admin_page.eval_on_selector_all(
+        "div.ui-scroll-area",
+        "els => els.map(el => el.scrollWidth - el.clientWidth)",
+    )
+    assert overflows, "no widget bodies on the dashboard; this test would be vacuous"
+    assert max(overflows) <= 0, f"a widget body overflows sideways by {max(overflows)}px"
+
+
+def test_the_user_menu_holds_actions_only(admin_page):
+    """The trigger sits directly beside the menu and already shows who
+    you are; the menu is for what you can do."""
+    admin_page.goto(f"{ADMIN_URL}/users")
+    trigger = admin_page.locator('aside button[aria-haspopup="menu"]').last
+    expect(trigger).to_be_visible()
+    trigger.click()
+
+    menu = admin_page.locator('aside [role="menu"]')
+    expect(menu).to_be_visible()
+    assert menu.inner_text().strip() == "Sign out", (
+        f"the user menu shows {menu.inner_text().strip()!r}, not just its actions"
     )

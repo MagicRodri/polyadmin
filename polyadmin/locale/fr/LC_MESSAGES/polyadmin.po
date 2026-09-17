@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-16 12:20+0500\n"
+"POT-Creation-Date: 2026-09-17 14:36+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: fr\n"
@@ -83,6 +83,9 @@ msgstr "Tous"
 msgid "Anonymous"
 msgstr "Anonyme"
 
+msgid "Any date"
+msgstr "Toutes les dates"
+
 msgid "Asc"
 msgstr "Croissant"
 
@@ -103,6 +106,9 @@ msgstr "Tout effacer"
 
 msgid "Clear selection"
 msgstr "Effacer la sélection"
+
+msgid "Close"
+msgstr "Fermer"
 
 msgid "Close filters"
 msgstr "Fermer les filtres"
@@ -238,6 +244,9 @@ msgstr "Aucun widget configuré."
 msgid "Not found"
 msgstr "Introuvable"
 
+msgid "Notifications"
+msgstr "Notifications"
+
 msgid "Open calendar"
 msgstr "Ouvrir le calendrier"
 
@@ -253,6 +262,9 @@ msgstr "Page %(page)d sur %(pages)d"
 
 msgid "Password"
 msgstr "Mot de passe"
+
+msgid "Past 7 days"
+msgstr "7 derniers jours"
 
 msgid "Permission denied"
 msgstr "Accès refusé"
@@ -291,6 +303,9 @@ msgstr "Enregistrer et ajouter un autre"
 
 msgid "Save and continue editing"
 msgstr "Enregistrer et continuer la modification"
+
+msgid "Save as new"
+msgstr "Enregistrer comme nouveau"
 
 #, python-format
 msgid "Save to add %(label)s."
@@ -372,11 +387,20 @@ msgstr "Cette action est irréversible."
 msgid "This can't be deleted"
 msgstr "Suppression impossible"
 
+msgid "This month"
+msgstr "Ce mois-ci"
+
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr "Cette page a expiré avant l'envoi du formulaire. Rechargez la page et réessayez."
 
 msgid "This will also delete"
 msgstr "Seront aussi supprimés"
+
+msgid "This year"
+msgstr "Cette année"
+
+msgid "Today"
+msgstr "Aujourd'hui"
 
 msgid "Toggle dark mode"
 msgstr "Basculer le mode sombre"

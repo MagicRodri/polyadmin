@@ -47,27 +47,30 @@ def test_list_table_uses_the_registrys_scroll_part():
     assert ui("table", "scroll") in client.get("/admin/users").text
 
 
-def test_many_to_many_listbox_in_an_edit_row_is_capped():
+def test_many_to_many_in_an_edit_row_is_the_shadcn_control():
+    """The row holds the same trigger-and-popover control the full form
+    uses, not a native <select multiple> sized to its options."""
     client, org_admin, user_admin = make_client()
     org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
-    # More options than the cap, or there is nothing to cap.
     for i in range(1, INLINE_MULTISELECT_ROWS + 5):
         org_admin._store[100 + i] = Organization(100 + i, f"Team {i}")
 
     section = _inline_section(client.get(f"/admin/organizations/{org.id}/edit").text)
-    assert "<select multiple" in section, "no multi-select in the edit row"
-    assert f'size="{INLINE_MULTISELECT_ROWS}"' in section
-    # It must not be sized to the option count.
-    assert f'size="{INLINE_MULTISELECT_ROWS + 5}"' not in section
+    assert "<select multiple" not in section, "the native listbox is still there"
+    assert 'aria-haspopup="listbox"' in section, "no shadcn multi-select in the edit row"
+    # Its popover leaves the row rather than being clipped by it.
+    assert 'x-teleport="body"' in section
+    # Nothing is sized to the option count any more.
+    assert f'size="{INLINE_MULTISELECT_ROWS}"' not in section
 
 
-def test_many_to_many_listbox_in_an_edit_row_uses_the_scroll_area_styling():
+def test_a_relation_cell_in_an_edit_row_is_the_shadcn_select():
     client, org_admin, user_admin = make_client()
     org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
-    org_admin._store[101] = Organization(101, "Team")
 
     section = _inline_section(client.get(f"/admin/organizations/{org.id}/edit").text)
-    assert ui("scroll-area", "y") in section
+    # One hidden input carrying the value, as ui/select posts it.
+    assert "adminMultiSelect()" in section or "adminSelect()" in section
 
 
 def test_inline_edit_controls_are_actually_styled():
@@ -80,8 +83,9 @@ def test_inline_edit_controls_are_actually_styled():
     # the expression never leaks is the suite-wide guard in conftest).
     assert ui("input", "size-sm") in section
     # No plain <select> to check here: the inline's own fk_field is
-    # implied by context and never rendered, so the only select in this
-    # fixture's row is the many-to-many, which uses the table-cell part.
+    # implied by context and never rendered, so the only relation control
+    # in this fixture's row is the many-to-many, whose compact trigger
+    # uses the table-cell part.
     assert ui("select", "cell-multi") in section
 
 

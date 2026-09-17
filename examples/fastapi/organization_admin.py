@@ -13,6 +13,7 @@ from polyadmin import (
     ModelAdmin,
     StringField,
 )
+from polyadmin.core.filter import DateFilter
 from polyadmin.core.inline import TabularInline
 
 
@@ -55,6 +56,13 @@ class OrganizationAdmin(ModelAdmin):
     # Shows each Organization's Users inline on its own
     # create/detail/edit pages -- see docs/inlines.md.
     inlines = [TabularInline("users", "organization")]
+
+    # The small-parity batch, shown off together: a date filter in the
+    # panel, "Save as new" for cloning a company, and the name -- not the
+    # id -- as the link into the record.
+    filters = [DateFilter("founded")]
+    save_as = True
+    list_display_links = ["name"]
 
     def __init__(self, repository: OrganizationRepository, users: UserRepository) -> None:
         super().__init__()

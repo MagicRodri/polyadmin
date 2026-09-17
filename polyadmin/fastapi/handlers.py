@@ -22,7 +22,14 @@ from polyadmin.core.delete import previews_deletes, resolve_delete_preview
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
-from polyadmin.core.query import ListRequest, alist_objects, apply_defaults
+from polyadmin.core.query import (
+    LIST_TOKEN_FIELD,
+    ListRequest,
+    alist_objects,
+    apply_defaults,
+    safe_list_token,
+    with_list_token,
+)
 from polyadmin.core.template_context import delete_preview_view
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
@@ -48,6 +55,9 @@ from polyadmin.templating import Renderer
 # the handler reads presence rather than a value.
 SAVE_CONTINUE_FIELD = "_continue"
 SAVE_ADD_ANOTHER_FIELD = "_addanother"
+# Turns an edit into a create: the submitted values become a new record and
+# the original is left alone (save_as).
+SAVE_AS_NEW_FIELD = "_saveasnew"
 
 _FILTER_KEY = re.compile(r"^filter\[(\w+)\]$")
 
@@ -136,6 +146,15 @@ def _parse_form_data(model_admin: ModelAdmin, form: Any, obj: Any = None) -> dic
     return data
 
 
+def _list_token(request: Request, form: Any, base_path: str) -> str:
+    """The list a page was reached from -- the _list query parameter on a GET,
+    the hidden field on a POST -- validated the way a Referer is. An invalid
+    one reads as "no list", so a forged token redirects to the bare list
+    rather than off-site."""
+    raw = request.query_params.get(LIST_TOKEN_FIELD) or (form.get(LIST_TOKEN_FIELD) if form else None)
+    return safe_list_token(raw, request.url.netloc, base_path)
+
+
 def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
     slug = model_admin.get_slug()
 
@@ -155,6 +174,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         list_request = apply_defaults(model_admin, _parse_list_request(request.query_params))
         objects, total = await alist_objects(model_admin, list_request)
         page = page_of(objects, total, list_request)
+
 
         if is_htmx_request(request):
             html = renderer.render_list_fragment(
@@ -219,6 +239,7 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             relation_permissions=relation_permissions,
             base_path=base_path,
             messages=messages,
+            list_token=_list_token(request, None, base_path),
         )
         response = HTMLResponse(html)
         clear_flash(response)
@@ -242,6 +263,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             csrf_token=request.state.csrf_token,
             relation_options=relation_options,
             base_path=base_path,
+            list_token=_list_token(request, None, base_path),
         )
         return HTMLResponse(html)
 
@@ -275,6 +297,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     errors=errors,
                     relation_options=relation_options,
                     base_path=base_path,
+                    list_token=_list_token(request, form, base_path),
                 )
             return HTMLResponse(html, status_code=422)
         obj = await maybe_await(model_admin.create(data))
@@ -284,15 +307,18 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         # Translators: %(name)s is the model's name. French and Russian
         # nouns carry gender, so phrase around agreement.
         created_message = gettext("%(name)s created.") % {"name": gettext(model_admin.get_verbose_name())}
+        # preserve_filters: every page reached from the list keeps carrying
+        # it, so the trail back leads into the filtered list.
+        back = _list_token(request, form, base_path)
         if form.get(SAVE_ADD_ANOTHER_FIELD):
-            response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
+            response = redirect(request, with_list_token(f"{base_path}/{model_admin.get_slug()}/create", back))
             set_flash(response, "success", created_message)
             return response
         pk = model_admin.get_pk(obj)
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
-        response = redirect(request, target)
+        response = redirect(request, with_list_token(target, back))
         set_flash(response, "success", created_message)
         return response
 
@@ -320,6 +346,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             obj=obj,
             relation_options=relation_options,
             base_path=base_path,
+            list_token=_list_token(request, None, base_path),
         )
         return HTMLResponse(html)
 
@@ -360,21 +387,40 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     errors=errors,
                     relation_options=relation_options,
                     base_path=base_path,
+                    list_token=_list_token(request, form, base_path),
                 )
             return HTMLResponse(html, status_code=422)
+        # "Save as new": the submitted values become a new record, and the one
+        # being edited is left untouched. Gated on the option, so a forged
+        # field on an admin without it is an ordinary save.
+        if model_admin.save_as and form.get(SAVE_AS_NEW_FIELD):
+            if not compute_permissions(admin, principal, model_admin, None)["can_create"]:
+                return forbidden(request, admin, base_path)
+            created = await maybe_await(model_admin.create(data))
+            record_audit(admin, principal, model_admin, AUDIT_CREATE, created)
+            created_message = gettext("%(name)s created.") % {"name": gettext(model_admin.get_verbose_name())}
+            target = f"{base_path}/{model_admin.get_slug()}/{model_admin.get_pk(created)}"
+            if form.get(SAVE_CONTINUE_FIELD):
+                target += "/edit"
+            response = redirect(request, with_list_token(target, _list_token(request, form, base_path)))
+            set_flash(response, "success", created_message)
+            return response
         await maybe_await(model_admin.update(obj, data))
         record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
         # Translators: %(name)s is the model's name. French and Russian
         # nouns carry gender, so phrase around agreement.
         updated_message = gettext("%(name)s updated.") % {"name": gettext(model_admin.get_verbose_name())}
+        # preserve_filters: every page reached from the list keeps carrying
+        # it, so the trail back leads into the filtered list.
+        back = _list_token(request, form, base_path)
         if form.get(SAVE_ADD_ANOTHER_FIELD):
-            response = redirect(request, f"{base_path}/{model_admin.get_slug()}/create")
+            response = redirect(request, with_list_token(f"{base_path}/{model_admin.get_slug()}/create", back))
             set_flash(response, "success", updated_message)
             return response
         target = f"{base_path}/{model_admin.get_slug()}/{pk}"
         if form.get(SAVE_CONTINUE_FIELD):
             target += "/edit"
-        response = redirect(request, target)
+        response = redirect(request, with_list_token(target, back))
         set_flash(response, "success", updated_message)
         return response
 
@@ -402,6 +448,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             principal=principal,
             csrf_token=request.state.csrf_token,
             preview=preview,
+            list_token=_list_token(request, None, base_path),
         )
         return HTMLResponse(html)
 
@@ -419,7 +466,9 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                 return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
             await maybe_await(model_admin.delete(obj))
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
-        response = redirect(request, f"{base_path}/{model_admin.get_slug()}")
+        # Back to the list it came from -- preserve_filters.
+        back = _list_token(request, await request.form(), base_path)
+        response = redirect(request, back or f"{base_path}/{model_admin.get_slug()}")
         # Translators: %(name)s is the model's name. French and Russian
         # nouns carry gender, so phrase around agreement.
         deleted_message = gettext("%(name)s deleted.") % {"name": gettext(model_admin.get_verbose_name())}
@@ -517,7 +566,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             )
             if page is not None:
                 return page
-        message = action.handler(model_admin, objects, principal)
+        message = await maybe_await(action.handler(model_admin, objects, principal))
         # One entry per record, not per action: the log's question is
         # "what happened to this record", and a bulk run over 500 rows is
         # 500 answers to it.

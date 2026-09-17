@@ -140,7 +140,7 @@ says otherwise.
 | `dropdown` | DropdownMenu; Floating UI → `x-anchor` | `ui/dropdown-menu`, used for the list view's Export menu. |
 | `popover` | Popover; Floating UI → `x-anchor` | The date picker's calendar. |
 | `tooltip` | Tooltip → CSS only (`peer-hover:`, `peer-focus-visible:`), so it works before Alpine loads | The theme toggle. |
-| `toast` | Sonner | `admin/components/toasts.html` — a PinesUI-derived queue restyled onto the tokens. |
+| `toast` | Sonner | `admin/components/toasts.html` — Sonner's anatomy and motion, minus its collapsed peek-stack. |
 | `sheet` | Dialog + slide transition | The sidebar below `md`. |
 
 ### Navigation and data

@@ -6,6 +6,7 @@
 {% block content %}
 <form method="post" class="{{ ui('panel', 'form') }} max-w-xl">
   {{ csrf_field(csrf_token) }}
+  {% if list_token %}<input type="hidden" name="_list" value="{{ list_token }}">{% endif %}
   <div class="flex items-start gap-3">
     <span class="inline-flex shrink-0 items-center justify-center rounded-full bg-destructive/10 p-2 text-destructive">
       {{ icon("delete", "w-5 h-5") }}

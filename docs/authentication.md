@@ -97,12 +97,17 @@ table.
   resumes where the visitor was going. HTMX requests get `HX-Redirect`,
   so an expired session navigates the window rather than swapping a
   login form into a table cell.
-- The sidebar's user menu grows a **Sign out** item. It POSTs: a logout
-  reachable by `GET` is one any `<img src>` on the internet can fire at
-  a signed-in administrator.
+- The sidebar's footer becomes a **menu**, holding a **Sign out** item.
+  It POSTs: a logout reachable by `GET` is one any `<img src>` on the
+  internet can fire at a signed-in administrator.
 
 Without one, none of the above exists and an unauthenticated request
-gets `401`.
+gets `401`. The footer then just names who you are, with nothing to
+open — the menu exists for actions, and with no session to end there
+are none.
+
+The menu never repeats the name and role. The trigger it opens from is
+directly beside it and already shows both.
 
 The `?next=` destination is validated (`safe_next_url`) to be a path
 inside the admin. A `next` echoed into a `Location` header unchecked is

@@ -1,6 +1,13 @@
-<div class="overflow-x-auto">
+{# The card's own body (dashboard.html) is the scroll box, so this
+   template adds no overflow container of its own -- a nested one would
+   put a second scrollbar inside the card. The header sticks to the top of
+   that box, so the columns stay readable while a long widget scrolls.
+
+   That box scrolls vertically only, so the cells wrap (and break a long
+   unbroken value, such as an address) instead of holding their line and
+   pushing the card sideways. #}
 <table class="min-w-full text-sm">
-  <thead>
+  <thead class="sticky top-0 z-10 bg-card">
     <tr class="border-b border-border">
       {% for column in widget_data.columns %}
       <th class="{{ ui('table', 'th-compact') }}">{{ _(column) }}</th>
@@ -11,7 +18,7 @@
     {% for row in widget_data.rows %}
     <tr class="hover:bg-muted/50">
       {% for column in widget_data.columns %}
-      <td class="px-2 py-1.5 text-foreground whitespace-nowrap">{{ row[column] }}</td>
+      <td class="px-2 py-1.5 text-foreground break-words">{{ row[column] }}</td>
       {% endfor %}
     </tr>
     {% endfor %}
@@ -20,4 +27,3 @@
 {% if not widget_data.rows %}
 <p class="text-sm text-muted-foreground">{{ _("No data.") }}</p>
 {% endif %}
-</div>

@@ -28,6 +28,8 @@ ROLES = (
 ALLOWED = re.compile(
     r"^[\w.+-]+@example\.com$"
     r"|^(?:Acme Corp|Widgets Inc|Globex Corporation|Initech)$"
+    # The seed's filler organizations, data like the four named ones.
+    r"|^Org \d\d Holdings$"
     r"|^(?:Free|Pro|Enterprise)$"
     rf"|^(?:{ROLES})(?:, (?:{ROLES}))*$"
     r"|^(?:Demo Admin|Demo Viewer|Amélie)$"

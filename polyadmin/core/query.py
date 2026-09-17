@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
+from urllib.parse import quote
 
 from polyadmin.core._async import maybe_await
 
@@ -80,6 +81,24 @@ def apply_filters(model_admin: Any, objects: list[Any], raw_filters: dict[str, s
     return objects
 
 
+def is_sortable(model_admin: Any, name: str) -> bool:
+    """Whether a list column offers a sort. An unset sortable_by leaves every
+    column sortable; an empty one leaves none."""
+    sortable = model_admin.sortable_by
+    return True if sortable is None else name in sortable
+
+
+def links_to_record(model_admin: Any, name: str) -> bool:
+    """Whether a list cell links to the record. An unset list_display_links
+    links the first column, as Django does; an empty one links nothing and
+    leaves the row menu as the way in."""
+    linked = model_admin.list_display_links
+    if linked is None:
+        display = list(model_admin.list_display)
+        return bool(display) and display[0] == name
+    return name in linked
+
+
 def apply_ordering(model_admin: Any, objects: list[Any], ordering: str | None) -> list[Any]:
     if not ordering:
         return objects
@@ -115,6 +134,11 @@ def apply_defaults(model_admin: Any, list_request: ListRequest) -> ListRequest:
     request on.
     """
     changes = {}
+    # A ?sort= naming a column the admin does not offer is dropped, so the
+    # restriction holds for a hand-typed URL too. The default ordering below
+    # is exempt: it is the admin's own choice, not user input.
+    if list_request.ordering and not is_sortable(model_admin, list_request.ordering.lstrip("-")):
+        list_request = replace(list_request, ordering=None)
     if not list_request.ordering:
         changes["ordering"] = model_admin.get_default_ordering()
     # Not for an unlimited request: that deliberately has no page.
@@ -164,3 +188,31 @@ async def alist_objects(model_admin: Any, list_request: ListRequest) -> tuple[li
     offset = min(offset, total)
     end = total if limit == 0 else min(offset + limit, total)
     return objects[offset:end], total
+
+
+# The reserved query parameter and form field carrying the list a page was
+# reached from -- its search, filters, sort and page (docs/lists.md). It is
+# what preserve_filters preserves: the pages reached from a list hand it
+# back, so the trail out of a filtered list leads into it rather than into
+# the bare one.
+LIST_TOKEN_FIELD = "_list"
+
+
+def safe_list_token(token: str | None, host: str, base_path: str) -> str:
+    """Validate a token the way safe_redirect_path validates a Referer: same
+    host, under the admin's base path. An invalid one yields "", which every
+    caller reads as "no list to go back to"."""
+    from polyadmin.core.csrf import safe_redirect_path
+
+    if not token:
+        return ""
+    return safe_redirect_path(token, host, base_path, "") or ""
+
+
+def with_list_token(url: str, token: str) -> str:
+    """Append a validated token to a URL as the _list parameter, leaving the
+    URL alone when there is none."""
+    if not token:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{LIST_TOKEN_FIELD}={quote(token, safe='')}"

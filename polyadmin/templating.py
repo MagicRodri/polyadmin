@@ -280,6 +280,7 @@ class Renderer:
         relation_permissions: dict[str, bool] | None = None,
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
+        list_token: str = "",
     ) -> str:
         from polyadmin.fastapi.inlines import build_inline_context
 
@@ -293,6 +294,7 @@ class Renderer:
             messages=messages,
             principal=principal,
             csrf_token=csrf_token,
+            list_token=list_token,
         )
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
         context["wide_body"] = _wide_body(context["inlines"])
@@ -313,6 +315,7 @@ class Renderer:
         relation_options: dict[str, list[tuple[Any, Any]]] | None = None,
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
+        list_token: str = "",
     ) -> str:
         from polyadmin.fastapi.auth import compute_permissions
         from polyadmin.fastapi.inlines import build_inline_context
@@ -330,6 +333,7 @@ class Renderer:
             messages=messages,
             principal=principal,
             csrf_token=csrf_token,
+            list_token=list_token,
         )
         mode = "placeholder" if obj is None else "edit"
         context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
@@ -449,8 +453,9 @@ class Renderer:
         principal: Any = None,
         csrf_token: str = "",
         preview: Any = None,
+        list_token: str = "",
     ) -> str:
-        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token, preview=preview)
+        context = delete_context(admin, model_admin, obj, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token, preview=preview, list_token=list_token)
         return self.render_candidates(model_admin.get_template_candidates("delete"), context)
 
     def render_delete_selected(

@@ -36,10 +36,14 @@
          ) }}
       {% endif %}
       {% if permissions.can_create %}
-      <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create"
-         class="{{ ui('button') }} {{ ui('button', 'size-sm') }} {{ ui('toolbar', 'item') }}">
-        {{ icon("plus", "size-4 " ~ ui('toolbar', 'item-icon')) }}
-        <span class="{{ ui('toolbar', 'item-label') }}">{{ _("New") }}</span>
+      {# Icon-only, and so not a toolbar "item": the label is what stretches
+         a stacked control to full width, and a lone plus in a full-width
+         bar reads as floating. aria-label carries the name the visible
+         text used to. #}
+      <a href="{{ base_path }}/{{ model_admin.get_slug() }}/create{{ list_query }}"
+         title="{{ _("New") }}" aria-label="{{ _("New") }}"
+         class="{{ ui('button', 'size-icon') }} self-end lg:self-auto">
+        {{ icon("plus", "size-4") }}
       </a>
       {% endif %}
     </div>

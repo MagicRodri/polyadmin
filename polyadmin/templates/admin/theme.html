@@ -189,8 +189,65 @@
       }
     });
   };
-  document.addEventListener("DOMContentLoaded", function () { window.polyadminFormat(document); });
-  document.addEventListener("htmx:load", function (evt) { window.polyadminFormat(evt.detail.elt); });
+
+  // prepopulated_fields (docs/model-admin.md): fill a field from others as
+  // they are typed. Create forms only -- the server omits the attribute on
+  // an edit form, because an existing record's slug is a real identifier.
+  //
+  // The slug rule mirrors the server's Slugify: transliterate, lowercase,
+  // collapse the rest into single hyphens. The Cyrillic table is the same
+  // data, kept here so the browser needs no round trip.
+  var CYRILLIC = {
+    "а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"yo","ж":"zh","з":"z",
+    "и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r",
+    "с":"s","т":"t","у":"u","ф":"f","х":"kh","ц":"ts","ч":"ch","ш":"sh",
+    "щ":"shch","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"
+  };
+  function polyadminSlugify(value, keepUnicode) {
+    var mapped = "";
+    for (var i = 0; i < value.length; i++) {
+      var ch = value[i], lower = ch.toLowerCase();
+      mapped += (!keepUnicode && CYRILLIC.hasOwnProperty(lower)) ? CYRILLIC[lower] : ch;
+    }
+    mapped = mapped.toLowerCase();
+    if (!keepUnicode) {
+      // Decompose, drop the combining marks an accent decomposed into, then
+      // drop whatever is still not ASCII.
+      mapped = mapped.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x00-\x7F]/g, "");
+    }
+    var pattern = keepUnicode ? /[^\p{L}\p{N}]+/gu : /[^a-z0-9]+/g;
+    return mapped.replace(pattern, "-").replace(/^-+|-+$/g, "");
+  }
+  window.polyadminPrepopulate = function (root) {
+    root.querySelectorAll("form[data-prepopulated]").forEach(function (form) {
+      var spec;
+      try {
+        spec = JSON.parse(form.dataset.prepopulated);
+      } catch (err) {
+        return;
+      }
+      Object.keys(spec).forEach(function (name) {
+        var target = form.querySelector('[name="' + name + '"]');
+        if (!target || target.dataset.prepopulateBound) return;
+        target.dataset.prepopulateBound = "1";
+        // Typing in the target detaches it for the rest of the form's life,
+        // and a value already there is never overwritten.
+        var detached = target.value !== "";
+        target.addEventListener("input", function () { detached = true; });
+        var sources = (spec[name].from || []).map(function (from) {
+          return form.querySelector('[name="' + from + '"]');
+        }).filter(Boolean);
+        var fill = function () {
+          if (detached) return;
+          var parts = sources.map(function (el) { return el.value; }).filter(Boolean);
+          target.value = polyadminSlugify(parts.join(" "), !!spec[name].unicode);
+        };
+        sources.forEach(function (el) { el.addEventListener("input", fill); });
+      });
+    });
+  };
+  document.addEventListener("DOMContentLoaded", function () { window.polyadminFormat(document); window.polyadminPrepopulate(document); });
+  document.addEventListener("htmx:load", function (evt) { window.polyadminFormat(evt.detail.elt); window.polyadminPrepopulate(evt.detail.elt); });
 </script>
 
 <style>

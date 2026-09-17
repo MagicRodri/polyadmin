@@ -22,6 +22,25 @@ Every widget computes its own data lazily (`get_value`/`get_series`/
 dashboard route actually renders, so a widget backed by a slow query
 only pays that cost on page load, not at `Dashboard` construction time.
 
+## How tall a card gets
+
+The dashboard is a grid, and a grid stretches every card in a row to
+match the tallest one. So a card's content area is bounded rather than
+free to grow: past about 320px it scrolls inside its own card, with the
+same themed scrollbar the rest of the admin uses. A `Table` of two
+hundred rows leaves the cards beside it exactly where they were.
+
+It scrolls in one direction only. A card is a fixed column of the grid,
+so anything wider than it is a widget that has to wrap, not a sideways
+scrollbar for the reader to drag — `widgets/table.html` wraps its cells
+(and breaks a long unbroken value) rather than holding them on one
+line.
+
+This applies to a custom widget's template too — it renders inside that
+box and needs no overflow container of its own. A second scroller
+nested in there shows a second scrollbar, and content that bleeds past
+the box's edge, as a negative margin does, is clipped.
+
 ## Built-in widget types
 
 | Widget | Shows | Constructor |

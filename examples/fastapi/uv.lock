@@ -361,10 +361,13 @@ provides-extras = ["fastapi", "export-xlsx"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "babel", specifier = ">=2.14" },
     { name = "fastapi", specifier = ">=0.110" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "openpyxl", specifier = ">=3.1" },
+    { name = "playwright", specifier = ">=1.40" },
     { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-playwright", specifier = ">=0.4" },
     { name = "python-multipart", specifier = ">=0.0.9" },
 ]
 

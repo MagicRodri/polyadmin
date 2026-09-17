@@ -55,6 +55,25 @@ def validate_inlines(admin: Admin, model_admin: ModelAdmin) -> None:
             )
 
 
+def _pk_column(child_admin: Any, field_names: list[str]) -> str | None:
+    """The field whose value is the record's primary key, or the first
+    field when none is shown. None when there are no columns at all.
+
+    get_pk() reads a value, not a field name -- a ModelAdmin may override
+    it -- so the column is found by asking a probe object which attribute
+    the two agree on.
+    """
+    if not field_names:
+        return None
+    probe = getattr(child_admin, "model", None)
+    for name in field_names:
+        # A ModelAdmin's get_pk defaults to `.id`; a name that resolves to
+        # the same attribute is the primary key's column.
+        if name == "id" or (probe is not None and getattr(probe, "pk_field", None) == name):
+            return name
+    return field_names[0]
+
+
 def build_inline_context(
     admin: Admin,
     principal: Any,
@@ -96,6 +115,12 @@ def build_inline_context(
         child_perms = compute_permissions(admin, principal, child_admin)
         field_names = [name for name in child_admin.get_form_fields() if name != inline.fk_field]
         detail_field_names = [name for name in child_admin.get_detail_fields() if name != inline.fk_field]
+        # Which readonly column opens the record. The primary key's own
+        # column when it is shown -- an id is the one cell that is never a
+        # link already and never wraps -- and the first column otherwise,
+        # so a row is always reachable. See the readonly table in
+        # components/inline.html.
+        link_field = _pk_column(child_admin, detail_field_names)
 
         rows: list[dict[str, Any]] = []
         add_row: dict[str, Any] | None = None
@@ -143,6 +168,7 @@ def build_inline_context(
                 "child_admin": child_admin,
                 "field_names": field_names,
                 "detail_field_names": detail_field_names,
+                "link_field": link_field,
                 "can_change": child_perms["can_update"],
                 "can_delete": child_perms["can_delete"],
                 "rows": rows,

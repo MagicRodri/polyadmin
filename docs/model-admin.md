@@ -350,6 +350,47 @@ deleting them takes with it — see [`deletes.md`](deletes.md). That
 applies to an action of your own named `delete_selected` too: the page
 is keyed on the name.
 
+## Save as new
+
+`save_as` adds a second submit to the edit form. It saves the
+submitted values as a **new** record and leaves the one being edited
+untouched -- Django's `save_as`:
+
+```python
+class OrganizationAdmin(ModelAdmin):
+    save_as = True
+```
+
+It validates exactly as an update would, needs the principal's create
+permission, and lands on the new record. Inline children are **not**
+copied: they still point at the original, and duplicating a dozen of
+them silently would be a surprise.
+
+## Prepopulated fields
+
+Fill one field from others as they are typed -- a slug from a title:
+
+```python
+class ArticleAdmin(ModelAdmin):
+    prepopulated_fields = {"slug": ["title"]}
+    # Keep the letters as they are instead of transliterating:
+    prepopulated_unicode = ["slug"]
+```
+
+This runs in the browser, on the **create form only**: once a record
+exists its slug is a real identifier, and rewriting it from the title is
+how links rot. Typing in the target detaches it for the rest of the
+form's life, and a value already there is never overwritten.
+
+Slugs transliterate to ASCII by default -- `Café du Coin` becomes
+`cafe-du-coin`, `Привет мир` becomes `privet-mir` -- which is what
+`polyadmin.core.slug.slugify` does server-side, so a script and the
+browser agree. Letters outside the transliteration table drop out, which
+is what `prepopulated_unicode` (and `slugify_unicode`) is for.
+
+Nothing is slugified on the server and uniqueness is not checked: this
+is a convenience, not a constraint.
+
 ## Templates
 
 `list_template`/`detail_template`/`form_template`/`delete_template` name

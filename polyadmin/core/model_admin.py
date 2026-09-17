@@ -84,6 +84,31 @@ class ModelAdmin:
     # large, or too principal-sensitive, to dump into a page.
     autocomplete_fields: ClassVar[Sequence[str]] = ()
 
+    # The small-parity options -- see docs/lists.md and docs/model-admin.md.
+    # sortable_by and list_display_links distinguish None ("unset") from []
+    # ("none"); is_sortable and links_to_record apply the defaults.
+    #
+    # Which list columns offer a sort. None leaves every column sortable,
+    # [] none of them. The restriction also holds for a hand-typed ?sort=,
+    # but not for `ordering`, which is the admin's own choice.
+    sortable_by: ClassVar[Sequence[str] | None] = None
+    # Which list cells link to the record. None links the first column, []
+    # links none, leaving the row menu as the way in.
+    list_display_links: ClassVar[Sequence[str] | None] = None
+    # Fills a field from others as they are typed: {"slug": ["title"]}
+    # slugifies title into slug. Client-side and on the create form only,
+    # so an existing record's slug is never rewritten under it.
+    prepopulated_fields: ClassVar[dict[str, Sequence[str]]] = {}
+    # Prepopulated fields whose letters are kept as they are instead of
+    # transliterated to ASCII -- see polyadmin.core.slug.
+    prepopulated_unicode: ClassVar[Sequence[str]] = ()
+    # Adds "Save as new" to the edit form, which saves the submitted values
+    # as a new record and leaves the original alone. Opt-in, as Django's is.
+    save_as: ClassVar[bool] = False
+    # Whether the list hands its search, filters, sort and page to the pages
+    # reached from it, so they lead back into the list as it was left.
+    preserve_filters: ClassVar[bool] = True
+
     can_view: ClassVar[bool] = True
     can_create: ClassVar[bool] = True
     can_update: ClassVar[bool] = True

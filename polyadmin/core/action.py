@@ -7,6 +7,7 @@ checked. There's deliberately no separate record/bulk class: the same
 Action definition serves both, since the handler never needs to know
 which UI entry point it was invoked from.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -30,8 +31,8 @@ class Action:
         self.name = name
         self.label = label or name.replace("_", " ").title()
         self.handler = handler
-        # A confirmation prompt shown before running (the PinesUI modal
-        # in components/action_confirm_modal.html) -- None means no
+        # A confirmation prompt shown before running (the dialog in
+        # components/action_confirm_modal.html) -- None means no
         # confirmation.
         self.confirm = confirm
         # Extra permission suffix checked via resource_permission(slug,
@@ -77,7 +78,9 @@ def delete_selected_action() -> Action:
                     f"deleted {deleted} of {len(objects)}, then: {exc}"
                 ) from exc
             deleted += 1
-        return ngettext("Deleted %(num)d record.", "Deleted %(num)d records.", deleted) % {"num": deleted}
+        return ngettext(
+            "Deleted %(num)d record.", "Deleted %(num)d records.", deleted
+        ) % {"num": deleted}
 
     return Action(
         DELETE_SELECTED_NAME,

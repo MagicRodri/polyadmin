@@ -31,7 +31,7 @@
    survives a reload; `sidebarOpen` is the mobile sheet, a separate
    axis, because a phone has an overlay rather than a rail. Cmd/Ctrl+B
    is wired here too, so it works wherever focus is. #}
-<body class="h-full bg-background text-foreground antialiased"
+<body class="min-h-full bg-background text-foreground antialiased"
       x-data="{
         sidebarOpen: false,
         collapsed: (document.cookie.match(/(?:^|; )sidebar_state=([^;]*)/) || [])[1] === 'collapsed',
@@ -45,7 +45,7 @@
       @keydown.window.ctrl.b.prevent="toggle()">
   {% include "admin/components/toasts.html" %}
   {% include "admin/components/action_confirm_modal.html" %}
-  <div class="flex h-full">
+  <div class="flex min-h-full">
     {# Below md the sidebar *is* a sheet -- overlay plus off-canvas
        panel -- and from md up it becomes the static collapsible
        column. One element does both jobs, so there is no duplicate nav
@@ -75,12 +75,14 @@
         {% if locale_switcher %}{{ locale_switcher_menu(locale_switcher, base_path, csrf_token) }}{% endif %}
         {{ theme_toggle() }}
       </header>
-      {# overflow-y-auto is explicit, not inherited from
-         overflow-x-hidden's side effect: record pages resolve
-         min-h-full against this element and pin their action bar to it
-         with position:sticky, so it has to be the scroll container on
-         purpose. #}
-      <main class="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4">
+      {# The page itself scrolls -- one scrollbar, the browser's own, for
+         however long the table is. So main must NOT become a scroll
+         container: overflow-x-clip clips a wide table without the side
+         effect overflow-x-hidden has, which is to turn the other axis
+         into auto and box the content in a scrollbar of its own. The
+         sidebar stays put by being sticky, not by the content scrolling
+         underneath it. #}
+      <main class="min-w-0 flex-1 overflow-x-clip p-4">
         {% block content %}{% endblock %}
       </main>
     </div>

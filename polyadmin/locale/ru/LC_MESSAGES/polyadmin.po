@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-16 12:20+0500\n"
+"POT-Creation-Date: 2026-09-17 14:36+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -87,6 +87,9 @@ msgstr "Все"
 msgid "Anonymous"
 msgstr "Аноним"
 
+msgid "Any date"
+msgstr "Любая дата"
+
 msgid "Asc"
 msgstr "По возрастанию"
 
@@ -107,6 +110,9 @@ msgstr "Очистить всё"
 
 msgid "Clear selection"
 msgstr "Снять выделение"
+
+msgid "Close"
+msgstr "Закрыть"
 
 msgid "Close filters"
 msgstr "Закрыть фильтры"
@@ -244,6 +250,9 @@ msgstr "Виджеты не настроены."
 msgid "Not found"
 msgstr "Не найдено"
 
+msgid "Notifications"
+msgstr "Уведомления"
+
 msgid "Open calendar"
 msgstr "Открыть календарь"
 
@@ -259,6 +268,9 @@ msgstr "Страница %(page)d из %(pages)d"
 
 msgid "Password"
 msgstr "Пароль"
+
+msgid "Past 7 days"
+msgstr "Последние 7 дней"
 
 msgid "Permission denied"
 msgstr "Доступ запрещён"
@@ -297,6 +309,9 @@ msgstr "Сохранить и добавить ещё"
 
 msgid "Save and continue editing"
 msgstr "Сохранить и продолжить редактирование"
+
+msgid "Save as new"
+msgstr "Сохранить как новый"
 
 #, python-format
 msgid "Save to add %(label)s."
@@ -381,11 +396,20 @@ msgstr "Это действие нельзя отменить."
 msgid "This can't be deleted"
 msgstr "Удаление невозможно"
 
+msgid "This month"
+msgstr "В этом месяце"
+
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr "Срок действия страницы истёк до отправки формы. Обновите страницу и попробуйте снова."
 
 msgid "This will also delete"
 msgstr "Также будут удалены"
+
+msgid "This year"
+msgstr "В этом году"
+
+msgid "Today"
+msgstr "Сегодня"
 
 msgid "Toggle dark mode"
 msgstr "Переключить тёмную тему"

@@ -379,3 +379,34 @@ def test_no_selection_without_the_flag_still_acts_on_nothing():
         follow_redirects=False,
     )
     assert user_admin.get_object(a.id).is_active, "an empty selection must not act on everything"
+
+
+async def _async_deactivate(model_admin, objects, principal):
+    import asyncio
+
+    await asyncio.sleep(0)
+    for obj in objects:
+        obj.is_active = False
+    return f"Deactivated {len(objects)} user(s)."
+
+
+class AsyncActionableUserAdmin(InMemoryUserAdmin):
+    """An Action handler that is itself a coroutine function -- the shape
+    a handler calling an async HTTP client (e.g. a "sync with FRSI"
+    action) actually takes."""
+
+    actions = [Action("deactivate", _async_deactivate, confirm="Deactivate selected users?")]
+
+
+def test_async_action_handler_is_awaited():
+    client, user_admin = make_client(model_admin_cls=AsyncActionableUserAdmin)
+    a = user_admin.create({"email": "a@example.com", "is_active": True})
+
+    response = client.post(
+        "/admin/users/actions/deactivate",
+        data={"pks": [str(a.id)]},
+        follow_redirects=False,
+        headers=csrf(client),
+    )
+    assert response.status_code == 303
+    assert user_admin.get_object(a.id).is_active is False

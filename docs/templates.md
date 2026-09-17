@@ -156,9 +156,6 @@ list and the porting rationale. In short:
   own reasoning. The other genuinely Alpine-driven ports are the
   relation combobox, the date picker's calendar popover, the dialog,
   the dropdown menu, the sheet, and the toasts.
-- **A few components predate the port** (the toast queue, the confirm
-  dialog) and came from [PinesUI](https://devdojo.com/pines); they were
-  restyled onto the same tokens rather than rewritten.
 
 Tailwind, Alpine (plus its focus/collapse/anchor plugins), and HTMX are
 all CDN-loaded from `admin/theme.html` — there is no frontend build step

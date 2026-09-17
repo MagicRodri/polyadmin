@@ -4,6 +4,8 @@
 {% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/select.html" import select %}
+{% from "admin/components/ui/multi-select.html" import multi_select %}
 {% from "admin/components/ui/delete-preview.html" import delete_refusal %}
 
 {% macro render_inline_section(inline) %}
@@ -86,26 +88,18 @@
 <input type="checkbox" name="{{ field.name }}" value="true" autocomplete="off" {% if value %}checked{% endif %}
        class="{{ ui('checkbox') }}">
 {% elif field.field_type in ("foreignkey", "onetoone") %}
-<select name="{{ field.name }}" autocomplete="off" class="{{ select_classes }}">
-  <option value="">&mdash;</option>
-  {% for pk, label in (relation.options if relation else []) %}
-  <option value="{{ pk }}" {% if relation and pk == relation.selected_pk %}selected{% endif %}>{{ label }}</option>
-  {% endfor %}
-</select>
+{{ select(field.name, [(none, "—")] + (relation.options|list if relation else []),
+          selected=(relation.selected_pk if relation else none), placeholder="—", compact=true) }}
 {% elif field.field_type == "manytomany" %}
-{# Capped, and the cap is the whole point: sizing the listbox to the
-   option count made every row as tall as the longest option list --
-   eight roles gave a 195px row, and three such rows filled the
-   viewport. Past the cap a native <select multiple> scrolls internally,
-   which is the ScrollArea behaviour here; the scroll-area classes only
-   restyle that scrollbar onto the theme. #}
-<select multiple name="{{ field.name }}" autocomplete="off"
-        size="{{ [[(relation.options|length if relation else 1), 1] | max, INLINE_MULTISELECT_ROWS] | min }}"
-        class="{{ ui('select', 'cell-multi') }} {{ ui('scroll-area', 'y') }}">
-  {% for pk, label in (relation.options if relation else []) %}
-  <option value="{{ pk }}" {% if relation and pk in relation.selected_pks %}selected{% endif %}>{{ label }}</option>
-  {% endfor %}
-</select>
+{# The same shadcn control the full form uses: a trigger with chips and
+   a portalled popover, so a row stays one line tall however many options
+   there are -- the native <select multiple> it replaces had to be capped
+   and scrolled internally to avoid 195px rows. #}
+{% set m2m = namespace(pairs=[]) %}
+{% for pk, label in (relation.options if relation else []) %}
+{% set m2m.pairs = m2m.pairs + [(pk, label, relation and pk in relation.selected_pks)] %}
+{% endfor %}
+{{ multi_select(field.name, m2m.pairs, placeholder=_("Select…"), compact=true) }}
 {% elif field.field_type == "enum" %}
 <select name="{{ field.name }}" autocomplete="off" class="{{ select_classes }}">
   {% for choice in field.choices %}
@@ -216,7 +210,6 @@
     {% for name in inline.detail_field_names %}
     <th class="{{ ui('table', 'th-compact') }}">{{ _(inline.child_admin.get_field(name).label) }}</th>
     {% endfor %}
-    <th></th>
   </tr></thead>
   <tbody class="divide-y divide-border">
     {% for row in inline.rows %}
@@ -229,14 +222,15 @@
            three of them made the row three lines tall and widened the
            column enough to push the row's own actions off the card. #}
         {% if field.field_type == "manytomany" %}<span class="{{ ui('scroll-area', 'x') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</span>
+        {% elif name == inline.link_field %}
+        {# The primary key's cell opens the record, so the row needs no
+           column of its own for a View link. Never a relation cell,
+           which is already a link -- nesting one in another is invalid
+           HTML that browsers silently restructure. #}
+        <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}</a>
         {% else %}{{ render_field_value(field, field.get_value(row.obj), inline.empty_value) }}{% endif %}
       </td>
       {% endfor %}
-      {# The row link is its own column rather than wrapped around the
-         first value, which may itself be a relation link. #}
-      <td class="px-3 py-2 text-right whitespace-nowrap">
-        <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ _("View") }}</a>
-      </td>
     </tr>
     {% endfor %}
   </tbody>

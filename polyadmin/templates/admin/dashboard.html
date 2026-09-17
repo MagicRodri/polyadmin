@@ -23,7 +23,9 @@
       </span>
       <h2 class="{{ ui('widget', 'title') }}">{{ _(widget.title) }}</h2>
     </div>
-    {% include widget.template %}
+    {# Bounded, so a widget with hundreds of rows scrolls inside its own
+       card instead of stretching every card beside it. #}
+    <div class="{{ ui('widget', 'body') }}">{% include widget.template %}</div>
   </div>
   {% endfor %}
   {% if not widgets %}

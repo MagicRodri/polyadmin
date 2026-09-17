@@ -8,9 +8,8 @@ so the other files' tests still find the seed intact.
 import re
 import uuid
 
-from playwright.sync_api import expect
-
 from conftest import ADMIN_URL
+from playwright.sync_api import expect
 
 NAME_FIELD = "#field-name"
 

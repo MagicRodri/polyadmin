@@ -10,6 +10,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.auth import AllowAllAuthenticator, DenyAllAuthenticator, Principal
 from polyadmin.core.login import NEXT_QUERY_PARAM
 from polyadmin.fastapi.router import create_router
+from polyadmin.ui import ui
 from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin
 
@@ -213,6 +214,37 @@ def test_sidebar_offers_sign_out_when_a_login_backend_is_configured(client):
     assert "Sign out" in page
     # A form, not a link: see the template's note on GET logouts.
     assert '<form method="post" action="/admin/logout">' in page
+
+
+def _sidebar_footer(page):
+    """The sidebar's footer region, bounded at the rail that follows it."""
+    footer = page[page.index(ui("sidebar", "footer")) :]
+    return footer[: footer.index('aria-label="Toggle sidebar"')]
+
+
+def test_the_user_menu_holds_actions_only(client):
+    """The trigger the menu opens from sits directly beside it and
+    already shows who you are, so an identity header inside the menu
+    told the reader nothing new."""
+    client.cookies.set(SESSION_COOKIE, "demo")
+    footer = _sidebar_footer(client.get("/admin/users").text)
+
+    assert "Sign out" in footer, "no sign-out in the footer; the assertions below would be vacuous"
+    assert footer.count("Demo Admin") == 1, "the signed-in name is repeated in the menu"
+    assert footer.count("Superuser") == 1, "the signed-in role is repeated in the menu"
+    assert ui("dropdown", "label") not in footer, "the user menu still carries an identity header"
+
+
+def test_with_nothing_to_sign_out_of_the_footer_opens_nothing():
+    """With no login backend the menu would hold no items at all, and a
+    trigger that opens an empty box is a dead end."""
+    admin = Admin(
+        model_admins=[InMemoryUserAdmin()],
+        authenticator=AllowAllAuthenticator(Principal(id="demo", display_name="Demo")),
+    )
+    footer = _sidebar_footer(_client(admin).get("/admin/users").text)
+    assert "Demo" in footer, "the footer does not name the principal"
+    assert 'aria-haspopup="menu"' not in footer, "the footer still opens a menu with nothing in it"
 
 
 def test_sidebar_omits_sign_out_without_a_login_backend():

@@ -30,6 +30,8 @@ permissions) and you get:
   destructive ones
 - Delete previews: the confirmation page says what else a delete takes
   with it, and protected records block it
+- List niceties: a date drill-down, restricted sorting, chosen link
+  columns, and filters that survive the trip to a record and back
 - Authentication/authorization hooks gating every route *and* every
   control the templates render
 - CSV and XLSX export

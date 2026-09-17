@@ -18,9 +18,11 @@
 <div id="resource-form-wrapper" class="{{ ui('page') }}">
   <div class="{{ ui('page', 'body-wide') if wide_body else ui('page', 'body') }}">
     <form id="resource-form" method="post" action="{{ form_action }}"
+          {% if prepopulated %}data-prepopulated='{{ prepopulated | tojson }}'{% endif %}
           hx-post="{{ form_action }}" hx-target="#resource-form-wrapper" hx-swap="outerHTML"
           class="{{ ui('panel', 'form') }}">
       {{ csrf_field(csrf_token) }}
+  {% if list_token %}<input type="hidden" name="_list" value="{{ list_token }}">{% endif %}
       {% if non_field_errors %}
       {# A tinted, outlined panel rather than a solid red block: solid
          destructive is reserved for buttons, so an error summary does
@@ -111,6 +113,14 @@
                 class="{{ ui('button', 'outline') }}">
           {{ icon("plus", "w-4 h-4") }} {{ _("Save and add another") }}
         </button>
+        {# save_as: only on an existing record, since there is nothing to
+           copy from on a create form. #}
+        {% if allow_save_as %}
+        <button type="submit" form="resource-form" name="_saveasnew" value="1"
+                class="{{ ui('button', 'outline') }}">
+          {{ icon("copy", "w-4 h-4") }} {{ _("Save as new") }}
+        </button>
+        {% endif %}
         {% endif %}
         <a href="{{ base_path }}/{{ model_admin.get_slug() }}" class="{{ ui('button', 'ghost-muted') }}">
           {{ _("Cancel") }}

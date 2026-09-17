@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-16 12:20+0500\n"
+"POT-Creation-Date: 2026-09-17 14:36+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -82,6 +82,9 @@ msgstr ""
 msgid "Anonymous"
 msgstr ""
 
+msgid "Any date"
+msgstr ""
+
 msgid "Asc"
 msgstr ""
 
@@ -101,6 +104,9 @@ msgid "Clear all"
 msgstr ""
 
 msgid "Clear selection"
+msgstr ""
+
+msgid "Close"
 msgstr ""
 
 msgid "Close filters"
@@ -237,6 +243,9 @@ msgstr ""
 msgid "Not found"
 msgstr ""
 
+msgid "Notifications"
+msgstr ""
+
 msgid "Open calendar"
 msgstr ""
 
@@ -251,6 +260,9 @@ msgid "Page %(page)d of %(pages)d"
 msgstr ""
 
 msgid "Password"
+msgstr ""
+
+msgid "Past 7 days"
 msgstr ""
 
 msgid "Permission denied"
@@ -289,6 +301,9 @@ msgid "Save and add another"
 msgstr ""
 
 msgid "Save and continue editing"
+msgstr ""
+
+msgid "Save as new"
 msgstr ""
 
 #, python-format
@@ -371,10 +386,19 @@ msgstr ""
 msgid "This can't be deleted"
 msgstr ""
 
+msgid "This month"
+msgstr ""
+
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr ""
 
 msgid "This will also delete"
+msgstr ""
+
+msgid "This year"
+msgstr ""
+
+msgid "Today"
 msgstr ""
 
 msgid "Toggle dark mode"
