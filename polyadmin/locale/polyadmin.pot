@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-17 14:36+0500\n"
+"POT-Creation-Date: 2026-09-20 00:38+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -85,6 +85,9 @@ msgstr ""
 msgid "Any date"
 msgstr ""
 
+msgid "Apply"
+msgstr ""
+
 msgid "Asc"
 msgstr ""
 
@@ -117,6 +120,9 @@ msgstr ""
 
 #, python-format
 msgid "Couldn't save %(name)s"
+msgstr ""
+
+msgid "Custom range"
 msgstr ""
 
 msgid "Dark mode"
@@ -173,6 +179,9 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
+msgid "Empty"
+msgstr ""
+
 msgid "Everything is selected."
 msgstr ""
 
@@ -183,6 +192,9 @@ msgid "Filters"
 msgstr ""
 
 msgid "First page"
+msgstr ""
+
+msgid "From"
 msgstr ""
 
 msgid "History"
@@ -238,6 +250,9 @@ msgid "No resources registered."
 msgstr ""
 
 msgid "No widgets configured."
+msgstr ""
+
+msgid "Not empty"
 msgstr ""
 
 msgid "Not found"
@@ -396,6 +411,9 @@ msgid "This will also delete"
 msgstr ""
 
 msgid "This year"
+msgstr ""
+
+msgid "To"
 msgstr ""
 
 msgid "Today"

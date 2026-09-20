@@ -24,9 +24,13 @@ from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
 from polyadmin.core.query import (
     LIST_TOKEN_FIELD,
+    RANGE_FOR_FIELD,
+    RANGE_FROM_FIELD,
+    RANGE_TO_FIELD,
     ListRequest,
     alist_objects,
     apply_defaults,
+    fold_range_params,
     safe_list_token,
     with_list_token,
 )
@@ -39,6 +43,7 @@ from polyadmin.fastapi.locale import acached_principal
 from polyadmin.fastapi.relations import (
     compute_relation_options,
     compute_relation_permissions,
+    relation_filter_choices_for,
 )
 from polyadmin.fastapi.responses import (
     clear_flash,
@@ -62,12 +67,26 @@ SAVE_AS_NEW_FIELD = "_saveasnew"
 _FILTER_KEY = re.compile(r"^filter\[(\w+)\]$")
 
 
-def _parse_list_request(query_params: Any) -> ListRequest:
+def _parse_list_request(query_params: Any, model_admin: ModelAdmin) -> ListRequest:
+    """Read the list query from the URL. It takes the ModelAdmin only so
+    the panel's range form can be folded into one filter value -- see
+    fold_range_params, which needs to know which filters are declared.
+    """
     filters = {}
     for key, value in query_params.multi_items():
         match = _FILTER_KEY.match(key)
         if match:
             filters[match.group(1)] = value
+    # The panel's range form posts two date inputs plus the filter they
+    # belong to; fold them into the one value the grammar defines before
+    # anything reads filters.
+    fold_range_params(
+        model_admin,
+        filters,
+        query_params.get(RANGE_FOR_FIELD, ""),
+        query_params.get(RANGE_FROM_FIELD, ""),
+        query_params.get(RANGE_TO_FIELD, ""),
+    )
     # page_size defaults to 0, not 25: an unset value has to reach
     # apply_defaults so the ModelAdmin's own list_per_page is consulted
     # first.
@@ -171,10 +190,15 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         # Resolved once and handed to both the query and the pager:
         # otherwise page_of would size the control from the raw request
         # and disagree with the rows fetched.
-        list_request = apply_defaults(model_admin, _parse_list_request(request.query_params))
+        list_request = apply_defaults(model_admin, _parse_list_request(request.query_params, model_admin))
         objects, total = await alist_objects(model_admin, list_request)
         page = page_of(objects, total, list_request)
-
+        # A relation filter cannot source its own choices -- core reaches
+        # neither the registry nor the principal -- so they are resolved
+        # here and passed in.
+        filter_choices = relation_filter_choices_for(
+            admin, principal, model_admin, list_request.filters, base_path
+        )
 
         if is_htmx_request(request):
             html = renderer.render_list_fragment(
@@ -187,6 +211,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 base_path=base_path,
                 principal=principal,
                 csrf_token=request.state.csrf_token,
+                relation_filter_choices=filter_choices,
             )
         else:
             messages = pop_flash(request)
@@ -201,6 +226,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
                 messages=messages,
                 principal=principal,
                 csrf_token=request.state.csrf_token,
+                relation_filter_choices=filter_choices,
             )
         response = HTMLResponse(html)
         if not is_htmx_request(request):
@@ -631,7 +657,7 @@ def build_export_handler(admin: Admin, model_admin: ModelAdmin, exporter: Export
             return error
         # unlimited: an export of a filtered set is the whole set, not
         # whichever page the user happened to be looking at.
-        list_request = _parse_list_request(request.query_params)
+        list_request = _parse_list_request(request.query_params, model_admin)
         list_request.unlimited = True
         objects, _ = await alist_objects(model_admin, list_request)
         columns = list(model_admin.list_display)

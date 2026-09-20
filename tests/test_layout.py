@@ -36,6 +36,7 @@ SHARED_LAYOUT = {
     "admin/components/ui/breadcrumb.html",
     "admin/components/ui/bulk-actions.html",
     "admin/components/ui/calendar.html",
+    "admin/components/ui/combobox.html",
     "admin/components/ui/delete-preview.html",
     "admin/components/ui/dropdown-menu.html",
     "admin/components/ui/field.html",

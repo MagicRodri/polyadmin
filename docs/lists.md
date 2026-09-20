@@ -85,6 +85,24 @@ It renders in the same filter panel as `BooleanFilter` and
 own name (`filter[founded]=7d`), so a filtered list is a link like any
 other.
 
+Below the presets the panel offers **Custom range**, two date inputs
+whose value rides in the same parameter:
+
+```
+?filter[founded]=7d                       a preset
+?filter[founded]=2026-01-01:2026-03-01    a range
+?filter[founded]=2026-01-01:              from that date through today
+```
+
+The range is **inclusive of both endpoints** — that is what "from X to
+Y" means — and `date_filter_range` converts it to the same half-open
+window the presets produce, so a `list_page` implementation resolving
+the raw value gets identical results either way. An empty end means
+"through today", resolved by the parser rather than by the panel, so the
+range still works with scripting off. An empty start, an unparseable
+date, or an end before its start narrows nothing, the same rule an
+unrecognised preset follows.
+
 Because it rides in the same `ListRequest` as every other filter,
 **exports and `delete_selected` narrow with it**: "all N matching" means
 what the panel is showing.
@@ -111,3 +129,110 @@ Two details worth knowing: the window is **half-open** (`>= from`,
 is compared **by date**, so a datetime's clock time never decides whether
 it counts as "today". An unrecognised value narrows nothing rather than
 failing, so a crafted URL renders the list unfiltered.
+
+## Filtering on whether a field is set at all
+
+`EmptyFilter` splits a list on presence, which is the question behind
+most "why is this record wrong?" hunts:
+
+```python
+class UserAdmin(ModelAdmin):
+    filters = [EmptyFilter("organization")]
+```
+
+It offers **All**, **Empty** and **Not empty**, and the URL carries
+`filter[organization]=empty` or `=notempty`.
+
+**Empty means unset or blank, never merely zero.** `None`, `""`, an
+empty collection and a zero datetime are empty; `0`, `False` and `"0"`
+are values somebody chose. A `many` relation is empty when it has no
+members.
+
+A `list_page` implementation reads the raw value and compares it against
+the constants, so the two paths cannot drift:
+
+```python
+value = request.filters.get("organization")
+if value == EMPTY_FILTER_EMPTY:
+    where.append("organization_id IS NULL")
+elif value == EMPTY_FILTER_NOT_EMPTY:
+    where.append("organization_id IS NOT NULL")
+```
+
+## Filtering by a related record
+
+```python
+class UserAdmin(ModelAdmin):
+    filters = [RelationFilter("organization")]
+```
+
+The URL carries the target's primary key —
+`filter[organization]=3` — and a `many` relation matches when any member
+does, so "users whose teams include Platform" works.
+
+**The control follows `autocomplete_fields`.** A relation named there
+renders as the same lookup-backed combobox the form uses, pointed at the
+target's own `/lookup` route; every other relation renders as a list of
+links over the target's whole queryset, uncapped, exactly as the form's
+non-autocomplete `<select>` already does. Declaring the relation in
+`autocomplete_fields` is the answer to a large target, and it is the
+same answer in both places.
+
+A reader who may not view the target resource does not get the filter at
+all — it is dropped from the panel rather than shown empty.
+
+**One limitation worth knowing.** `apply` receives the parent
+ModelAdmin, not the registry, so it cannot call the target's own
+`get_pk`. It uses the same default lookup `ModelAdmin.get_pk` does. If
+the target declares its own, pass `related_pk` to match:
+
+```python
+RelationFilter("organization", related_pk=lambda related: related.code)
+```
+
+## Writing your own filter
+
+A filter is a base class, not a closed set. Subclass `Filter`, implement
+two methods and declare it like any built-in; Django calls this a
+`SimpleListFilter`, and the two halves are the same: the options, and
+the constraint.
+
+```python
+class PlanFilter(Filter):
+    def choices_with_labels(self):
+        return [("", "All"), ("paid", "Paid"), ("free", "Free")]
+
+    def apply(self, objects, raw_value, model_admin):
+        if not raw_value:
+            return objects  # "" always means "no filter"
+        field = model_admin.get_field("plan")
+        return [
+            obj for obj in objects if (field.get_value(obj) != "Free") == (raw_value == "paid")
+        ]
+```
+
+```python
+class UserAdmin(ModelAdmin):
+    filters = [PlanFilter("plan")]
+```
+
+Three rules make a host filter equal to a built-in rather than
+cosmetic:
+
+- **`""` always means "no filter".** It is the first choice, it is what
+  Clear all sets, and `apply` must return its input unchanged for it.
+- **An unrecognised value narrows nothing.** The value comes from a URL,
+  so treat anything you do not recognise as absent rather than failing —
+  a crafted link should render the list, not an error.
+- **`apply` gets the raw string.** Parsing is the filter's own job,
+  because only it knows what its values mean.
+
+Because it rides in the same `ListRequest` as every built-in, **exports
+and `delete_selected` narrow with it**: "all N matching" means what the
+panel is showing. A `list_page` implementation reads the same raw value
+out of `request.filters` and resolves it in its own query.
+
+A filter that needs a control other than a list of links says so with
+`control_kind` — that is how `DateFilter` gets its range inputs and
+`RelationFilter` its combobox. A filter that leaves it alone is a choice
+list, which is what almost every filter wants.

@@ -487,6 +487,11 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             # The count badge on the trigger, shown only while filters
             # are actually narrowing the list.
             "count": "rounded-sm px-1 font-mono text-xs font-normal",
+            # The range form under a date filter's presets.
+            "form": "mt-2 space-y-2 border-t border-border px-3 pt-3",
+            "form-row": "flex items-center gap-2",
+            "form-label": "w-10 shrink-0 text-xs text-muted-foreground",
+            "form-input": "h-8 flex-1 text-sm",
         },
     },
 

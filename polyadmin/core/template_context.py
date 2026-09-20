@@ -20,10 +20,18 @@ from polyadmin.core.delete import (
     ResolvedDeletePreview,
     previews_deletes,
 )
+from polyadmin.core.filter import (
+    FILTER_KIND_DATE_RANGE,
+    FILTER_KIND_RELATION,
+    date_filter_range_values,
+)
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
 from polyadmin.core.query import (
     LIST_TOKEN_FIELD,
+    RANGE_FOR_FIELD,
+    RANGE_FROM_FIELD,
+    RANGE_TO_FIELD,
     ListRequest,
     is_sortable,
     links_to_record,
@@ -109,16 +117,59 @@ def _list_url(
     return f"{base_path}/{model_admin.get_slug()}{query}"
 
 
-def _filter_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> list[dict[str, Any]]:
+def _filter_form_hidden(list_request: ListRequest, exclude: str) -> list[dict[str, str]]:
+    """Every list parameter except the one the form is about, as hidden
+    fields. Without them, submitting the form would drop the reader's
+    search, sort and other filters.
+    """
+    hidden = []
+    if list_request.search:
+        hidden.append({"name": "search", "value": list_request.search})
+    if list_request.ordering:
+        hidden.append({"name": "sort", "value": list_request.ordering})
+    # Page is deliberately dropped: narrowing a list returns to page 1,
+    # exactly as the choice links already do.
+    for name in sorted(n for n in list_request.filters if n != exclude):
+        hidden.append({"name": f"filter[{name}]", "value": list_request.filters[name]})
+    return hidden
+
+
+def _filter_controls(
+    model_admin: ModelAdmin,
+    list_request: ListRequest,
+    base_path: str,
+    relation_choices: dict[str, dict[str, Any] | None] | None = None,
+) -> list[dict[str, Any]]:
     """Per-filter choice lists with precomputed URLs. Each choice is a link, not a
     <select> option, preserving everything else and resetting to page 1.
+
+    `relation_choices` carries what a relation filter cannot supply itself:
+    the target's records, permission-filtered. It is computed by the
+    adapter and passed in, because core must not import the adapter. A
+    None entry means the principal may not view that target, and the
+    filter is dropped rather than shown empty.
     """
+    relation_choices = relation_choices or {}
     controls = []
     for filt in model_admin.filters:
         current = list_request.filters.get(filt.name, "")
         others = {n: v for n, v in list_request.filters.items() if n != filt.name}
+
+        sourced: list[dict[str, str]] = []
+        combobox = None
+        if filt.control_kind == FILTER_KIND_RELATION:
+            from_target = relation_choices.get(filt.name)
+            if from_target is None:
+                continue  # dropped, not emptied -- see relation_filter_choices
+            sourced = from_target["choices"]
+            combobox = from_target["combobox"]
+
+        pairs = [
+            *filt.choices_with_labels(),
+            *((choice["value"], choice["label"]) for choice in sourced),
+        ]
         choices = []
-        for value, label in filt.choices_with_labels():
+        for value, label in pairs:
             combined = {**others, filt.name: value} if value else others
             choices.append({
                 "value": value,
@@ -126,6 +177,11 @@ def _filter_controls(model_admin: ModelAdmin, list_request: ListRequest, base_pa
                 "selected": value == current,
                 "url": _list_url(model_admin, list_request, base_path, filters=combined),
             })
+        range_from, range_to = "", ""
+        if filt.control_kind == FILTER_KIND_DATE_RANGE:
+            values = date_filter_range_values(current)
+            if values is not None:
+                range_from, range_to = values
         controls.append({
             "name": filt.name,
             "label": filt.label,
@@ -135,6 +191,33 @@ def _filter_controls(model_admin: ModelAdmin, list_request: ListRequest, base_pa
             # a URL that clears just this filter.
             "active": next((c["label"] for c in choices if c["selected"] and c["value"]), None),
             "clear_url": _list_url(model_admin, list_request, base_path, filters=others),
+            # This filter's raw value on this request. The badge counts on
+            # it rather than on a selected choice: a custom date range and
+            # a combobox selection are both real values that match no
+            # declared choice, and counting choices treated those lists as
+            # unfiltered.
+            "current": current,
+            # core.filter's control_kind as a plain string: "" for a link
+            # list, "daterange" for the two date inputs, "relation" for
+            # the combobox.
+            "kind": filt.control_kind,
+            # Prefilled into the range inputs when the current value is a
+            # range rather than a preset. Both "" otherwise.
+            "range_from": range_from,
+            "range_to": range_to,
+            # The GET form an input-bearing control submits: the list's own
+            # path, plus every other parameter as a hidden field, so
+            # submitting reproduces the list it was opened from with one
+            # thing changed.
+            "form_action": f"{base_path}/{model_admin.get_slug()}",
+            "hidden": _filter_form_hidden(list_request, filt.name),
+            # A relation filter whose field is in autocomplete_fields
+            # renders the lookup-backed combobox instead of a link list --
+            # the same declaration, and the same control, the form uses.
+            "uses_combobox": combobox is not None,
+            "lookup_url": (combobox or {}).get("lookup_url", ""),
+            "selected_pk": (combobox or {}).get("selected_pk", ""),
+            "selected_label": (combobox or {}).get("selected_label", ""),
         })
     return controls
 
@@ -296,6 +379,7 @@ def list_context(
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
     csrf_token: str = "",
+    relation_filter_choices: dict[str, dict[str, Any] | None] | None = None,
 ) -> dict[str, Any]:
     list_request = list_request or ListRequest()
     # Carries search/filter/sort into the Export links so a download
@@ -310,7 +394,9 @@ def list_context(
         export_params.append(("sort", list_request.ordering))
     export_query = f"?{urlencode(export_params)}" if export_params else ""
 
-    filter_controls = _filter_controls(model_admin, list_request, base_path)
+    filter_controls = _filter_controls(
+        model_admin, list_request, base_path, relation_filter_choices
+    )
 
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
@@ -347,6 +433,11 @@ def list_context(
         "search": list_request.search or "",
         "filters": list_request.filters,
         "filter_controls": filter_controls,
+        # The panel's range form field names, so the template never spells
+        # a reserved parameter itself.
+        "range_for_field": RANGE_FOR_FIELD,
+        "range_from_field": RANGE_FROM_FIELD,
+        "range_to_field": RANGE_TO_FIELD,
         "sort_controls": _sort_controls(model_admin, list_request, base_path),
         "page_size_options": _page_size_options(model_admin, list_request, base_path),
         # Precomputed for the same reason the filter links are: the
@@ -364,7 +455,7 @@ def list_context(
         # Badges the Filters trigger, so the panel says how much it hides
         # without being opened. Search is excluded: it has its own visible
         # box.
-        "active_filter_count": sum(1 for control in filter_controls if control["active"]),
+        "active_filter_count": sum(1 for control in filter_controls if control["current"]),
         "ordering": list_request.ordering or "",
         "export_query": export_query,
         "permissions": permissions or default_permissions(model_admin),

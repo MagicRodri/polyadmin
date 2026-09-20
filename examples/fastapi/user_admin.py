@@ -11,7 +11,7 @@ from models import OrganizationRepository, RoleRepository, User, UserRepository
 from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
 from polyadmin.core.action import Action
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
-from polyadmin.core.filter import BooleanFilter
+from polyadmin.core.filter import BooleanFilter, EmptyFilter, Filter, RelationFilter
 from polyadmin.core.model_admin import Fieldset
 from polyadmin.core.relation import Relation
 
@@ -43,6 +43,29 @@ def _deactivate(model_admin, objects, principal):
     return _set_active(model_admin, objects, False)
 
 
+class PlanFilter(Filter):
+    """A filter this application wrote itself: it subclasses the published
+    base and implements the two methods, borrowing nothing from the
+    framework's own filter types. This is the hook Django calls a
+    SimpleListFilter -- the admin supplies both the options and the
+    constraint.
+
+    It exists in the example so the extension point is exercised by the
+    browser suite rather than only described in docs/lists.md.
+    """
+
+    def choices_with_labels(self):
+        return [("", "All"), ("paid", "Paid"), ("free", "Free")]
+
+    def apply(self, objects, raw_value, model_admin):
+        if not raw_value:
+            return objects
+        field = model_admin.get_field("plan")
+        return [
+            obj for obj in objects if (field.get_value(obj) != "Free") == (raw_value == "paid")
+        ]
+
+
 class UserAdmin(ModelAdmin):
     model = User
 
@@ -68,7 +91,21 @@ class UserAdmin(ModelAdmin):
         ),
     ]
     search_fields = ["email"]
-    filters = [BooleanFilter("is_active")]
+    filters = [
+        BooleanFilter("is_active"),
+        # organization is in autocomplete_fields below, so this renders as
+        # the lookup-backed combobox rather than a list of every
+        # organization.
+        RelationFilter("organization"),
+        # roles is a many-to-many: this matches a user holding the chosen
+        # role among however many they have.
+        RelationFilter("roles"),
+        # Not every user has an organization, and "which ones are
+        # unassigned?" is the question the seed makes real.
+        EmptyFilter("organization"),
+        # A filter this application wrote itself -- see PlanFilter.
+        PlanFilter("plan"),
+    ]
     # Routes the "organization" relation through the /lookup endpoint
     # instead of a same-page <select> populated from every
     # organization -- demonstrates the combobox for a relation that, in

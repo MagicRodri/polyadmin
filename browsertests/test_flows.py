@@ -335,3 +335,77 @@ def test_the_user_menu_holds_actions_only(admin_page):
     assert menu.inner_text().strip() == "Sign out", (
         f"the user menu shows {menu.inner_text().strip()!r}, not just its actions"
     )
+
+
+def test_filtering_by_a_related_record(admin_page):
+    """The organization filter is the lookup-backed combobox, because the
+    field is in autocomplete_fields. Selecting an option writes the pk
+    into the form's hidden input; Apply submits it."""
+    admin_page.goto(f"{ADMIN_URL}/users")
+    admin_page.click("button:has-text('Filters')")
+    panel = admin_page.locator('[role="dialog"][aria-label="Filters"]')
+    expect(panel).to_be_visible()
+
+    trigger = panel.locator('input[role="combobox"]').first
+    expect(trigger).to_be_visible()
+    trigger.click()
+    # Typed, not filled: the lookup fires on keyup (hx-trigger), and
+    # fill() sets the value without dispatching one.
+    trigger.press_sequentially("Acme", delay=30)
+    option = admin_page.locator('[role="listbox"] [data-pk]').first
+    expect(option).to_be_visible()
+    option.click()
+    panel.locator('button[type="submit"]').first.click()
+
+    expect(admin_page).to_have_url(re.compile(r"filter"))
+    expect(admin_page.locator("table tbody tr").first).to_be_visible()
+
+
+def test_the_filter_panel_combobox_is_not_clipped(admin_page):
+    """The panel is a scrolling sheet with a focus trap; a popover inside
+    it has been clipped by an ancestor's overflow twice before."""
+    admin_page.goto(f"{ADMIN_URL}/users")
+    admin_page.click("button:has-text('Filters')")
+    panel = admin_page.locator('[role="dialog"][aria-label="Filters"]')
+    panel.locator('input[role="combobox"]').first.click()
+
+    clipped = admin_page.evaluate(
+        """() => {
+            const popover = document.querySelector('body > [class*=bg-popover]');
+            if (!popover) return 'no popover';
+            let el = popover.parentElement;
+            while (el && el !== document.documentElement) {
+                const cs = getComputedStyle(el);
+                if (cs.overflowY !== 'visible' || cs.overflowX !== 'visible') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }"""
+    )
+    assert clipped is False, f"the panel's combobox popover is clipped ({clipped})"
+
+
+def test_filtering_by_a_custom_date_range(admin_page):
+    """The range is two date inputs and a submit, not a link, so this is
+    the one filter whose form has to carry the rest of the list."""
+    admin_page.goto(f"{ADMIN_URL}/organizations?search=Acme")
+    admin_page.click("button:has-text('Filters')")
+    panel = admin_page.locator('[role="dialog"][aria-label="Filters"]')
+
+    # Wide enough to include Acme, founded 2019 in the seed.
+    panel.locator('input[name="_range_from"]').fill("2010-01-01")
+    panel.locator('input[name="_range_to"]').fill("2030-01-01")
+    panel.locator('button[type="submit"]').first.click()
+
+    # The search the reader had must survive applying a range.
+    expect(admin_page).to_have_url(re.compile(r"search=Acme"))
+    expect(admin_page.locator("table tbody tr").first).to_be_visible()
+
+
+def test_a_host_written_filter_appears_in_the_panel(admin_page):
+    """The example's own Plan filter: the hook, exercised rather than
+    only documented."""
+    admin_page.goto(f"{ADMIN_URL}/users")
+    admin_page.click("button:has-text('Filters')")
+    panel = admin_page.locator('[role="dialog"][aria-label="Filters"]')
+    expect(panel.locator("text=Paid").first).to_be_visible()

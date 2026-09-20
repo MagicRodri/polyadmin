@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-17 14:36+0500\n"
+"POT-Creation-Date: 2026-09-20 00:38+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: fr\n"
@@ -86,6 +86,9 @@ msgstr "Anonyme"
 msgid "Any date"
 msgstr "Toutes les dates"
 
+msgid "Apply"
+msgstr "Appliquer"
+
 msgid "Asc"
 msgstr "Croissant"
 
@@ -119,6 +122,9 @@ msgstr "Confirmer"
 #, python-format
 msgid "Couldn't save %(name)s"
 msgstr "Impossible d'enregistrer « %(name)s »"
+
+msgid "Custom range"
+msgstr "Période personnalisée"
 
 msgid "Dark mode"
 msgstr "Mode sombre"
@@ -174,6 +180,9 @@ msgstr "Modifier"
 msgid "Email"
 msgstr "E-mail"
 
+msgid "Empty"
+msgstr "Vide"
+
 msgid "Everything is selected."
 msgstr "Tout est sélectionné."
 
@@ -185,6 +194,9 @@ msgstr "Filtres"
 
 msgid "First page"
 msgstr "Première page"
+
+msgid "From"
+msgstr "Du"
 
 msgid "History"
 msgstr "Historique"
@@ -240,6 +252,9 @@ msgstr "Aucune ressource enregistrée."
 
 msgid "No widgets configured."
 msgstr "Aucun widget configuré."
+
+msgid "Not empty"
+msgstr "Non vide"
 
 msgid "Not found"
 msgstr "Introuvable"
@@ -398,6 +413,9 @@ msgstr "Seront aussi supprimés"
 
 msgid "This year"
 msgstr "Cette année"
+
+msgid "To"
+msgstr "Au"
 
 msgid "Today"
 msgstr "Aujourd'hui"

@@ -1,3 +1,4 @@
+{% from "admin/components/ui/combobox.html" import combobox %}
 {% from "admin/components/icons.html" import icon %}
 {# Filter drawer: one "Filters" trigger in the toolbar plus a sheet
    that slides in from the right listing every declared filter. One
@@ -81,6 +82,60 @@
           </li>
           {% endfor %}
         </ul>
+        {% if control.uses_combobox %}
+        {# The same control the form uses, in the same GET form the range
+           uses: the combobox writes the chosen pk into its own hidden
+           input, and Apply submits the form, so the panel needs no
+           bespoke navigation. #}
+        {# hx-disinherit: the combobox inside carries its own complete htmx
+           wiring for /lookup, and without this it would inherit this
+           form's hx-select="#resource-list" -- htmx would then select that
+           id out of the lookup's option list, find nothing, and swap
+           nothing, leaving the panel's combobox permanently empty. #}
+        <form method="get" action="{{ control.form_action }}" class="{{ ui('filter-panel', 'form') }}"
+              hx-get="{{ control.form_action }}" hx-target="#resource-list" hx-select="#resource-list"
+              hx-swap="outerHTML" hx-push-url="true" hx-disinherit="*">
+          {% for field in control.hidden %}
+          <input type="hidden" name="{{ field.name }}" value="{{ field.value }}">
+          {% endfor %}
+          {{ combobox(name="filter[" ~ control.name ~ "]",
+                      id="filter-combobox-" ~ control.name,
+                      selected_pk=control.selected_pk,
+                      selected_label=control.selected_label,
+                      lookup_url=control.lookup_url,
+                      placeholder=_('Search…')) }}
+          <button type="submit" class="{{ ui('button', 'outline', 'size-xs') }} w-full">{{ _("Apply") }}</button>
+        </form>
+        {% endif %}
+        {% if control.kind == "daterange" %}
+        {# A GET form, not a JS-built URL: two date inputs cannot become
+           one parameter without either a form post or scripting, and the
+           form is the one that still works with scripting off. The route
+           folds _range_from/_range_to into the filter's own value
+           (fold_range_params). #}
+        <form method="get" action="{{ control.form_action }}" class="{{ ui('filter-panel', 'form') }}"
+              hx-get="{{ control.form_action }}" hx-target="#resource-list" hx-select="#resource-list"
+              hx-swap="outerHTML" hx-push-url="true">
+          {% for field in control.hidden %}
+          <input type="hidden" name="{{ field.name }}" value="{{ field.value }}">
+          {% endfor %}
+          <input type="hidden" name="{{ range_for_field }}" value="{{ control.name }}">
+          <p class="{{ ui('filter-panel', 'group-label') }}">{{ _("Custom range") }}</p>
+          <div class="{{ ui('filter-panel', 'form-row') }}">
+            <label for="range-from-{{ control.name }}" class="{{ ui('filter-panel', 'form-label') }}">{{ _("From") }}</label>
+            <input type="date" id="range-from-{{ control.name }}" name="{{ range_from_field }}"
+                   value="{{ control.range_from }}"
+                   class="{{ ui('input') }} {{ ui('filter-panel', 'form-input') }}">
+          </div>
+          <div class="{{ ui('filter-panel', 'form-row') }}">
+            <label for="range-to-{{ control.name }}" class="{{ ui('filter-panel', 'form-label') }}">{{ _("To") }}</label>
+            <input type="date" id="range-to-{{ control.name }}" name="{{ range_to_field }}"
+                   value="{{ control.range_to }}"
+                   class="{{ ui('input') }} {{ ui('filter-panel', 'form-input') }}">
+          </div>
+          <button type="submit" class="{{ ui('button', 'outline', 'size-xs') }} w-full">{{ _("Apply") }}</button>
+        </form>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

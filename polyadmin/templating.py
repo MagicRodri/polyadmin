@@ -227,6 +227,7 @@ class Renderer:
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
         csrf_token: str = "",
+        relation_filter_choices: dict[str, Any] | None = None,
     ) -> str:
         context = list_context(
             admin,
@@ -239,6 +240,7 @@ class Renderer:
             messages=messages,
             principal=principal,
             csrf_token=csrf_token,
+            relation_filter_choices=relation_filter_choices,
         )
         return self.render_candidates(model_admin.get_template_candidates("list"), context)
 
@@ -254,6 +256,7 @@ class Renderer:
         base_path: str = "/admin",
         principal: Any = None,
         csrf_token: str = "",
+        relation_filter_choices: dict[str, Any] | None = None,
     ) -> str:
         context = list_context(
             admin,
@@ -265,6 +268,7 @@ class Renderer:
             base_path=base_path,
             principal=principal,
             csrf_token=csrf_token,
+            relation_filter_choices=relation_filter_choices,
         )
         return self.render("admin/components/list_content.html", context)
 

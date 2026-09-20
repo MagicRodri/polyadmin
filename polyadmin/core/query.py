@@ -216,3 +216,33 @@ def with_list_token(url: str, token: str) -> str:
         return url
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}{LIST_TOKEN_FIELD}={quote(token, safe='')}"
+
+
+# The panel's range form posts these three rather than one filter value,
+# because a form cannot concatenate two inputs. Reserved names, in the
+# same family as _list and _return.
+RANGE_FOR_FIELD = "_range_for"
+RANGE_FROM_FIELD = "_range_from"
+RANGE_TO_FIELD = "_range_to"
+
+
+def fold_range_params(
+    model_admin: Any, filters: dict[str, str], range_for: str, from_value: str, to_value: str
+) -> None:
+    """Turn a range form's submission into the single filter value the
+    grammar defines, in place. Folding here rather than in the browser is
+    what keeps the range working with scripting off.
+
+    `range_for` arrives from the client, so it is honoured only when the
+    ModelAdmin actually declares a filter by that name -- otherwise a
+    crafted form could inject any key into filters. Submitting both inputs
+    empty clears the filter instead of setting an empty range.
+    """
+    if not range_for:
+        return
+    if not any(filt.name == range_for for filt in model_admin.filters):
+        return
+    if not from_value and not to_value:
+        filters.pop(range_for, None)
+        return
+    filters[range_for] = f"{from_value}:{to_value}"

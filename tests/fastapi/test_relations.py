@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.field import ForeignKeyField, ManyToManyField, StringField
+from polyadmin.core.filter import RelationFilter
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE
 from polyadmin.core.relation import Relation
@@ -374,4 +375,85 @@ def test_lookup_results_are_listbox_options():
     fragment = client.get("/admin/organizations/lookup?q=acme").text
     assert 'role="option"' in fragment, (
         "lookup results must be options, or the panel is a listbox with no options in it"
+    )
+
+
+class RelationFilterUserAdmin(UserAdmin):
+    filters = [RelationFilter("organization")]
+
+
+def test_a_relation_filter_lists_the_targets_records():
+    org_admin = OrganizationAdmin()
+    user_admin = RelationFilterUserAdmin()
+    admin = Admin(model_admins=[user_admin, org_admin])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    org_admin.create({"name": "Acme"})
+
+    page = TestClient(app).get("/admin/users").text
+    assert "Acme" in page, "the relation filter does not offer the target's records"
+    # This repo percent-encodes filter keys; Go does not. Both are fine in
+    # a browser, and the mirrored tests assert different strings.
+    assert "filter%5Borganization%5D=1" in page, (
+        "a relation choice does not carry the target's primary key"
+    )
+
+
+def test_a_relation_filter_disappears_when_the_target_is_not_viewable():
+    # Not rendered empty: an empty group is a control that looks broken.
+    # A reader who may not see organizations is not told they exist.
+    org_admin = OrganizationAdmin()
+    user_admin = RelationFilterUserAdmin()
+
+    class DenyAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "organizations.view"
+
+    admin = Admin(model_admins=[user_admin, org_admin], authorizer=DenyAuthorizer())
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    org_admin.create({"name": "Acme"})
+
+    page = TestClient(app).get("/admin/users").text
+    assert "filter%5Borganization%5D" not in page, (
+        "a filter over a target the principal cannot view was offered"
+    )
+
+
+class AutocompleteRelationFilterAdmin(AutocompleteUserAdmin):
+    filters = [RelationFilter("organization")]
+
+
+def test_a_large_relation_filter_uses_the_combobox():
+    org_admin = OrganizationAdmin()
+    user_admin = AutocompleteRelationFilterAdmin()
+    admin = Admin(model_admins=[user_admin, org_admin])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    org_admin.create({"name": "Acme"})
+
+    page = TestClient(app).get("/admin/users").text
+    assert 'name="filter[organization]"' in page, (
+        "the panel did not render a combobox input for an autocomplete relation"
+    )
+    # It queries the target's own lookup route, which is already
+    # authorized against that target's view permission.
+    assert "/admin/organizations/lookup" in page
+    # The whole queryset must NOT have been dumped into the panel.
+    assert "filter%5Borganization%5D=1" not in page, (
+        "the combobox branch still rendered a link list"
+    )
+
+
+def test_a_small_relation_filter_stays_a_link_list():
+    org_admin = OrganizationAdmin()
+    user_admin = RelationFilterUserAdmin()  # no autocomplete_fields
+    admin = Admin(model_admins=[user_admin, org_admin])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    org_admin.create({"name": "Acme"})
+
+    page = TestClient(app).get("/admin/users").text
+    assert "filter%5Borganization%5D=1" in page, (
+        "a relation not in autocomplete_fields should render as links"
     )
