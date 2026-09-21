@@ -1,0 +1,72 @@
+site_name: PolyAdmin
+site_description: Server-rendered admin frameworks for Python and Go
+site_url: https://magicrodri.github.io/polyadmin/
+repo_url: https://github.com/MagicRodri/polyadmin
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Shared concepts:
+      - Architecture: concepts/architecture.md
+      - Model administration: concepts/model-admin.md
+      - Frontend and theming: concepts/frontend.md
+  - Python / FastAPI:
+      - Getting started: python/index.md
+      - Architecture: architecture.md
+      - Model admin: model-admin.md
+      - Dashboard: dashboard.md
+      - Lists and filters: lists.md
+      - Authentication: authentication.md
+      - Permissions: permissions.md
+      - Routing: routing.md
+      - Relations and inlines: inlines.md
+      - Actions and deletes: deletes.md
+      - Exports: exports.md
+      - Internationalization: i18n.md
+      - Templates and components: templates.md
+  - Go / Fiber:
+      - Getting started: go/index.md
+      - Architecture: go/reference/architecture.md
+      - Model admin: go/reference/model-admin.md
+      - Dashboard: go/reference/dashboard.md
+      - Lists and filters: go/reference/lists.md
+      - Authentication: go/reference/authentication.md
+      - Permissions: go/reference/permissions.md
+      - Routing: go/reference/routing.md
+      - Relations and inlines: go/reference/inlines.md
+      - Actions and deletes: go/reference/deletes.md
+      - Exports: go/reference/exports.md
+      - Internationalization: go/reference/i18n.md
+      - Templates and components: go/reference/templates.md

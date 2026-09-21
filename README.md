@@ -2,7 +2,8 @@
 
 A Django-admin-style, server-rendered admin framework for
 [FastAPI](https://fastapi.tiangolo.com). See [`docs/`](docs/) for
-reference documentation.
+reference documentation, or visit the [PolyAdmin documentation site](https://magicrodri.github.io/polyadmin-docs/)
+for the shared Python and Go guides.
 
 ## What you get from declaring a `ModelAdmin`
 

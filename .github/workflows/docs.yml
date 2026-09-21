@@ -1,0 +1,55 @@
+name: Deploy documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Go documentation
+        run: git clone --depth 1 https://github.com/MagicRodri/go-polyadmin.git /tmp/go-polyadmin
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build documentation
+        run: |
+          python -m pip install mkdocs-material
+          mkdir -p docs/go/reference
+          rm docs/components.md
+          cp -R /tmp/go-polyadmin/docs/. docs/go/reference/
+          rm docs/go/reference/components.md
+          sed -i 's|(components.md)|(../../concepts/frontend.md)|g' docs/go/reference/architecture.md docs/go/reference/templates.md
+          mkdocs build --strict
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

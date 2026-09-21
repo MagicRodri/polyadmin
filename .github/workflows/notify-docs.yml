@@ -1,0 +1,21 @@
+name: Notify documentation site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger documentation rebuild
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          repository: MagicRodri/polyadmin-docs
+          event-type: source-docs-updated
