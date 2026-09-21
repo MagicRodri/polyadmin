@@ -80,6 +80,7 @@ class Admin:
         slug = model_admin.get_slug()
         if slug in self._registry:
             raise ValueError(f"A ModelAdmin is already registered for slug {slug!r}.")
+        model_admin.validate_detail_actions()
         self._registry[slug] = model_admin
 
     def get_model_admin(self, slug: str) -> ModelAdmin:

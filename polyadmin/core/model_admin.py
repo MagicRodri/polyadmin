@@ -73,6 +73,10 @@ class ModelAdmin:
     filters: ClassVar[Sequence[Any]] = ()
     fields: ClassVar[Sequence[Field]] = ()
     actions: ClassVar[Sequence[Any]] = ()
+    # Names of the actions the detail page offers, in order. None means every
+    # action whose `where` includes the detail page; a list overrides `where`
+    # (so a "list" action can be named here), and [] offers none.
+    detail_actions: ClassVar[Sequence[str] | None] = None
     # Removes the built-in bulk delete. Opt-out, so the default keeps it,
     # as Django does.
     disable_delete_selected: ClassVar[bool] = False
@@ -235,6 +239,28 @@ class ModelAdmin:
             if action.name == name:
                 return action
         return None
+
+    def get_list_actions(self) -> list[Any]:
+        """The actions the list page's bulk bar offers."""
+        return [a for a in self.get_actions() if a.where in ("list", "both")]
+
+    def get_detail_actions(self) -> list[Any]:
+        """The actions one record's detail page offers. delete_selected is a
+        bulk action, so it is never among them -- not by `where`, not by being
+        named in `detail_actions`, not when a ModelAdmin replaces it."""
+        candidates = [a for a in self.get_actions() if a.name != DELETE_SELECTED_NAME]
+        if self.detail_actions is None:
+            return [a for a in candidates if a.where in ("detail", "both")]
+        by_name = {a.name: a for a in candidates}
+        return [by_name[name] for name in self.detail_actions if name in by_name]
+
+    def validate_detail_actions(self) -> None:
+        known = {a.name for a in self.get_actions()}
+        for name in self.detail_actions or ():
+            if name not in known:
+                raise ValueError(
+                    f"{type(self).__name__}.detail_actions names {name!r}, which is not one of its actions {sorted(known)}."
+                )
 
     def get_template_candidates(self, view: str) -> list[str]:
         """Template lookup order for a view: an explicit `{view}_template`

@@ -17,6 +17,10 @@ from polyadmin.i18n import N_, ngettext
 
 ActionHandler = Callable[[Any, Sequence[Any], Any], "str | None"]
 
+# Which pages offer an action: the list page's bulk bar, one record's detail
+# page, or both.
+ACTION_WHERE = ("list", "detail", "both")
+
 
 class Action:
     def __init__(
@@ -27,7 +31,10 @@ class Action:
         label: str | None = None,
         confirm: str | None = None,
         permission: str | None = None,
+        where: str = "both",
     ) -> None:
+        if where not in ACTION_WHERE:
+            raise ValueError(f"Action {name!r}: where must be one of {ACTION_WHERE}, not {where!r}.")
         self.name = name
         self.label = label or name.replace("_", " ").title()
         self.handler = handler
@@ -39,6 +46,9 @@ class Action:
         # permission) alongside the resource's `.view` -- None means no
         # extra check beyond being able to see the resource at all.
         self.permission = permission
+        # Placement only, not authorization: the action route serves every
+        # action whichever page offered it, and checks `permission` there.
+        self.where = where
 
 
 # The built-in bulk delete's action name. Reserved: a ModelAdmin that
@@ -88,4 +98,5 @@ def delete_selected_action() -> Action:
         label=N_("Delete selected"),
         confirm=N_("Delete the selected records? This cannot be undone."),
         permission="delete",
+        where="list",
     )
