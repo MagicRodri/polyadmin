@@ -350,6 +350,36 @@ deleting them takes with it — see [`deletes.md`](deletes.md). That
 applies to an action of your own named `delete_selected` too: the page
 is keyed on the name.
 
+### Where an action appears
+
+`where=` places an action: `"list"` (the bulk bar only), `"detail"` (one
+record's page only) or `"both"`, the default. A ModelAdmin can also set
+`detail_actions`, an ordered list of action names that **replaces** the
+`where` default for its detail page:
+
+```python
+class UserAdmin(ModelAdmin):
+    actions = [
+        Action("activate", _activate),
+        Action("deactivate", _deactivate),
+        Action("export_badge", _badge, where="detail"),
+    ]
+    detail_actions = ["deactivate", "export_badge"]  # [] offers none
+```
+
+Naming an action that `where="list"` would hide is fine: the explicit
+list wins. A name that matches no action fails when the `Admin` is
+built. `detail_actions` only decides which buttons the detail page shows;
+the list page is unaffected.
+
+The built-in `delete_selected` is bulk-only. It never appears on a detail
+page, even when named in `detail_actions` or replaced by an action of
+your own with the same name.
+
+Placement is not authorization: hiding a button does not stop a request
+to `POST /{slug}/actions/{name}`. Restrict who may run an action with
+`permission=`.
+
 ## Save as new
 
 `save_as` adds a second submit to the edit form. It saves the

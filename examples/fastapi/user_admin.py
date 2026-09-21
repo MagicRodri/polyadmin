@@ -115,6 +115,8 @@ class UserAdmin(ModelAdmin):
         Action("activate", _activate, label="Activate"),
         Action("deactivate", _deactivate, label="Deactivate", confirm="Deactivate the selected users?"),
     ]
+    # The detail page offers Deactivate only; Activate stays a bulk action.
+    detail_actions = ["deactivate"]
     fields = [
         # help_text is where an ORM/DB column comment lands. It shows
         # under the control on the form and under the label on the

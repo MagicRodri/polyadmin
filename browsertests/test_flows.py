@@ -409,3 +409,11 @@ def test_a_host_written_filter_appears_in_the_panel(admin_page):
     admin_page.click("button:has-text('Filters')")
     panel = admin_page.locator('[role="dialog"][aria-label="Filters"]')
     expect(panel.locator("text=Paid").first).to_be_visible()
+
+
+def test_detail_page_offers_only_the_allowlisted_actions(admin_page):
+    record_url = create_user(admin_page, unique_email())
+    admin_page.goto(record_url)
+    expect(admin_page.get_by_role("button", name="Deactivate")).to_be_visible()
+    expect(admin_page.get_by_role("button", name="Activate", exact=True)).to_have_count(0)
+    expect(admin_page.get_by_role("button", name="Delete selected")).to_have_count(0)

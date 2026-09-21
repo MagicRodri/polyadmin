@@ -16,7 +16,9 @@ class Authorizer(Protocol):
 (`view`, `create`, `update`, `delete`, `export`), plus `"dashboard.view"`
 for the dashboard route. An Action's own `permission=`
 (see [`model-admin.md`](model-admin.md#actions)) is checked the same
-way, as `"{slug}.{that permission}"`, alongside the resource's `.view`.
+way, as `"{slug}.{that permission}"`, alongside the resource's `.view`. Placing an action with `where=` or
+`detail_actions` only hides its button; it is not a security boundary,
+so use `permission=` to restrict who can run it.
 Applications are free to invent their own permission strings beyond
 these standard ones — `Authorizer.can` just receives whatever
 string it's asked about.
