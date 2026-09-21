@@ -1,5 +1,10 @@
 # PolyAdmin
 
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![CI](https://github.com/MagicRodri/polyadmin/actions/workflows/publish.yml/badge.svg)](https://github.com/MagicRodri/polyadmin/actions/workflows/publish.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub Repo stars](https://img.shields.io/github/stars/MagicRodri/polyadmin?style=flat-square)](https://github.com/MagicRodri/polyadmin)
+
 A Django-admin-style, server-rendered admin framework for
 [FastAPI](https://fastapi.tiangolo.com). See [`docs/`](docs/) for
 reference documentation, or visit the [PolyAdmin documentation site](https://magicrodri.github.io/polyadmin-docs/)
@@ -54,15 +59,16 @@ See [`docs/components.md`](docs/components.md).
 
 ## Quickstart
 
-Not yet published to PyPI — install from git:
+The first beta release is available on PyPI:
 
-```toml
-# pyproject.toml
-[project]
-dependencies = ["polyadmin"]
+```bash
+pip install "polyadmin[fastapi]==0.1.0b1"
+```
 
-[tool.uv.sources]
-polyadmin = { git = "https://github.com/MagicRodri/polyadmin.git" }
+For the latest unreleased code, install from Git:
+
+```bash
+pip install "polyadmin[fastapi] @ git+https://github.com/MagicRodri/polyadmin.git"
 ```
 
 Declare a `ModelAdmin` against your own storage and mount it on a

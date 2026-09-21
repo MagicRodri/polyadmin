@@ -1,10 +1,29 @@
 [project]
 name = "polyadmin"
-version = "0.1.0"
+version = "0.1.0b1"
 description = "PolyAdmin: cross-language server-rendered admin framework (Python core)"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.10"
+keywords = ["admin", "fastapi", "htmx", "server-rendered"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
 dependencies = ["jinja2>=3.1"]
+[project.urls]
+Documentation = "https://magicrodri.github.io/polyadmin-docs/"
+Source = "https://github.com/MagicRodri/polyadmin"
+Issues = "https://github.com/MagicRodri/polyadmin/issues"
 
 [project.optional-dependencies]
 fastapi = [
