@@ -11,10 +11,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from polyadmin.core.action import DELETE_SELECTED_NAME, delete_selected_action
+from polyadmin.core.action import DELETE_SELECTED_NAME, Action, action, collect_actions
+from polyadmin.core.auth import Principal
 from polyadmin.core.field import Field
 from polyadmin.core.inline import Inline
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE
+from polyadmin.i18n import N_, gettext, ngettext
 
 
 @dataclass
@@ -72,7 +74,6 @@ class ModelAdmin:
     detail_fields: ClassVar[Sequence[str] | None] = None
     filters: ClassVar[Sequence[Any]] = ()
     fields: ClassVar[Sequence[Field]] = ()
-    actions: ClassVar[Sequence[Any]] = ()
     # Names of the actions the detail page offers, in order. None means every
     # action whose `where` includes the detail page; a list overrides `where`
     # (so a "list" action can be named here), and [] offers none.
@@ -129,6 +130,15 @@ class ModelAdmin:
     detail_template: ClassVar[str | None] = None
     form_template: ClassVar[str | None] = None
     delete_template: ClassVar[str | None] = None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "actions" in vars(cls):
+            raise TypeError(
+                f"{cls.__name__}.actions is no longer supported: declare each action as a "
+                "method decorated with @action (polyadmin.core.action.action). "
+                "See docs/model-admin.md#actions."
+            )
 
     def __init__(self) -> None:
         if getattr(self, "model", None) is None:
@@ -220,34 +230,31 @@ class ModelAdmin:
             return list(self.detail_fields)
         return list(dict.fromkeys([*self.list_display, *self.get_form_fields()]))
 
-    def get_actions(self) -> list[Any]:
-        """The declared actions plus the built-in bulk delete every admin that can
-        delete gets for free. Declaring one named DELETE_SELECTED_NAME replaces
-        it rather than duplicating it.
-        """
-        declared = list(self.actions)
+    def get_actions(self) -> list[Action]:
+        """The @action methods, in definition order, with the built-in bulk
+        delete last -- the destructive action should not be the first thing in
+        the listbox. `disable_delete_selected` and `can_delete = False` remove
+        it however it is defined."""
+        actions = collect_actions(self)
+        others = [a for a in actions if a.name != DELETE_SELECTED_NAME]
         if self.disable_delete_selected or not self.can_delete:
-            return declared
-        if any(a.name == DELETE_SELECTED_NAME for a in declared):
-            return declared
-        # Appended, not prepended: the destructive action should not be
-        # the first thing in the listbox.
-        return [*declared, delete_selected_action()]
+            return others
+        return [*others, *(a for a in actions if a.name == DELETE_SELECTED_NAME)]
 
-    def get_action(self, name: str) -> Any | None:
-        for action in self.get_actions():
-            if action.name == name:
-                return action
+    def get_action(self, name: str) -> Action | None:
+        for candidate in self.get_actions():
+            if candidate.name == name:
+                return candidate
         return None
 
-    def get_list_actions(self) -> list[Any]:
+    def get_list_actions(self) -> list[Action]:
         """The actions the list page's bulk bar offers."""
         return [a for a in self.get_actions() if a.where in ("list", "both")]
 
-    def get_detail_actions(self) -> list[Any]:
+    def get_detail_actions(self) -> list[Action]:
         """The actions one record's detail page offers. delete_selected is a
         bulk action, so it is never among them -- not by `where`, not by being
-        named in `detail_actions`, not when a ModelAdmin replaces it."""
+        named in `detail_actions`, not when a ModelAdmin overrides it."""
         candidates = [a for a in self.get_actions() if a.name != DELETE_SELECTED_NAME]
         if self.detail_actions is None:
             return [a for a in candidates if a.where in ("detail", "both")]
@@ -261,6 +268,41 @@ class ModelAdmin:
                 raise ValueError(
                     f"{type(self).__name__}.detail_actions names {name!r}, which is not one of its actions {sorted(known)}."
                 )
+
+    @action(
+        label=N_("Delete selected"),
+        confirm=N_("Delete the selected records? This cannot be undone."),
+        permission="delete",
+        where="list",
+    )
+    def delete_selected(self, objects: Sequence[Any], principal: Principal | None) -> str | None:
+        """The bulk delete every admin gets for free.
+
+        Django ships the same one, and it is the single most common action
+        anyone would otherwise write by hand. It is expressed entirely in terms
+        of this ModelAdmin's own `delete` hook, so it works against whatever
+        storage the application has and honours whatever that hook already
+        does (cascades, soft deletes, hooks of its own).
+
+        permission="delete", not the resource's bare "view": the action route
+        checks it on top, so a principal who may look at a list but not destroy
+        its rows is refused -- and, because the same check drives the listbox,
+        never offered it in the first place.
+        """
+        deleted = 0
+        for obj in objects:
+            try:
+                self.delete(obj)
+            except Exception as exc:
+                # Stop at the first failure and report how far it got:
+                # silently continuing would leave the user unable to
+                # tell which records survived.
+                # Translators: a bulk delete stopped part-way. %(deleted)d of
+                # %(total)d records were deleted; %(error)s is the underlying error.
+                failure = gettext("Deleted %(deleted)d of %(total)d, then failed: %(error)s")
+                raise RuntimeError(failure % {"deleted": deleted, "total": len(objects), "error": exc}) from exc
+            deleted += 1
+        return ngettext("Deleted %(num)d record.", "Deleted %(num)d records.", deleted) % {"num": deleted}
 
     def get_template_candidates(self, view: str) -> list[str]:
         """Template lookup order for a view: an explicit `{view}_template`

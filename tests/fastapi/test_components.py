@@ -92,15 +92,17 @@ def test_date_field_still_wrapped_in_the_form_field_unit(task_client):
 def _filterable_page(query: str = "") -> str:
     """The list view of a ModelAdmin that declares a filter and has
     actions/export/create available, with `query` applied."""
-    from polyadmin.core.action import Action
+    from polyadmin.core.action import action
     from polyadmin.core.filter import BooleanFilter
 
-    def _noop(model_admin, objects, principal):
-        return ""
+    class FilterableAdmin(InMemoryUserAdmin):
+        filters = [BooleanFilter("is_active")]
 
-    filterable = InMemoryUserAdmin()
-    filterable.filters = [BooleanFilter("is_active")]
-    filterable.actions = [Action("touch", _noop)]
+        @action
+        def touch(self, objects, principal):
+            return ""
+
+    filterable = FilterableAdmin()
     filterable.create({"email": "jane@example.com"})
     admin = Admin(model_admins=[filterable])
     app = FastAPI()

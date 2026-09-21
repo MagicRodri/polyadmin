@@ -1,9 +1,12 @@
 """delete_selected's confirmation page when the ModelAdmin previews deletes."""
 
-from polyadmin.core.action import DELETE_SELECTED_NAME, Action
+from collections.abc import Sequence
+
+from polyadmin.core.action import action
+from polyadmin.core.auth import Principal
 from polyadmin.core.delete import DeletePreview, selection_fingerprint
 from tests.conftest import csrf
-from tests.fastapi.test_delete_preview import make, protected_invoices
+from tests.fastapi.test_delete_preview import PreviewUserAdmin, make, protected_invoices
 
 
 def no_cascade(objects):
@@ -73,15 +76,25 @@ def test_confirmation_returns_to_the_list_it_came_from():
     assert response.headers["location"] == "/admin/users?search=a"
 
 
+class OverriddenDeleteSelectedAdmin(PreviewUserAdmin):
+    @action(label="Delete selected")
+    def delete_selected(self, objects: Sequence[object], principal: Principal | None) -> str | None:
+        return ""
+
+
+class ArchivingAdmin(PreviewUserAdmin):
+    @action(confirm="Archive them?")
+    def archive(self, objects: Sequence[object], principal: Principal | None) -> str | None:
+        return ""
+
+
 def test_overridden_delete_selected_still_previews():
-    client, users, _ = make(no_cascade)
-    users.actions = [Action(DELETE_SELECTED_NAME, lambda model_admin, objects, principal: "")]
+    client, _, _ = make(no_cascade, admin_cls=OverriddenDeleteSelectedAdmin)
     assert 'name="_confirmed"' in post(client, {"pks": ["1"]}).text
 
 
 def test_bulk_bar_marks_the_preview_and_keeps_other_modals():
-    client, users, _ = make(no_cascade)
-    users.actions = [Action("archive", lambda model_admin, objects, principal: "", confirm="Archive them?")]
+    client, _, _ = make(no_cascade, admin_cls=ArchivingAdmin)
     page = client.get("/admin/users").text
     assert "data-preview" in page and 'data-confirm="Archive them?"' in page
     assert 'data-confirm="Delete the selected records? This cannot be undone."' not in page

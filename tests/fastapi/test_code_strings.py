@@ -73,7 +73,7 @@ def test_export_headers_are_translated(tmp_path):
 
 def test_delete_selected_flash_is_not_double_bracketed_under_pseudo_locale(tmp_path):
     # R5: build_action_handler re-translates a built-in action's already
-    # -translated result (delete_selected_action returns an ngettext
+    # -translated result (ModelAdmin.delete_selected returns an ngettext
     # call's output) before flashing it. Under the pseudo locale that
     # re-translation must not double-bracket it into "[[...]]".
     users = InMemoryUserAdmin()

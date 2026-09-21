@@ -592,7 +592,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             )
             if page is not None:
                 return page
-        message = await maybe_await(action.handler(model_admin, objects, principal))
+        message = await maybe_await(action.handler(objects, principal))
         # One entry per record, not per action: the log's question is
         # "what happened to this record", and a bulk run over 500 rows is
         # 500 answers to it.

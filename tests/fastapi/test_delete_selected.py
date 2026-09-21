@@ -1,10 +1,13 @@
 """The built-in bulk delete."""
 
+from collections.abc import Sequence
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from polyadmin.core.action import DELETE_SELECTED_NAME, Action, delete_selected_action
+from polyadmin.core.action import DELETE_SELECTED_NAME, action
 from polyadmin.core.admin import Admin
+from polyadmin.core.auth import Principal
 from polyadmin.fastapi.router import create_router
 from tests.conftest import csrf
 from tests.core.test_model_admin import InMemoryUserAdmin, User
@@ -42,11 +45,11 @@ def test_delete_selected_actually_deletes():
 
 
 def test_delete_selected_carries_a_confirmation():
-    assert delete_selected_action().confirm
+    assert InMemoryUserAdmin().get_action(DELETE_SELECTED_NAME).confirm
 
 
 def test_delete_selected_requires_the_delete_permission():
-    assert delete_selected_action().permission == "delete"
+    assert InMemoryUserAdmin().get_action(DELETE_SELECTED_NAME).permission == "delete"
 
 
 def test_delete_selected_is_absent_when_delete_is_disabled():
@@ -63,19 +66,16 @@ def test_delete_selected_can_be_opted_out():
     assert "Delete selected" not in _client(OptedOut()).get("/admin/users").text
 
 
-def test_declaring_delete_selected_replaces_the_built_in():
+def test_overriding_delete_selected_replaces_the_built_in():
     class Custom(InMemoryUserAdmin):
-        actions = [
-            Action(
-                DELETE_SELECTED_NAME,
-                lambda ma, objects, principal: "mine ran",
-                label="Delete selected",
-            )
-        ]
+        @action(label="Delete selected")
+        def delete_selected(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+            return "mine ran"
 
     actions = Custom().get_actions()
-    assert len(actions) == 1
+    assert [a.name for a in actions] == [DELETE_SELECTED_NAME]
     assert actions[0].label == "Delete selected"
+    assert actions[0].handler([], None) == "mine ran"
 
 
 def test_list_page_translates_the_label_and_confirmation():

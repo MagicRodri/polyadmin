@@ -1,23 +1,23 @@
+from collections.abc import Sequence
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from polyadmin.core.action import Action
+from polyadmin.core.action import action
 from polyadmin.core.admin import Admin
-from polyadmin.core.auth import AllowAllAuthenticator
+from polyadmin.core.auth import AllowAllAuthenticator, Principal
 from polyadmin.core.filter import BooleanFilter
 from polyadmin.fastapi.router import create_router
 from tests.conftest import csrf
-from tests.core.test_model_admin import InMemoryUserAdmin
-
-
-def _deactivate(model_admin, objects, principal):
-    for obj in objects:
-        obj.is_active = False
-    return f"Deactivated {len(objects)} user(s)."
+from tests.core.test_model_admin import InMemoryUserAdmin, User
 
 
 class ActionableUserAdmin(InMemoryUserAdmin):
-    actions = [Action("deactivate", _deactivate, confirm="Deactivate selected users?")]
+    @action(confirm="Deactivate selected users?")
+    def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+        for obj in objects:
+            obj.is_active = False
+        return f"Deactivated {len(objects)} user(s)."
 
 
 def make_client(model_admin_cls=ActionableUserAdmin, **admin_kwargs):
@@ -102,7 +102,11 @@ def test_action_requires_extra_permission_when_declared():
     )
 
     class PermissionedUserAdmin(InMemoryUserAdmin):
-        actions = [Action("deactivate", _deactivate, permission="deactivate")]
+        @action(permission="deactivate")
+        def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+            for obj in objects:
+                obj.is_active = False
+            return f"Deactivated {len(objects)} user(s)."
 
     user_admin = PermissionedUserAdmin()
     admin = Admin(
@@ -381,21 +385,19 @@ def test_no_selection_without_the_flag_still_acts_on_nothing():
     assert user_admin.get_object(a.id).is_active, "an empty selection must not act on everything"
 
 
-async def _async_deactivate(model_admin, objects, principal):
-    import asyncio
-
-    await asyncio.sleep(0)
-    for obj in objects:
-        obj.is_active = False
-    return f"Deactivated {len(objects)} user(s)."
-
-
 class AsyncActionableUserAdmin(InMemoryUserAdmin):
-    """An Action handler that is itself a coroutine function -- the shape
-    a handler calling an async HTTP client (e.g. a "sync with FRSI"
-    action) actually takes."""
+    """An action that is itself a coroutine function -- the shape a method
+    calling an async HTTP client (e.g. a "sync with FRSI" action) actually
+    takes."""
 
-    actions = [Action("deactivate", _async_deactivate, confirm="Deactivate selected users?")]
+    @action(confirm="Deactivate selected users?")
+    async def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+        import asyncio
+
+        await asyncio.sleep(0)
+        for obj in objects:
+            obj.is_active = False
+        return f"Deactivated {len(objects)} user(s)."
 
 
 def test_async_action_handler_is_awaited():

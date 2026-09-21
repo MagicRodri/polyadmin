@@ -37,8 +37,8 @@ class PreviewUserAdmin(InMemoryUserAdmin):
         return self.preview_fn(objects)
 
 
-def make(preview_fn, authorizer=None):
-    users, notes = PreviewUserAdmin(preview_fn), NoteAdmin()
+def make(preview_fn, authorizer=None, admin_cls=None):
+    users, notes = (admin_cls or PreviewUserAdmin)(preview_fn), NoteAdmin()
     admin = Admin(model_admins=[users, notes], authorizer=authorizer)
     app = FastAPI()
     app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
