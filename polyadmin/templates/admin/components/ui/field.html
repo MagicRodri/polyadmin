@@ -16,7 +16,9 @@
 {% from "admin/components/ui/calendar.html" import date_picker %}
 {% from "admin/components/ui/select.html" import select %}
 {% from "admin/components/ui/multi-select.html" import multi_select %}
-{% macro render_form_input(field, value, errors, relation=none, readonly_field=false) %}
+{# `key` keeps a control's element ids unique when the same field renders
+   more than once on a page, as it does in every row of an inline. #}
+{% macro render_form_input(field, value, errors, relation=none, readonly_field=false, key="") %}
 {% set input_types = {
   "integer": "number",
   "decimal": "number",
@@ -70,7 +72,7 @@
   {{ select(field.name, enum_options.pairs, selected=value, placeholder=_("Select…"), disabled=field.disabled) }}
   {% elif field.field_type in ("foreignkey", "onetoone") and relation and relation.autocomplete %}
   {{ combobox(name=field.name,
-              id="combobox-results-" ~ field.name,
+              id="combobox-results-" ~ (key ~ "-" if key else "") ~ field.name,
               selected_pk=relation.selected_pk,
               selected_label=relation.selected_label,
               lookup_url=base_path ~ "/" ~ relation.lookup_target ~ "/lookup",

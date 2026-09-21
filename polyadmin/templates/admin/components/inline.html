@@ -4,6 +4,7 @@
 {% from "admin/components/ui/field.html" import render_form_input with context %}
 {% from "admin/components/field.html" import render_field_value with context %}
 {% from "admin/components/icons.html" import icon %}
+{% from "admin/components/ui/combobox.html" import combobox %}
 {% from "admin/components/ui/select.html" import select %}
 {% from "admin/components/ui/multi-select.html" import multi_select %}
 {% from "admin/components/ui/delete-preview.html" import delete_refusal %}
@@ -36,7 +37,7 @@
   {% for name in inline.field_names %}
   {% set field = inline.child_admin.get_field(name) %}
   {% set value = row.data.get(name) if row.data is not none else field.get_value(row.obj) %}
-  {{ render_form_input(field, value, row.errors.get(name), row.relation_options.get(name)) }}
+  {{ render_form_input(field, value, row.errors.get(name), row.relation_options.get(name), key=inline.slug ~ "-" ~ row.pk) }}
   {% endfor %}
   <div class="flex gap-2">
     {% if inline.can_change %}
@@ -61,7 +62,7 @@
   {% for name in inline.field_names %}
   {% set field = inline.child_admin.get_field(name) %}
   {% set value = inline.add_row.data.get(name) if inline.add_row.data is not none else none %}
-  {{ render_form_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name)) }}
+  {{ render_form_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name), key=inline.slug ~ "-new") }}
   {% endfor %}
   <button type="submit"
           class="{{ ui('button', 'outline', 'size-xs') }}">
@@ -77,7 +78,7 @@
 {# No <form> element: HTML forbids one as a table row or cell
    descendant. Save uses hx-post plus hx-include="closest tr", since
    there is no enclosing <form> to submit. #}
-{% macro render_inline_table_cell_input(field, value, errors, relation) %}
+{% macro render_inline_table_cell_input(field, value, errors, relation, key="") %}
 {# Called, not quoted. This was a string literal containing Jinja
    delimiters -- Jinja never re-renders a value, so the raw text landed
    in the class attribute and every control in an inline edit row
@@ -87,6 +88,15 @@
 {% if field.field_type == "boolean" %}
 <input type="checkbox" name="{{ field.name }}" value="true" autocomplete="off" {% if value %}checked{% endif %}
        class="{{ ui('checkbox') }}">
+{% elif field.field_type in ("foreignkey", "onetoone") and relation and relation.autocomplete %}
+{# An autocomplete relation loads no options into the page, so the plain
+   select below would be empty. Same combobox the full form uses. #}
+{{ combobox(name=field.name,
+            id="combobox-results-" ~ key ~ "-" ~ field.name,
+            selected_pk=relation.selected_pk,
+            selected_label=relation.selected_label,
+            lookup_url=base_path ~ "/" ~ relation.lookup_target ~ "/lookup",
+            placeholder=_('Search…')) }}
 {% elif field.field_type in ("foreignkey", "onetoone") %}
 {{ select(field.name, [(none, "—")] + (relation.options|list if relation else []),
           selected=(relation.selected_pk if relation else none), placeholder="—", compact=true) }}
@@ -133,7 +143,7 @@
       {% for name in inline.field_names %}
       {% set field = inline.child_admin.get_field(name) %}
       {% set value = row.data.get(name) if row.data is not none else field.get_value(row.obj) %}
-      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, row.errors.get(name), row.relation_options.get(name)) }}</td>
+      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, row.errors.get(name), row.relation_options.get(name), inline.slug ~ "-" ~ row.pk) }}</td>
       {% endfor %}
       <td class="px-3 py-2 text-right whitespace-nowrap">
         {% if inline.can_change %}
@@ -158,7 +168,7 @@
       {% for name in inline.field_names %}
       {% set field = inline.child_admin.get_field(name) %}
       {% set value = inline.add_row.data.get(name) if inline.add_row.data is not none else none %}
-      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name)) }}</td>
+      <td class="px-3 py-2">{{ render_inline_table_cell_input(field, value, inline.add_row.errors.get(name), inline.add_row.relation_options.get(name), inline.slug ~ "-new") }}</td>
       {% endfor %}
       <td class="px-3 py-2 text-right">
         <button type="button" hx-post="{{ inline.add_row.create_url }}" hx-include="closest tr"

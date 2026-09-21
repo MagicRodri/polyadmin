@@ -1,13 +1,15 @@
 """A ModelAdmin with async hooks and a list_page works as a relation target
 and as an inline child -- the paths that used to call hooks synchronously."""
 
+import re
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.field import ForeignKeyField, ManyToManyField, StringField
 from polyadmin.core.filter import RelationFilter
-from polyadmin.core.inline import TabularInline
+from polyadmin.core.inline import StackedInline, TabularInline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
 from polyadmin.fastapi.router import create_router
@@ -181,6 +183,75 @@ def test_an_id_based_row_preselects_its_relation_on_the_edit_form():
 
     assert 'name="organization" x-ref="hiddenInput" value="7"' in page
     assert 'data-label="Acme"' in page
+
+
+class SponsoredMember(Member):
+    def __init__(self, id, email, organization=None, sponsor=None):
+        super().__init__(id, email, organization)
+        self.sponsor_id = sponsor.id if sponsor else None
+        self.sponsor_name = sponsor.name if sponsor else None
+
+
+class AutocompleteChildAdmin(AsyncMemberAdmin):
+    """A child with a relation of its own besides the one back to its parent,
+    rendered as a combobox rather than a select of every organization."""
+
+    form_fields = ["email", "organization", "sponsor"]
+    autocomplete_fields = ["sponsor"]
+    fields = [
+        *AsyncMemberAdmin.fields[:2],
+        ForeignKeyField(
+            "sponsor",
+            relation=Relation(
+                "sponsor",
+                target="orgs",
+                display_field="name",
+                get_related=lambda row: Ref(row.sponsor_id, row.sponsor_name) if row.sponsor_id else None,
+            ),
+        ),
+    ]
+
+
+def _inline_section(page):
+    return page.split('id="inline-members"')[1].split("</table>")[0]
+
+
+def test_a_tabular_inline_row_renders_an_autocomplete_relation_as_a_combobox():
+    client, orgs, members = make_client(AutocompleteChildAdmin)
+    acme = orgs.store[1] = Org(1, "Acme")
+    other = orgs.store[2] = Org(2, "Other Ltd")
+    members.store[1] = SponsoredMember(1, "a@example.com", acme, sponsor=other)
+    members.store[2] = SponsoredMember(2, "b@example.com", acme)
+
+    section = _inline_section(client.get("/admin/orgs/1/edit").text)
+
+    # The current sponsor is labelled, and searching goes to the target's lookup.
+    assert 'value="Other Ltd"' in section
+    assert 'hx-get="/admin/orgs/lookup"' in section
+    # It is not the plain select, which would be empty for an autocomplete relation.
+    assert re.search(r'name="sponsor"\s+value="2"', section)
+    assert "adminSelect" not in section
+    # Two rows and the add row: three comboboxes, so three distinct result panels.
+    panels = re.findall(r'id="(combobox-results-[^"]+)"', section)
+    assert len(panels) == 3 and len(set(panels)) == 3, panels
+
+
+def test_a_stacked_inline_gives_each_autocomplete_row_its_own_result_panel():
+    orgs = AsyncOrgAdmin()
+    orgs.inlines = [StackedInline("members", "organization")]
+    members = AutocompleteChildAdmin(orgs)
+    admin = Admin(model_admins=[orgs, members])
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    client = TestClient(app)
+    acme = orgs.store[1] = Org(1, "Acme")
+    members.store[1] = SponsoredMember(1, "a@example.com", acme)
+    members.store[2] = SponsoredMember(2, "b@example.com", acme)
+
+    page = client.get("/admin/orgs/1/edit").text
+    panels = re.findall(r'id="(combobox-results-[^"]+)"', page.split('id="inline-members"')[1])
+
+    assert len(panels) == 3 and len(set(panels)) == 3, panels
 
 
 def make_client(member_cls=AsyncMemberAdmin):

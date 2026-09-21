@@ -54,6 +54,10 @@ subset in this version: a subset would desync from the child's own
 `validate()`, which iterates every one of `form_fields` and would
 flag a field excluded from the inline row as spuriously missing.
 
+A relation the child lists in `autocomplete_fields` renders as the same search
+combobox the full form uses, in both layouts, so an inline row never loads a
+whole target collection. Each row and the add row get their own results panel.
+
 ## Generated routes
 
 See [`routing.md`](routing.md#inline-routes) for the three routes
