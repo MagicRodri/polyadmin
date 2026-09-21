@@ -76,3 +76,13 @@ def test_declaring_delete_selected_replaces_the_built_in():
     actions = Custom().get_actions()
     assert len(actions) == 1
     assert actions[0].label == "Delete selected"
+
+
+def test_list_page_translates_the_label_and_confirmation():
+    client = _client(InMemoryUserAdmin())
+    fr = client.get("/admin/users", headers={"Accept-Language": "fr"}).text
+    assert "Supprimer la sélection" in fr
+    assert "Supprimer les enregistrements sélectionnés" in fr
+    ru = client.get("/admin/users", headers={"Accept-Language": "ru"}).text
+    assert "Удалить выбранное" in ru
+    assert "Удалить выбранные записи" in ru

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-20 00:38+0500\n"
+"POT-Creation-Date: 2026-09-21 18:34+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -163,6 +163,12 @@ msgstr "Удалить «%(name)s»?"
 #, python-format
 msgid "Delete «%(label)s»?"
 msgstr "Удалить «%(label)s»?"
+
+#. Translators: a bulk delete stopped part-way. %(deleted)d of
+#. %(total)d records were deleted; %(error)s is the underlying error.
+#, python-format
+msgid "Deleted %(deleted)d of %(total)d, then failed: %(error)s"
+msgstr "Удалено %(deleted)d из %(total)d, затем сбой: %(error)s"
 
 #, python-format
 msgid "Deleted %(num)d record."

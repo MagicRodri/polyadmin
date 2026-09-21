@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from polyadmin.i18n import N_, ngettext
+from polyadmin.i18n import N_, gettext, ngettext
 
 ActionHandler = Callable[[Any, Sequence[Any], Any], "str | None"]
 
@@ -84,9 +84,10 @@ def delete_selected_action() -> Action:
                 # Stop at the first failure and report how far it got:
                 # silently continuing would leave the user unable to
                 # tell which records survived.
-                raise RuntimeError(
-                    f"deleted {deleted} of {len(objects)}, then: {exc}"
-                ) from exc
+                # Translators: a bulk delete stopped part-way. %(deleted)d of
+                # %(total)d records were deleted; %(error)s is the underlying error.
+                failure = gettext("Deleted %(deleted)d of %(total)d, then failed: %(error)s")
+                raise RuntimeError(failure % {"deleted": deleted, "total": len(objects), "error": exc}) from exc
             deleted += 1
         return ngettext(
             "Deleted %(num)d record.", "Deleted %(num)d records.", deleted
