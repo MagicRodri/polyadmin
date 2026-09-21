@@ -331,7 +331,11 @@ Relation(
 ```
 
 The stand-in only needs the target's primary key and the `display_field`
-attribute. Have the backend return the label with the row.
+attribute. Have the backend return the label with the row. This applies to
+every place the field's value is read -- list and detail pages, the edit
+form's preselected option, inline rows and exports -- and the field's own name
+is still the key in the `data` your `create` receives, so an id-based row can
+name the field after its id column (`employee_id`) and read `data["employee_id"]`.
 
 ## Actions
 

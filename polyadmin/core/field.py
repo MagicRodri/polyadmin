@@ -174,6 +174,14 @@ class ForeignKeyField(Field):
         super().__init__(name, **kwargs)
         self.relation = relation
 
+    def get_value(self, obj: Any) -> Any:
+        # A relation with get_related builds the related object from what the
+        # row carries (typically an id and a label read over HTTP); without one
+        # the row's attribute of this field's name is the related object.
+        if self.relation.get_related is not None:
+            return self.relation.get_related(obj)
+        return super().get_value(obj)
+
 
 class OneToOneField(ForeignKeyField):
     field_type = "onetoone"
@@ -189,5 +197,5 @@ class ManyToManyField(Field):
         self.relation = relation
 
     def get_value(self, obj: Any) -> Any:
-        value = super().get_value(obj)
+        value = self.relation.get_related(obj) if self.relation.get_related is not None else super().get_value(obj)
         return value if value is not None else []

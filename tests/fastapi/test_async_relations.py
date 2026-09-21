@@ -110,6 +110,79 @@ class AutocompleteFilteredMemberAdmin(FilteredMemberAdmin):
     autocomplete_fields = ["organization"]
 
 
+class IdBasedMember:
+    """A row read over HTTP: it stores the organization's id and name, not an
+    Organization."""
+
+    def __init__(self, id, email, organization_id, organization_name):
+        self.id = id
+        self.email = email
+        self.organization_id = organization_id
+        self.organization_name = organization_name
+
+
+class Ref:
+    """The stand-in a relation builds from what the row already carries."""
+
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+
+class IdBasedMemberAdmin(ModelAdmin):
+    model = IdBasedMember
+    slug = "members"
+    list_display = ["id", "email", "organization"]
+    form_fields = ["email", "organization"]
+    fields = [
+        StringField("email", required=True),
+        ForeignKeyField(
+            "organization",
+            relation=Relation(
+                "organization",
+                target="orgs",
+                display_field="name",
+                get_related=lambda row: Ref(row.organization_id, row.organization_name),
+            ),
+        ),
+    ]
+
+    def __init__(self, orgs):
+        super().__init__()
+        self.orgs = orgs
+        self.store: dict[int, IdBasedMember] = {}
+
+    async def list_page(self, list_request):
+        return list(self.store.values()), len(self.store)
+
+    async def get_object(self, pk):
+        return self.store.get(int(pk))
+
+
+def test_an_id_based_row_shows_its_relation_label_and_link_without_a_fetch():
+    client, orgs, members = make_client(IdBasedMemberAdmin)
+    orgs.store[7] = Org(7, "Acme")
+    members.store[1] = IdBasedMember(1, "a@example.com", 7, "Acme")
+
+    listing = client.get("/admin/members").text
+    detail = client.get("/admin/members/1").text
+
+    assert "Acme" in listing
+    assert 'href="/admin/orgs/7"' in listing
+    assert "Acme" in detail
+
+
+def test_an_id_based_row_preselects_its_relation_on_the_edit_form():
+    client, orgs, members = make_client(IdBasedMemberAdmin)
+    orgs.store[7] = Org(7, "Acme")
+    members.store[1] = IdBasedMember(1, "a@example.com", 7, "Acme")
+
+    page = client.get("/admin/members/1/edit").text
+
+    assert 'name="organization" x-ref="hiddenInput" value="7"' in page
+    assert 'data-label="Acme"' in page
+
+
 def make_client(member_cls=AsyncMemberAdmin):
     orgs = AsyncOrgAdmin()
     members = member_cls(orgs)

@@ -1,4 +1,12 @@
-from polyadmin.core.field import BooleanField, EnumField, Field, StringField
+from polyadmin.core.field import (
+    BooleanField,
+    EnumField,
+    Field,
+    ForeignKeyField,
+    ManyToManyField,
+    StringField,
+)
+from polyadmin.core.relation import Relation
 
 
 class Obj:
@@ -46,3 +54,29 @@ def test_custom_validator():
 def test_enum_field_choices():
     field = EnumField("role", choices=["admin", "member"])
     assert field.choices == ["admin", "member"]
+
+
+def test_foreign_key_reads_the_attribute_by_default():
+    org = Obj(id=1)
+    field = ForeignKeyField("organization", relation=Relation("organization", target="orgs"))
+    assert field.get_value(Obj(organization=org)) is org
+
+
+def test_foreign_key_uses_get_related_when_the_relation_has_one():
+    # An id-based row holds organization_id, not an organization object: the
+    # relation says how to build the related object from what the row has.
+    field = ForeignKeyField(
+        "organization",
+        relation=Relation("organization", target="orgs", get_related=lambda row: Obj(id=row.organization_id)),
+    )
+    related = field.get_value(Obj(organization_id=7))
+    assert related.id == 7
+
+
+def test_many_to_many_uses_get_related_and_defaults_to_empty():
+    field = ManyToManyField(
+        "teams",
+        relation=Relation("teams", target="orgs", cardinality="many", get_related=lambda row: [Obj(id=i) for i in row.team_ids]),
+    )
+    assert [t.id for t in field.get_value(Obj(team_ids=[1, 2]))] == [1, 2]
+    assert ManyToManyField("teams", relation=Relation("teams", target="orgs", cardinality="many")).get_value(Obj()) == []
