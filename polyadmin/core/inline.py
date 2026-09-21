@@ -13,6 +13,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from polyadmin.core._async import maybe_await
+from polyadmin.core.query import ListRequest, alist_objects
+
 if TYPE_CHECKING:
     # Only needed for type hints -- inline.py must not import
     # model_admin.py at runtime, since model_admin.py imports Inline
@@ -70,6 +73,36 @@ def filter_inline_children(
     parent_pk_str = str(parent_pk)
     result = []
     for obj in child_admin.get_queryset():
+        related = field.get_value(obj)
+        if related is None:
+            continue
+        if str(parent_admin.get_pk(related)) == parent_pk_str:
+            result.append(obj)
+    return result
+
+
+async def afilter_inline_children(
+    child_admin: ModelAdmin, fk_field: str, parent_admin: ModelAdmin, parent_pk: Any
+) -> list[Any]:
+    """Children of `child_admin` that point at the object identified by
+    `parent_pk` on `parent_admin`.
+
+    A child that implements `list_page` answers for itself: it is asked for
+    every row (`unlimited`) with `filters[fk_field] = str(parent_pk)` and its
+    rows are used as returned, so an HTTP-backed child never has to download
+    its whole table to be filtered here. That is the contract such a child
+    implements. Any other child loads its queryset (which may be async) and is
+    filtered in memory, as `filter_inline_children` does.
+    """
+    if hasattr(child_admin, "list_page"):
+        objects, _ = await alist_objects(
+            child_admin, ListRequest(filters={fk_field: str(parent_pk)}, unlimited=True)
+        )
+        return list(objects)
+    field = child_admin.get_field(fk_field)
+    parent_pk_str = str(parent_pk)
+    result = []
+    for obj in await maybe_await(child_admin.get_queryset()):
         related = field.get_value(obj)
         if related is None:
             continue

@@ -1,8 +1,11 @@
+import asyncio
+
 from polyadmin.core.field import ForeignKeyField, StringField
 from polyadmin.core.inline import (
     Inline,
     StackedInline,
     TabularInline,
+    afilter_inline_children,
     filter_inline_children,
 )
 from polyadmin.core.model_admin import ModelAdmin
@@ -123,3 +126,56 @@ def test_filter_inline_children_compares_pks_as_strings():
     # param) must still match the int id stored on the object.
     result = filter_inline_children(user_admin, "organization", org_admin, "1")
     assert len(result) == 1
+
+
+class _Parent:
+    def __init__(self, id):
+        self.id = id
+
+
+class _Child:
+    def __init__(self, id, parent):
+        self.id = id
+        self.parent = parent
+
+
+class _ParentAdmin(ModelAdmin):
+    model = _Parent
+    slug = "parents"
+    fields = []
+
+
+_PARENT_FIELD = ForeignKeyField("parent", relation=Relation("parent", target="parents"))
+
+
+def test_afilter_asks_a_list_page_child_for_the_parents_rows():
+    seen = []
+
+    class PageChildAdmin(ModelAdmin):
+        model = _Child
+        slug = "children"
+        fields = [_PARENT_FIELD]
+
+        async def list_page(self, list_request):
+            seen.append((dict(list_request.filters), list_request.unlimited))
+            return [_Child(7, None), _Child(8, None)], 2
+
+    result = asyncio.run(afilter_inline_children(PageChildAdmin(), "parent", _ParentAdmin(), 5))
+
+    assert seen == [({"parent": "5"}, True)]
+    # The child answered for the filter, so its rows are used as returned.
+    assert [c.id for c in result] == [7, 8]
+
+
+def test_afilter_filters_an_async_get_queryset_child_in_memory():
+    class AsyncQuerysetChildAdmin(ModelAdmin):
+        model = _Child
+        slug = "children"
+        fields = [_PARENT_FIELD]
+
+        async def get_queryset(self):
+            return [_Child(1, _Parent(5)), _Child(2, _Parent(6)), _Child(3, None)]
+
+    result = asyncio.run(afilter_inline_children(AsyncQuerysetChildAdmin(), "parent", _ParentAdmin(), "5"))
+
+    assert [c.id for c in result] == [1]

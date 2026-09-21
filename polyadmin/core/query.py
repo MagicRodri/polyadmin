@@ -170,14 +170,9 @@ def list_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any]
 
 async def alist_objects(model_admin: Any, list_request: ListRequest) -> tuple[list[Any], int]:
     """Async counterpart of list_objects, for a ModelAdmin whose list_page or
-    get_queryset is a coroutine function.
-
-    list_objects stays the sync entrypoint used by the relation-options and
-    inline-listing paths, which run outside any event loop and never await
-    it -- a ModelAdmin with async hooks is not usable as a relation target
-    or inline child until those paths grow their own async counterpart.
-    This one is used only by the FastAPI handlers, which already run inside
-    the request's own event loop.
+    get_queryset is a coroutine function. It is what every request path uses --
+    the list view, exports, the lookup route, relation option lists and inline
+    child loading -- so async hooks work everywhere, on sync ModelAdmins too.
     """
     list_request = apply_defaults(model_admin, list_request)
     if hasattr(model_admin, "list_page"):
