@@ -219,10 +219,9 @@ Any of these five, plus `list_page`, may be `async def` instead of a plain
 function -- useful for a ModelAdmin backed by an async HTTP client. The
 FastAPI adapter awaits whichever ones are coroutine functions and calls the
 rest directly, so a ModelAdmin may mix sync and async hooks freely. This
-support does not (yet) extend to a ModelAdmin used as a relation target
-(`ForeignKeyField`/`autocomplete_fields`) or referenced by an `Inline`:
-those render through a still-synchronous path, so an async-hooked
-ModelAdmin cannot be used there.
+holds on every path, including a ModelAdmin used as a relation target
+(`ForeignKeyField`, `ManyToManyField`, `autocomplete_fields`, relation
+filters) or as an `Inline` child.
 
 `data` is a `dict[str, Any]` keyed by field name, already coerced to
 each field's Python type (an `IntegerField` submission arrives as `int`,
@@ -308,6 +307,31 @@ A relation's *reverse* side — showing/managing a child's records from
 the parent's own create/detail/edit pages, Django-admin
 StackedInline/TabularInline style — is `Inline`. See
 [`inlines.md`](inlines.md).
+
+### Id-based and HTTP-backed models
+
+A `ForeignKeyField`'s value is the related **object**, resolved through
+`Relation.get_related` (default: the attribute of the same name). A row that
+only stores an id -- typical of a model read over HTTP -- can still show a
+label and link, without a fetch per row, by returning a small stand-in from
+`get_related`, built from data already on the row:
+
+```python
+@dataclass
+class Ref:
+    id: int
+    name: str
+
+Relation(
+    "employee_id",
+    target="employees",
+    display_field="name",
+    get_related=lambda row: Ref(id=row.employee_id, name=row.employee_name),
+)
+```
+
+The stand-in only needs the target's primary key and the `display_field`
+attribute. Have the backend return the label with the row.
 
 ## Actions
 

@@ -95,6 +95,17 @@ require the child's own `.create`/`.update`/`.delete` respectively,
 exists on the parent's edit page, which is already gated by that
 route. See [`permissions.md`](permissions.md#permission-names).
 
+## Async and `list_page` children
+
+A child `ModelAdmin` may use async hooks or `list_page`. A child that
+implements `list_page` is asked for its rows directly: the framework calls it
+with `ListRequest(filters={fk_field: str(parent_pk)}, unlimited=True)` and
+uses what it returns. **The child's `list_page` must honour
+`list_request.filters[fk_field]`** -- that is what keeps an HTTP-backed inline
+from downloading the whole child table to filter it in memory. A child that
+only has `get_queryset` (sync or async) is filtered in memory by its fk field
+as before.
+
 ## Current limitations
 
 - **One inline per child slug per parent.** A parent can declare
