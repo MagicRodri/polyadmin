@@ -406,7 +406,7 @@ def list_context(
     return {
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
         "page": page,
-        "actions": _action_infos(model_admin),
+        "actions": _action_infos(model_admin, model_admin.get_list_actions()),
         # A previewing resource has something to say before the delete, so
         # the row's Delete leads to the page that says it.
         "previews_deletes": previews_deletes(model_admin),
@@ -486,7 +486,7 @@ def detail_context(
         **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
-        "actions": _action_infos(model_admin),
+        "actions": _action_infos(model_admin, model_admin.get_detail_actions()),
         "permissions": permissions or default_permissions(model_admin),
         "relation_permissions": relation_permissions or {},
     }
@@ -613,13 +613,14 @@ def delete_selected_context(
     }
 
 
-def _action_infos(model_admin: ModelAdmin) -> list[dict[str, Any]]:
-    """The actions as the bulk bar and detail page see them. delete_selected on
-    a ModelAdmin that previews deletes gets the server's confirmation page
-    instead of the modal (docs/deletes.md)."""
+def _action_infos(model_admin: ModelAdmin, actions: list[Any]) -> list[dict[str, Any]]:
+    """`actions` as the bulk bar and detail page see them -- already resolved
+    for the page by ModelAdmin.get_list_actions / get_detail_actions.
+    delete_selected on a ModelAdmin that previews deletes gets the server's
+    confirmation page instead of the modal (docs/deletes.md)."""
     previews = previews_deletes(model_admin)
     infos = []
-    for a in model_admin.get_actions():
+    for a in actions:
         preview = previews and a.name == DELETE_SELECTED_NAME
         infos.append({"name": a.name, "label": a.label, "confirm": None if preview else a.confirm, "preview": preview})
     return infos
