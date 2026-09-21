@@ -311,44 +311,56 @@ StackedInline/TabularInline style — is `Inline`. See
 
 ## Actions
 
-Actions (record actions from the detail page, bulk actions from the
-list view's row-selection) share one type — see
-`polyadmin.core.action.Action`:
+An action is a `ModelAdmin` method decorated with `@action`. Record actions
+(the detail page) and bulk actions (the list view's row-selection) share one
+shape:
 
 ```python
-from polyadmin.core.action import Action
+from collections.abc import Sequence
 
-def deactivate(model_admin, objects, principal):
-    for obj in objects:
-        obj.is_active = False
-    return f"Deactivated {len(objects)} user(s)."  # flash message text
+from polyadmin.core.action import action
+from polyadmin.core.auth import Principal
 
 class UserAdmin(ModelAdmin):
-    actions = [Action("deactivate", deactivate, confirm="Deactivate the selected users?")]
+    @action(label="Deactivate", confirm="Deactivate the selected users?")
+    def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+        for obj in objects:
+            obj.is_active = False
+        return f"Deactivated {len(objects)} user(s)."  # flash message text
 ```
 
-An action handler is always called with a list of objects — one for a
-detail-page record action, as many as were checked for a bulk action —
-so it never needs to know which UI entry point invoked it. On the list
-view, picking one from the bulk-actions listbox runs it immediately —
-there's no separate "Apply" step. `confirm=` shows a shadcn/ui Dialog
-before the request goes out; `permission=` checks an extra
-`{slug}.{permission}` permission (see
-[`permissions.md`](permissions.md)) beyond the resource's own `.view`.
-The handler's return value (a string, or `None`) becomes the success
-toast text, falling back to `"{label} applied to N record(s)."` when
-empty.
+The method is always called with a list of objects — one for a detail-page
+record action, as many as were checked for a bulk action — so it never
+needs to know which UI entry point invoked it. The method's name is the
+action's name. On the list view, picking one from the bulk-actions listbox
+runs it immediately — there's no separate "Apply" step. `confirm=` shows a
+shadcn/ui Dialog before the request goes out; `permission=` checks an extra
+`{slug}.{permission}` permission (see [`permissions.md`](permissions.md))
+beyond the resource's own `.view`; `label=` defaults to the method name,
+title-cased. The return value (a string, or `None`) becomes the success
+toast text, falling back to `"{label} applied to N record(s)."` when empty.
 
-A handler may also be `async def` -- useful for one that calls out to an
+`@action` works bare (`@action`) or with options. The options are
+keyword-only: `label=`, `confirm=`, `permission=` and `where=`.
+
+A method may also be `async def` -- useful for one that calls out to an
 async client, such as pushing the selected records to an external system.
 The adapter awaits it when it is one.
 
-The built-in **`delete_selected`** is the one exception to the Dialog. On
-a ModelAdmin that implements `delete_preview` it opens a server-rendered
-confirmation page instead, listing the selected records and what
-deleting them takes with it — see [`deletes.md`](deletes.md). That
-applies to an action of your own named `delete_selected` too: the page
-is keyed on the name.
+Actions are collected in the order they are defined, base classes first. A
+subclass that overrides an action method **without** decorating it again
+keeps the base's label, confirm text, permission and placement and only
+changes what it does; decorating it again replaces all of those options.
+
+The built-in **`delete_selected`** is an action too, defined on `ModelAdmin`
+and always listed last. Override the method to change the deletion; repeat
+`@action(...)` on the override to change its label or confirm text (and
+repeat `permission="delete"` if you still want that check). It is the one
+exception to the Dialog: on a ModelAdmin that implements `delete_preview`
+it opens a server-rendered confirmation page instead, listing the selected
+records and what deleting them takes with it — see
+[`deletes.md`](deletes.md). That applies to an override of your own too:
+the page is keyed on the name.
 
 ### Where an action appears
 
@@ -359,12 +371,16 @@ record's page only) or `"both"`, the default. A ModelAdmin can also set
 
 ```python
 class UserAdmin(ModelAdmin):
-    actions = [
-        Action("activate", _activate),
-        Action("deactivate", _deactivate),
-        Action("export_badge", _badge, where="detail"),
-    ]
     detail_actions = ["deactivate", "export_badge"]  # [] offers none
+
+    @action
+    def activate(self, objects: Sequence[User], principal: Principal | None) -> str | None: ...
+
+    @action
+    def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None: ...
+
+    @action(where="detail")
+    def export_badge(self, objects: Sequence[User], principal: Principal | None) -> str | None: ...
 ```
 
 Naming an action that `where="list"` would hide is fine: the explicit
@@ -373,12 +389,31 @@ built. `detail_actions` only decides which buttons the detail page shows;
 the list page is unaffected.
 
 The built-in `delete_selected` is bulk-only. It never appears on a detail
-page, even when named in `detail_actions` or replaced by an action of
-your own with the same name.
+page, even when named in `detail_actions` or overridden. It is removed
+entirely by `disable_delete_selected = True` or `can_delete = False`,
+however it is defined.
 
 Placement is not authorization: hiding a button does not stop a request
 to `POST /{slug}/actions/{name}`. Restrict who may run an action with
 `permission=`.
+
+### Migrating from `Action(...)`
+
+Earlier versions declared actions as a list of `Action` objects wrapping
+free functions:
+
+```python
+def deactivate(model_admin, objects, principal): ...
+
+class UserAdmin(ModelAdmin):
+    actions = [Action("deactivate", deactivate, confirm="Sure?")]
+```
+
+That form is gone, and a ModelAdmin that still sets `actions` raises a
+`TypeError` when the class is defined. Move each function into the class as
+a method, drop the `model_admin` parameter (it is `self` now), and pass the
+old `Action(...)` options to `@action(...)`. The action's name is now the
+method's name.
 
 ## Save as new
 

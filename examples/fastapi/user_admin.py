@@ -6,10 +6,13 @@ the installed `admin` package on sys.path.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from models import OrganizationRepository, RoleRepository, User, UserRepository
 
 from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
-from polyadmin.core.action import Action
+from polyadmin.core.action import action
+from polyadmin.core.auth import Principal
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
 from polyadmin.core.filter import BooleanFilter, EmptyFilter, Filter, RelationFilter
 from polyadmin.core.model_admin import Fieldset
@@ -24,23 +27,6 @@ ORGANIZATION_RELATION = Relation(
 ROLES_RELATION = Relation(
     "roles", target="roles", display_field="name", cardinality="many"
 )
-
-
-def _set_active(model_admin: UserAdmin, objects, active: bool) -> str:
-    # In-memory repositories store the objects themselves, so mutating
-    # in place is enough to persist -- no separate update() call needed.
-    for obj in objects:
-        obj.is_active = active
-    verb = "Activated" if active else "Deactivated"
-    return f"{verb} {len(objects)} user(s)."
-
-
-def _activate(model_admin, objects, principal):
-    return _set_active(model_admin, objects, True)
-
-
-def _deactivate(model_admin, objects, principal):
-    return _set_active(model_admin, objects, False)
 
 
 class PlanFilter(Filter):
@@ -111,10 +97,22 @@ class UserAdmin(ModelAdmin):
     # organization -- demonstrates the combobox for a relation that, in
     # a real deployment, could be too large to dump wholesale.
     autocomplete_fields = ["organization"]
-    actions = [
-        Action("activate", _activate, label="Activate"),
-        Action("deactivate", _deactivate, label="Deactivate", confirm="Deactivate the selected users?"),
-    ]
+    def _set_active(self, objects: Sequence[User], active: bool) -> str:
+        # In-memory repositories store the objects themselves, so mutating
+        # in place is enough to persist -- no separate update() call needed.
+        for obj in objects:
+            obj.is_active = active
+        verb = "Activated" if active else "Deactivated"
+        return f"{verb} {len(objects)} user(s)."
+
+    @action(label="Activate")
+    def activate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+        return self._set_active(objects, True)
+
+    @action(label="Deactivate", confirm="Deactivate the selected users?")
+    def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
+        return self._set_active(objects, False)
+
     # The detail page offers Deactivate only; Activate stays a bulk action.
     detail_actions = ["deactivate"]
     fields = [
