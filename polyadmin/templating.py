@@ -285,9 +285,8 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         list_token: str = "",
+        inlines: list[dict[str, Any]] | None = None,
     ) -> str:
-        from polyadmin.fastapi.inlines import build_inline_context
-
         context = detail_context(
             admin,
             model_admin,
@@ -300,7 +299,7 @@ class Renderer:
             csrf_token=csrf_token,
             list_token=list_token,
         )
-        context["inlines"] = build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
+        context["inlines"] = inlines or []
         context["wide_body"] = _wide_body(context["inlines"])
         context["history"] = _history_for(admin, model_admin, obj)
         return self.render_candidates(model_admin.get_template_candidates("detail"), context)
@@ -320,9 +319,9 @@ class Renderer:
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         list_token: str = "",
+        inlines: list[dict[str, Any]] | None = None,
     ) -> str:
         from polyadmin.fastapi.auth import compute_permissions
-        from polyadmin.fastapi.inlines import build_inline_context
 
         context = form_context(
             admin,
@@ -339,8 +338,7 @@ class Renderer:
             csrf_token=csrf_token,
             list_token=list_token,
         )
-        mode = "placeholder" if obj is None else "edit"
-        context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
+        context["inlines"] = inlines or []
         context["wide_body"] = _wide_body(context["inlines"])
         return self.render_candidates(model_admin.get_template_candidates("form"), context)
 
@@ -357,9 +355,9 @@ class Renderer:
         non_field_errors: list[str] | None = None,
         relation_options: dict[str, list[tuple[Any, Any]]] | None = None,
         base_path: str = "/admin",
+        inlines: list[dict[str, Any]] | None = None,
     ) -> str:
         from polyadmin.fastapi.auth import compute_permissions
-        from polyadmin.fastapi.inlines import build_inline_context
 
         context = form_context(
             admin,
@@ -374,29 +372,24 @@ class Renderer:
             principal=principal,
             csrf_token=csrf_token,
         )
-        mode = "placeholder" if obj is None else "edit"
-        context["inlines"] = build_inline_context(admin, principal, model_admin, obj, mode, base_path)
+        context["inlines"] = inlines or []
         return self.render("admin/components/form_wrapper.html", context)
 
     def render_inline_fragment(
         self,
         admin: Admin,
-        principal: Any,
-        model_admin: ModelAdmin,
-        obj: Any,
         inline: Inline,
+        sections: list[dict[str, Any]],
         *,
         base_path: str = "/admin",
-        redisplay: dict[str, Any] | None = None,
         refusal: dict[str, Any] | None = None,
     ) -> str:
         """Renders one inline section standalone: the response body for the inline
         create/update/delete routes, swapped into `#inline-{child_slug}` by
-        htmx. `refusal` explains a Remove the child's delete_preview blocked.
+        htmx. `sections` is the parent's awaited inline context (built in edit mode,
+        with any redisplay already applied); `refusal` explains a Remove the
+        child's delete_preview blocked.
         """
-        from polyadmin.fastapi.inlines import build_inline_context
-
-        sections = build_inline_context(admin, principal, model_admin, obj, "edit", base_path, redisplay=redisplay)
         section = next(s for s in sections if s["slug"] == inline.child)
         return self.render(
             "admin/components/inline_fragment.html",

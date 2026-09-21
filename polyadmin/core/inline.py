@@ -58,29 +58,6 @@ class TabularInline(Inline):
         super().__init__(child, fk_field, layout=TABULAR, label=label)
 
 
-def filter_inline_children(
-    child_admin: ModelAdmin, fk_field: str, parent_admin: ModelAdmin, parent_pk: Any
-) -> list[Any]:
-    """Children of `child_admin` whose `fk_field` points at the object
-    identified by `parent_pk` on `parent_admin` -- filters
-    `child_admin.get_queryset()` (the whole, unfiltered collection) in
-    memory, the same convention core/query.py's search/filter/ordering
-    pipeline already uses. PKs compare as strings to dodge int/str
-    mismatches; `fk_field`'s value is the related object itself (per
-    Relation.get_value), so `parent_admin.get_pk(...)` resolves its PK.
-    """
-    field = child_admin.get_field(fk_field)
-    parent_pk_str = str(parent_pk)
-    result = []
-    for obj in child_admin.get_queryset():
-        related = field.get_value(obj)
-        if related is None:
-            continue
-        if str(parent_admin.get_pk(related)) == parent_pk_str:
-            result.append(obj)
-    return result
-
-
 async def afilter_inline_children(
     child_admin: ModelAdmin, fk_field: str, parent_admin: ModelAdmin, parent_pk: Any
 ) -> list[Any]:
@@ -92,7 +69,9 @@ async def afilter_inline_children(
     rows are used as returned, so an HTTP-backed child never has to download
     its whole table to be filtered here. That is the contract such a child
     implements. Any other child loads its queryset (which may be async) and is
-    filtered in memory, as `filter_inline_children` does.
+    filtered in memory by its fk field: PKs compare as strings to dodge int/str
+    mismatches, and the fk field's value is the related object itself (per
+    Relation.get_value), so `parent_admin.get_pk(...)` resolves its PK.
     """
     if hasattr(child_admin, "list_page"):
         objects, _ = await alist_objects(

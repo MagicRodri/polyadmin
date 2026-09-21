@@ -8,7 +8,7 @@ from typing import Any
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
-from polyadmin.core.inline import Inline, filter_inline_children
+from polyadmin.core.inline import Inline, afilter_inline_children
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.fastapi.auth import compute_permissions
 from polyadmin.fastapi.relations import compute_relation_options
@@ -74,7 +74,7 @@ def _pk_column(child_admin: Any, field_names: list[str]) -> str | None:
     return field_names[0]
 
 
-def build_inline_context(
+async def build_inline_context(
     admin: Admin,
     principal: Any,
     model_admin: ModelAdmin,
@@ -126,7 +126,7 @@ def build_inline_context(
         add_row: dict[str, Any] | None = None
         if mode != "placeholder":
             parent_pk = model_admin.get_pk(obj)
-            children = filter_inline_children(child_admin, inline.fk_field, model_admin, parent_pk)
+            children = await afilter_inline_children(child_admin, inline.fk_field, model_admin, parent_pk)
             for child_obj in children:
                 child_pk = child_admin.get_pk(child_obj)
                 row_redisplay = (
@@ -134,15 +134,14 @@ def build_inline_context(
                     if redisplay is not None and redisplay.get("pk") is not None and str(redisplay["pk"]) == str(child_pk)
                     else None
                 )
+                row_options = await compute_relation_options(admin, child_admin, obj=child_obj) if mode == "edit" else {}
                 rows.append(
                     {
                         "pk": child_pk,
                         "obj": child_obj,
                         "data": row_redisplay["data"] if row_redisplay else None,
                         "errors": row_redisplay["errors"] if row_redisplay else {},
-                        "relation_options": compute_relation_options(admin, child_admin, obj=child_obj)
-                        if mode == "edit"
-                        else {},
+                        "relation_options": row_options,
                         "update_url": f"{base_path}/{model_admin.get_slug()}/{parent_pk}/inlines/{inline.child}/{child_pk}",
                         "delete_url": f"{base_path}/{model_admin.get_slug()}/{parent_pk}/inlines/{inline.child}/{child_pk}",
                         "detail_url": f"{base_path}/{inline.child}/{child_pk}",
@@ -153,7 +152,7 @@ def build_inline_context(
                 add_row = {
                     "data": add_redisplay["data"] if add_redisplay else None,
                     "errors": add_redisplay["errors"] if add_redisplay else {},
-                    "relation_options": compute_relation_options(admin, child_admin),
+                    "relation_options": await compute_relation_options(admin, child_admin),
                     "create_url": f"{base_path}/{model_admin.get_slug()}/{parent_pk}/inlines/{inline.child}",
                 }
 

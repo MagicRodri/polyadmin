@@ -6,10 +6,14 @@ from polyadmin.core.inline import (
     StackedInline,
     TabularInline,
     afilter_inline_children,
-    filter_inline_children,
 )
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.relation import Relation
+
+
+def filter_inline_children(*args):
+    return asyncio.run(afilter_inline_children(*args))
+
 
 ORGANIZATION_RELATION = Relation("organization", target="organizations", display_field="name")
 

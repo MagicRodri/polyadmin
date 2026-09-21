@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import resource_permission
 from polyadmin.core.field import Field
 from polyadmin.core.filter import FILTER_KIND_RELATION
 from polyadmin.core.model_admin import ModelAdmin
-from polyadmin.core.query import ListRequest, list_objects
+from polyadmin.core.query import ListRequest, alist_objects
 from polyadmin.core.relation import Relation
 
 
@@ -51,7 +52,7 @@ def compute_relation_permissions(
     return result
 
 
-def compute_relation_options(
+async def compute_relation_options(
     admin: Admin, model_admin: ModelAdmin, obj: Any = None
 ) -> dict[str, dict[str, Any]]:
     """Selectable options for each relation field in `model_admin.form_fields`.
@@ -99,9 +100,9 @@ def compute_relation_options(
 
         # unlimited: a non-autocomplete relation renders every choice
         # inline, which is exactly what this widget is for. Going through
-        # list_objects means a list_page target answers this from its own
-        # data source like every other list query.
-        related_objects, _ = list_objects(target_admin, ListRequest(unlimited=True))
+        # alist_objects means a list_page target, or one with async hooks,
+        # answers this from its own data source like every other list query.
+        related_objects, _ = await alist_objects(target_admin, ListRequest(unlimited=True))
         options = [
             (target_admin.get_pk(related), display_field.get_value(related))
             for related in related_objects
@@ -125,7 +126,7 @@ def compute_relation_options(
     return result
 
 
-def relation_filter_choices(
+async def relation_filter_choices(
     admin: Admin, principal: Any, model_admin: ModelAdmin, field: Any
 ) -> list[dict[str, str]] | None:
     """A relation filter's choice list: every record of the target
@@ -154,7 +155,7 @@ def relation_filter_choices(
     target_admin = admin.get_model_admin(relation.target)
     if target_admin is None:
         return None
-    related_objects, _ = list_objects(target_admin, ListRequest(unlimited=True))
+    related_objects, _ = await alist_objects(target_admin, ListRequest(unlimited=True))
     try:
         display_field = target_admin.get_field(relation.display_field)
     except KeyError:
@@ -167,7 +168,7 @@ def relation_filter_choices(
     return choices
 
 
-def relation_filter_choices_for(
+async def relation_filter_choices_for(
     admin: Admin,
     principal: Any,
     model_admin: ModelAdmin,
@@ -205,12 +206,12 @@ def relation_filter_choices_for(
                 continue
             sourced[filt.name] = {
                 "choices": [],
-                "combobox": relation_filter_combobox(
+                "combobox": await relation_filter_combobox(
                     admin, principal, model_admin, field, filters.get(filt.name, ""), base_path
                 ),
             }
             continue
-        choices = relation_filter_choices(admin, principal, model_admin, field)
+        choices = await relation_filter_choices(admin, principal, model_admin, field)
         sourced[filt.name] = None if choices is None else {"choices": choices, "combobox": None}
     return sourced
 
@@ -229,7 +230,7 @@ def relation_filter_target_is_viewable(
     return allowed.get(relation.target, False)
 
 
-def relation_filter_combobox(
+async def relation_filter_combobox(
     admin: Admin, principal: Any, model_admin: ModelAdmin, field: Any, current: str, base_path: str
 ) -> dict[str, str]:
     """What the panel's combobox needs for a relation filter: the target's
@@ -251,7 +252,7 @@ def relation_filter_combobox(
         return result
     # One object, not the queryset: the trigger has to show what is
     # selected or the reader cannot tell what they are filtering by.
-    related = target_admin.get_object(current)
+    related = await maybe_await(target_admin.get_object(current))
     if related is None:
         return result
     result["selected_pk"] = current

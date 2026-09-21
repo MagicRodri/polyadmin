@@ -20,6 +20,7 @@ from polyadmin.core.authorization import resource_permission
 from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.delete import previews_deletes, resolve_delete_preview
 from polyadmin.core.exporter import Exporter
+from polyadmin.core.inline import Inline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import page_of
 from polyadmin.core.query import (
@@ -39,6 +40,7 @@ from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.deletes import RETURN_FIELD, confirm_delete_selected
 from polyadmin.fastapi.errors import forbidden, not_found
+from polyadmin.fastapi.inlines import build_inline_context
 from polyadmin.fastapi.locale import acached_principal
 from polyadmin.fastapi.relations import (
     compute_relation_options,
@@ -196,7 +198,7 @@ def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer
         # A relation filter cannot source its own choices -- core reaches
         # neither the registry nor the principal -- so they are resolved
         # here and passed in.
-        filter_choices = relation_filter_choices_for(
+        filter_choices = await relation_filter_choices_for(
             admin, principal, model_admin, list_request.filters, base_path
         )
 
@@ -255,10 +257,12 @@ def build_detail_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             admin, principal, model_admin, model_admin.get_detail_fields()
         )
         messages = pop_flash(request)
+        inlines = await build_inline_context(admin, principal, model_admin, obj, "readonly", base_path)
         html = renderer.render_detail(
             admin,
             model_admin,
             obj,
+            inlines=inlines,
             principal=principal,
             csrf_token=request.state.csrf_token,
             permissions=permissions,
@@ -281,13 +285,15 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         principal, error = await authorize(admin, request, base_path, resource_permission(slug, "create"), model_admin)
         if error:
             return error
-        relation_options = compute_relation_options(admin, model_admin)
+        relation_options = await compute_relation_options(admin, model_admin)
+        inlines = await build_inline_context(admin, principal, model_admin, None, "placeholder", base_path)
         html = renderer.render_form(
             admin,
             model_admin,
             principal=principal,
             csrf_token=request.state.csrf_token,
             relation_options=relation_options,
+            inlines=inlines,
             base_path=base_path,
             list_token=_list_token(request, None, base_path),
         )
@@ -301,7 +307,8 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         data = _parse_form_data(model_admin, form)
         errors = _validate_writable(model_admin, data)
         if errors:
-            relation_options = compute_relation_options(admin, model_admin)
+            relation_options = await compute_relation_options(admin, model_admin)
+            inlines = await build_inline_context(admin, principal, model_admin, None, "placeholder", base_path)
             if is_htmx_request(request):
                 html = renderer.render_form_fragment(
                     admin,
@@ -311,6 +318,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
+                    inlines=inlines,
                     base_path=base_path,
                 )
             else:
@@ -322,6 +330,7 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
+                    inlines=inlines,
                     base_path=base_path,
                     list_token=_list_token(request, form, base_path),
                 )
@@ -363,7 +372,8 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "update"), obj):
             return forbidden(request, admin, base_path)
-        relation_options = compute_relation_options(admin, model_admin, obj=obj)
+        relation_options = await compute_relation_options(admin, model_admin, obj=obj)
+        inlines = await build_inline_context(admin, principal, model_admin, obj, "edit", base_path)
         html = renderer.render_form(
             admin,
             model_admin,
@@ -371,6 +381,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             csrf_token=request.state.csrf_token,
             obj=obj,
             relation_options=relation_options,
+            inlines=inlines,
             base_path=base_path,
             list_token=_list_token(request, None, base_path),
         )
@@ -389,7 +400,8 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         data = _parse_form_data(model_admin, form, obj)
         errors = _validate_writable(model_admin, data, obj)
         if errors:
-            relation_options = compute_relation_options(admin, model_admin, obj=obj)
+            relation_options = await compute_relation_options(admin, model_admin, obj=obj)
+            inlines = await build_inline_context(admin, principal, model_admin, obj, "edit", base_path)
             if is_htmx_request(request):
                 html = renderer.render_form_fragment(
                     admin,
@@ -400,6 +412,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
+                    inlines=inlines,
                     base_path=base_path,
                 )
             else:
@@ -412,6 +425,7 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
                     data=data,
                     errors=errors,
                     relation_options=relation_options,
+                    inlines=inlines,
                     base_path=base_path,
                     list_token=_list_token(request, form, base_path),
                 )
@@ -685,6 +699,17 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
     def _get_inline(child_slug: str):
         return next((i for i in model_admin.inlines if i.child == child_slug), None)
 
+    async def render_section(
+        principal: Any,
+        parent_obj: Any,
+        inline: Inline,
+        *,
+        redisplay: dict[str, Any] | None = None,
+        refusal: dict[str, Any] | None = None,
+    ) -> str:
+        sections = await build_inline_context(admin, principal, model_admin, parent_obj, "edit", base_path, redisplay=redisplay)
+        return renderer.render_inline_fragment(admin, inline, sections, base_path=base_path, refusal=refusal)
+
     async def inline_create(request: Request, pk: str, child_slug: str) -> HTMLResponse:
         inline = _get_inline(child_slug)
         if inline is None:
@@ -705,19 +730,11 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         data[inline.fk_field] = str(model_admin.get_pk(parent_obj))
         errors = child_admin.validate(data)
         if errors:
-            html = renderer.render_inline_fragment(
-                admin,
-                principal,
-                model_admin,
-                parent_obj,
-                inline,
-                base_path=base_path,
-                redisplay={"pk": None, "data": data, "errors": errors},
-            )
+            html = await render_section(principal, parent_obj, inline, redisplay={"pk": None, "data": data, "errors": errors})
             return HTMLResponse(html, status_code=422)
 
         await maybe_await(child_admin.create(data))
-        html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
+        html = await render_section(principal, parent_obj, inline)
         return HTMLResponse(html)
 
     async def inline_update(request: Request, pk: str, child_slug: str, child_pk: str) -> HTMLResponse:
@@ -743,19 +760,11 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         data[inline.fk_field] = str(model_admin.get_pk(parent_obj))
         errors = child_admin.validate(data)
         if errors:
-            html = renderer.render_inline_fragment(
-                admin,
-                principal,
-                model_admin,
-                parent_obj,
-                inline,
-                base_path=base_path,
-                redisplay={"pk": child_pk, "data": data, "errors": errors},
-            )
+            html = await render_section(principal, parent_obj, inline, redisplay={"pk": child_pk, "data": data, "errors": errors})
             return HTMLResponse(html, status_code=422)
 
         await maybe_await(child_admin.update(child_obj, data))
-        html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
+        html = await render_section(principal, parent_obj, inline)
         return HTMLResponse(html)
 
     async def inline_delete(request: Request, pk: str, child_slug: str, child_pk: str) -> HTMLResponse:
@@ -779,14 +788,11 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                 # 200 with the rebuilt section and the reason on top: htmx
                 # would drop a 4xx body, and a redirect would lose the
                 # parent form's unsaved edits.
-                html = renderer.render_inline_fragment(
-                    admin, principal, model_admin, parent_obj, inline, base_path=base_path,
-                    refusal=delete_preview_view(preview, base_path),
-                )
+                html = await render_section(principal, parent_obj, inline, refusal=delete_preview_view(preview, base_path))
                 return HTMLResponse(html)
             await maybe_await(child_admin.delete(child_obj))
 
-        html = renderer.render_inline_fragment(admin, principal, model_admin, parent_obj, inline, base_path=base_path)
+        html = await render_section(principal, parent_obj, inline)
         return HTMLResponse(html)
 
     return inline_create, inline_update, inline_delete
