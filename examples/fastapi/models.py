@@ -55,9 +55,8 @@ class OrganizationRepository:
 class Role:
     """The many-to-many target: a user holds any number of these.
 
-    Modelled after the permissions list Django's admin is known for, and
-    what the searchable multi-select on the user form is there to make
-    bearable once the list is long.
+    A permissions-style list, long enough that the searchable multi-select
+    on the user form is there to make it bearable.
     """
 
     id: int
@@ -90,9 +89,10 @@ class User:
     email: str
     is_active: bool = True
     # A plain choice field, so the reference app exercises ui/select
-    # (the shadcn Select port). Every other choice-shaped field here is
-    # a relation, which renders one of the two combobox widgets
-    # instead -- without this, ui/select appeared nowhere in the app.
+    # (the reference design system's Select port). Every other
+    # choice-shaped field here is a relation, which renders one of the
+    # two combobox widgets instead -- without this, ui/select appeared
+    # nowhere in the app.
     plan: str = "Free"
     organization: Organization | None = None
     roles: list[Role] = field(default_factory=list)

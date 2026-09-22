@@ -90,8 +90,8 @@ def is_sortable(model_admin: Any, name: str) -> bool:
 
 def links_to_record(model_admin: Any, name: str) -> bool:
     """Whether a list cell links to the record. An unset list_display_links
-    links the first column, as Django does; an empty one links nothing and
-    leaves the row menu as the way in."""
+    links the first column; an empty one links nothing and leaves the
+    row menu as the way in."""
     linked = model_admin.list_display_links
     if linked is None:
         display = list(model_admin.list_display)

@@ -116,7 +116,6 @@ def test_resource_specific_template_beats_generic_default(tmp_path):
     assert html == "USERS-ONLY LIST TEMPLATE"
 
 
-# -- gettext in templates ------------------------------------------------
 # `_` and `ngettext` return plain text, so autoescape escapes a translation
 # at output like any other string, and `|tojson` serialises the raw text.
 

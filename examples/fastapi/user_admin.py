@@ -32,9 +32,8 @@ ROLES_RELATION = Relation(
 class PlanFilter(Filter):
     """A filter this application wrote itself: it subclasses the published
     base and implements the two methods, borrowing nothing from the
-    framework's own filter types. This is the hook Django calls a
-    SimpleListFilter -- the admin supplies both the options and the
-    constraint.
+    framework's own filter types. This hook lets the admin supply both
+    the options and the constraint itself.
 
     It exists in the example so the extension point is exercised by the
     browser suite rather than only described in docs/lists.md.
@@ -62,8 +61,7 @@ class UserAdmin(ModelAdmin):
     list_display = ["id", "email", "is_active", "plan", "organization"]
     detail_fields = ["id", "email", "is_active", "plan", "organization", "roles"]
     # roles is on the form but not in list_display: a many-to-many
-    # column costs a lookup per row and reads as noise in a table, which
-    # is why Django keeps it off list_display too.
+    # column costs a lookup per row and reads as noise in a table.
     # Grouped rather than flat, to exercise fieldsets -- the other
     # admins in this app stay flat, so both paths have example coverage.
     # Declaring these replaces form_fields: the groups are the form's

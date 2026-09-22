@@ -20,8 +20,6 @@ _UNSET = object()
 
 
 class Field:
-    """Base class for all admin field types."""
-
     field_type: str = "field"
 
     def __init__(
@@ -52,7 +50,6 @@ class Field:
         return self.default is not _UNSET
 
     def get_value(self, obj: Any) -> Any:
-        """Read this field's value off a model instance."""
         value = getattr(obj, self.name, _UNSET)
         if value is _UNSET:
             return self.default if self.has_default else None
@@ -188,8 +185,6 @@ class OneToOneField(ForeignKeyField):
 
 
 class ManyToManyField(Field):
-    """A collection of related objects."""
-
     field_type = "manytomany"
 
     def __init__(self, name: str, *, relation: Relation, **kwargs: Any) -> None:

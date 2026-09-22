@@ -97,9 +97,9 @@ def decimal_display(value: Any) -> str:
     is what Field.parse_form_value hands back for the "decimal" field
     type -- see core/field.py), so it is shown with the shortest digit
     string that round-trips back to the same float, in fixed-point, with
-    no trailing ".0" -- the same contract as Go's decimalText
-    (fiber/render_helpers.go), which uses strconv.FormatFloat(f, 'f', -1,
-    64). Anything else (an int) falls back to plain str().
+    no trailing ".0" -- the same contract as Go's decimalText, which uses
+    strconv.FormatFloat(f, 'f', -1, 64). Anything else (an int) falls back
+    to plain str().
     """
     if isinstance(value, Decimal):
         return format(value, "f")

@@ -22,8 +22,7 @@ from tests.core.test_model_admin import InMemoryUserAdmin
 class HostDomainFilter(Filter):
     """Written the way an application would write one: it subclasses the
     published base and implements the two methods, borrowing nothing from
-    the framework's own filter types. Django calls this a
-    SimpleListFilter -- lookups() plus queryset().
+    the framework's own filter types.
     """
 
     def choices_with_labels(self):

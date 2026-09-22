@@ -1,6 +1,7 @@
-# Python / FastAPI
+# Python
 
-The Python implementation mounts PolyAdmin into a FastAPI application.
+The Python implementation provides the core admin experience for Python
+applications. The current web adapter mounts PolyAdmin into FastAPI.
 
 ## Install from Git
 

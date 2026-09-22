@@ -45,9 +45,6 @@ def titles(objects):
     return [o.title for o in objects]
 
 
-# --- slugify ---------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("value", "want"),
     [
@@ -75,9 +72,6 @@ def test_slugify_transliterates_to_ascii(value, want):
 )
 def test_slugify_unicode_keeps_its_letters(value, want):
     assert slugify_unicode(value) == want
-
-
-# --- the date filter -------------------------------------------------
 
 
 class DatedPostAdmin(PostAdmin):
@@ -129,9 +123,6 @@ def test_date_filter_is_declared_like_any_other():
     assert [f.name for f in admin.filters] == ["created"]
 
 
-# --- sortable_by -----------------------------------------------------
-
-
 def test_unset_sortable_by_leaves_every_column_sortable():
     admin = PostAdmin()
     assert all(is_sortable(admin, name) for name in ("id", "title", "created"))
@@ -169,9 +160,6 @@ def test_the_model_admins_own_default_ordering_is_exempt_from_the_restriction():
     assert apply_defaults(Restricted(), ListRequest()).ordering == "-created"
 
 
-# --- list_display_links ----------------------------------------------
-
-
 def test_unset_list_display_links_links_the_first_column_only():
     admin = PostAdmin()
     assert links_to_record(admin, "id") and not links_to_record(admin, "title")
@@ -187,9 +175,6 @@ def test_list_display_links_chooses_and_empty_means_no_links():
         list_display_links = []
 
     assert not any(links_to_record(Unlinked(), name) for name in ("id", "title", "created"))
-
-
-# --- the other options' defaults -------------------------------------
 
 
 def test_preserve_filters_is_on_and_save_as_is_off_by_default():

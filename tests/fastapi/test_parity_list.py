@@ -82,8 +82,6 @@ def test_a_cell_that_is_already_a_link_is_not_wrapped_again():
     assert 'href="/admin/organizations/1"' in page
 
 
-# --- preserve_filters ------------------------------------------------
-
 # The list URL the tests navigate away from and expect to come back to.
 FILTERED_LIST = "/admin/users?search=a&sort=-email"
 FILTERED_TOKEN = quote(FILTERED_LIST, safe="")
@@ -162,9 +160,6 @@ def test_an_offsite_list_token_is_discarded():
     assert response.headers["location"] == "/admin/users"
 
 
-# --- save_as ---------------------------------------------------------
-
-
 class SaveAsUserAdmin(InMemoryUserAdmin):
     save_as = True
 
@@ -230,9 +225,6 @@ def test_save_as_new_redisplays_the_form_on_a_validation_error():
     assert len(users.get_queryset()) == 1
 
 
-# --- prepopulated_fields ---------------------------------------------
-
-
 def test_prepopulated_fields_ride_on_the_create_form_only():
     class Prepopulating(InMemoryUserAdmin):
         prepopulated_fields = {"email": ["email"]}
@@ -254,9 +246,6 @@ def test_prepopulated_unicode_fields_are_marked():
         prepopulated_unicode = ["email"]
 
     assert "unicode" in client_for(UnicodeSlug).get("/admin/users/create").text
-
-
-# --- the date filter -------------------------------------------------
 
 
 class DatedUserAdmin(InMemoryUserAdmin):

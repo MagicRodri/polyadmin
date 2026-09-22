@@ -192,9 +192,10 @@ def test_create_form_shows_relation_select_with_options():
 
     response = client.get("/admin/users/create")
     assert response.status_code == 200
-    # The plain (non-autocomplete) relation field is the shadcn Select
-    # port (ui/select.html): a hidden input named after the field, and
-    # each choice as a listbox option rather than an <option>.
+    # The plain (non-autocomplete) relation field is the reference
+    # design system's Select port (ui/select.html): a hidden input
+    # named after the field, and each choice as a listbox option rather
+    # than an <option>.
     assert 'name="organization"' in response.text
     assert 'data-value="1" data-label="Acme"' in response.text
 

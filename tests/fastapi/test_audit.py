@@ -1,4 +1,3 @@
-"""Audit logging."""
 from datetime import datetime, timezone
 
 from fastapi import FastAPI

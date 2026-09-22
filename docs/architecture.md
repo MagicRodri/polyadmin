@@ -1,7 +1,7 @@
 # Architecture
 
-PolyAdmin is a Django-admin-style admin framework for
-[FastAPI](https://fastapi.tiangolo.com). It owns presentation —
+PolyAdmin is a server-rendered operations framework for Python applications.
+The current [FastAPI](https://fastapi.tiangolo.com) adapter owns presentation —
 routes, forms, tables, permissions checks, HTML — and owns no storage:
 your `ModelAdmin` implements the lifecycle hooks against whatever
 database or service you already have. This document explains how the

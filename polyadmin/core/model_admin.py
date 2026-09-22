@@ -21,10 +21,10 @@ from polyadmin.i18n import N_, gettext, ngettext
 
 @dataclass
 class Fieldset:
-    """One titled group of form fields -- Django's `fieldsets`. A title of None
-    renders the group with no header, which is how the undeclared default
-    renders as a plain flat form. `collapsed` only seeds the initial state; the
-    group can always be opened.
+    """One titled group of form fields. A title of None renders the group
+    with no header, which is how the undeclared default renders as a plain
+    flat form. `collapsed` only seeds the initial state; the group can
+    always be opened.
     """
 
     fields: Sequence[str] = ()
@@ -65,7 +65,6 @@ class ModelAdmin:
     # stable between requests.
     ordering: ClassVar[str | None] = None
     # How many rows a list page holds; None means DEFAULT_PAGE_SIZE.
-    # Django's list_per_page.
     list_per_page: ClassVar[int | None] = None
     # What a read-only view shows for a None or blank value; None means
     # DEFAULT_EMPTY_VALUE.
@@ -78,8 +77,7 @@ class ModelAdmin:
     # action whose `where` includes the detail page; a list overrides `where`
     # (so a "list" action can be named here), and [] offers none.
     detail_actions: ClassVar[Sequence[str] | None] = None
-    # Removes the built-in bulk delete. Opt-out, so the default keeps it,
-    # as Django does.
+    # Removes the built-in bulk delete. Opt-out, so the default keeps it.
     disable_delete_selected: ClassVar[bool] = False
     # Child ModelAdmins whose records point back at this one, managed
     # inline on its create/detail/edit pages. See docs/inlines.md.
@@ -108,7 +106,7 @@ class ModelAdmin:
     # transliterated to ASCII -- see polyadmin.core.slug.
     prepopulated_unicode: ClassVar[Sequence[str]] = ()
     # Adds "Save as new" to the edit form, which saves the submitted values
-    # as a new record and leaves the original alone. Opt-in, as Django's is.
+    # as a new record and leaves the original alone. Opt-in.
     save_as: ClassVar[bool] = False
     # Whether the list hands its search, filters, sort and page to the pages
     # reached from it, so they lead back into the list as it was left.
@@ -209,11 +207,9 @@ class ModelAdmin:
         return self.empty_value_display or DEFAULT_EMPTY_VALUE
 
     def get_default_ordering(self) -> str | None:
-        """The sort to use when the request names none."""
         return self.ordering
 
     def is_readonly(self, name: str, obj: Any = None) -> bool:
-        """The question every call site actually asks."""
         return name in self.get_readonly_fields(obj)
 
     def get_fieldsets(self) -> list[Fieldset]:
@@ -278,11 +274,11 @@ class ModelAdmin:
     def delete_selected(self, objects: Sequence[Any], principal: Principal | None) -> str | None:
         """The bulk delete every admin gets for free.
 
-        Django ships the same one, and it is the single most common action
-        anyone would otherwise write by hand. It is expressed entirely in terms
-        of this ModelAdmin's own `delete` hook, so it works against whatever
-        storage the application has and honours whatever that hook already
-        does (cascades, soft deletes, hooks of its own).
+        This is the single most common action anyone would otherwise write
+        by hand. It is expressed entirely in terms of this ModelAdmin's own
+        `delete` hook, so it works against whatever storage the application
+        has and honours whatever that hook already does (cascades, soft
+        deletes, hooks of its own).
 
         permission="delete", not the resource's bare "view": the action route
         checks it on top, so a principal who may look at a list but not destroy
@@ -336,7 +332,6 @@ class ModelAdmin:
         raise NotImplementedError(f"{type(self).__name__} must implement update().")
 
     def delete(self, obj: Any) -> None:
-        """Delete an existing record."""
         raise NotImplementedError(f"{type(self).__name__} must implement delete().")
 
     def validate(self, data: dict[str, Any]) -> dict[str, list[str]]:

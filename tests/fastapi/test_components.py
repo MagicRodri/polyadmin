@@ -1,4 +1,3 @@
-"""Phase B/D component rendering."""
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -284,10 +283,11 @@ def test_combobox_uses_token_classes():
 
 
 def test_toast_viewport_sits_bottom_right_and_does_not_block_clicks():
-    """shadcn's ToastViewport, pinned bottom-right. pointer-events-none
-    matters: record pages now carry a sticky action bar in that same
-    corner, and the viewport spans a strip of the screen even with no
-    toasts in it -- without it, Save would be unclickable."""
+    """The reference design system's ToastViewport, pinned bottom-right.
+    pointer-events-none matters: record pages now carry a sticky action
+    bar in that same corner, and the viewport spans a strip of the
+    screen even with no toasts in it -- without it, Save would be
+    unclickable."""
     viewport = ui("toast", "list")
     assert "bottom-0" in viewport and "sm:right-0" in viewport
     assert "top-4" not in viewport, "toasts should no longer be top-anchored"
@@ -425,8 +425,7 @@ def test_readonly_field_renders_as_a_value_not_an_input(readonly_client):
 
 
 def test_boolean_field_renders_as_a_switch_inline_with_its_label():
-    # Django Unfold's treatment: a toggle beside its name, not a
-    # checkbox stacked under a label.
+    # A toggle beside its name, not a checkbox stacked under a label.
     from tests.fastapi.test_actions import make_client as make_action_client
 
     client, _ = make_action_client()
@@ -527,9 +526,10 @@ def test_toasts_are_the_sonner_toaster():
 
 
 def test_the_page_indicator_never_wraps():
-    """shadcn fixes the indicator at w-[100px], which a translated
-    "Page 1 of 8" overflows in most languages -- Russian's wrapped onto
-    a second line, pushing the jump buttons out of the footer's row."""
+    """The reference design system fixes the indicator at w-[100px],
+    which a translated "Page 1 of 8" overflows in most languages --
+    Russian's wrapped onto a second line, pushing the jump buttons out
+    of the footer's row."""
     indicator = ui("pagination", "page-indicator")
     assert "min-w-[100px]" in indicator, f"the indicator's width is not a floor: {indicator!r}"
     assert "whitespace-nowrap" in indicator, f"a long translation can still wrap: {indicator!r}"

@@ -1,12 +1,11 @@
 """Inline: a reverse-relation admin declaration -- lets a parent
 ModelAdmin manage/display a child ModelAdmin's records that point back
-at it via one FK/OneToOne field, Django-admin TabularInline/StackedInline
-style. See docs/inlines.md.
+at it via one FK/OneToOne field. See docs/inlines.md.
 
 `layout` is presentation-only, not behavioral, so there is one Inline
 type with a layout discriminator, not two structurally different
 classes -- StackedInline/TabularInline are just layout-preset
-subclasses, for a Django-familiar spelling.
+subclasses.
 """
 
 from __future__ import annotations
@@ -17,10 +16,6 @@ from polyadmin.core._async import maybe_await
 from polyadmin.core.query import ListRequest, alist_objects
 
 if TYPE_CHECKING:
-    # Only needed for type hints -- inline.py must not import
-    # model_admin.py at runtime, since model_admin.py imports Inline
-    # (a real ClassVar default, not just a hint) from here. Guarding
-    # only this side is enough to avoid a circular import.
     from polyadmin.core.model_admin import ModelAdmin
 
 STACKED = "stacked"

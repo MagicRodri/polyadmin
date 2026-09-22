@@ -1,4 +1,4 @@
-"""Tests for the shadcn variant resolver."""
+"""Tests for the reference design system's variant resolver."""
 import re
 
 import pytest
@@ -7,8 +7,8 @@ from polyadmin.ui import UI_REGISTRY, UnknownUIVariant, ui
 
 
 def test_fills_in_both_default_axes():
-    # Neither axis given: the shadcn defaults for variant *and* size
-    # should both appear.
+    # Neither axis given: the reference design system's defaults for
+    # variant *and* size should both appear.
     classes = ui("button")
     assert "inline-flex" in classes  # base
     assert "bg-primary" in classes  # variant "default"
@@ -110,7 +110,8 @@ def test_base_does_not_fight_its_variants(component):
     base that sets a property its own variant or size also sets produces
     two competing utilities in one class attribute -- and Tailwind
     resolves those by its own output order, not the order written.
-    shadcn's cva entries avoid this by construction; so must these.
+    The reference design system's cva entries avoid this by
+    construction; so must these.
     """
     base_props = _properties_of(UI_REGISTRY[component].get("base", ""))
     for kind in ("variants", "sizes"):
@@ -161,9 +162,9 @@ def test_uses_theme_tokens_not_literal_palette(component):
     variables in admin/theme.html. A literal neutral-*/gray-* here would
     be invisible to the theme and to dark mode.
 
-    The emerald/amber pairs are the documented exceptions -- there is no
-    shadcn success/warning token to defer to, so those name an explicit
-    dark: variant instead.
+    The emerald/amber pairs are the documented exceptions -- the
+    reference design system has no success/warning token to defer to,
+    so those name an explicit dark: variant instead.
     """
     spec = UI_REGISTRY[component]
     checked = [("base", spec.get("base", ""))]
@@ -186,28 +187,24 @@ def test_registry_matches_the_go_implementation_key_for_key():
     point is to fail when someone adds a component to one side only.
     """
     expected_components = {
-        # Phase A
         "button", "input", "textarea", "select", "label", "checkbox",
         "radio", "switch", "badge", "card", "alert", "separator",
         "skeleton", "avatar", "text",
-        # Phase B
         "dialog", "dropdown", "popover", "tooltip", "toast", "sheet",
-        # Phase C
         "sidebar", "nav-item", "tabs", "accordion", "breadcrumb",
         "pagination", "table",
-        # Phase D
         "field", "combobox", "calendar", "slider", "multi-select",
         # dashboard / misc
         "widget", "panel", "page", "toolbar", "filter-panel",
-        # form grouping (Django's fieldsets)
+        # form grouping
         "fieldset",
         # audit history panel
         "history",
-        # login page (shadcn's login-04 block)
+        # login page (the reference login block)
         "login",
         # 401/403/404 page
         "error",
-        # bounded scrolling region (shadcn ScrollArea)
+        # bounded scrolling region (the reference design system's ScrollArea)
         "scroll-area",
     }
     assert set(UI_REGISTRY) == expected_components

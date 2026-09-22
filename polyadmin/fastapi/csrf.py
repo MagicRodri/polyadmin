@@ -28,8 +28,6 @@ from polyadmin.fastapi.errors import csrf_failure
 
 
 def make_csrf_route(admin, base_path: str) -> type[APIRoute]:
-    """Build the APIRoute subclass for one mounted admin."""
-
     class CSRFRoute(APIRoute):
         def get_route_handler(self) -> Callable:
             original = super().get_route_handler()

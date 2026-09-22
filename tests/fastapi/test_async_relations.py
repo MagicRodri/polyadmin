@@ -271,9 +271,6 @@ def seed(orgs, members):
     return acme, other
 
 
-# --- as a relation target -------------------------------------------------
-
-
 def test_an_async_target_fills_a_foreign_key_select_and_a_many_to_many_list():
     client, orgs, members = make_client()
     seed(orgs, members)
@@ -304,9 +301,6 @@ def test_an_async_target_fills_the_select_on_the_edit_page():
     assert "Other Ltd" in page
 
 
-# --- as a relation filter target -------------------------------------------
-
-
 def test_an_async_target_supplies_relation_filter_choices():
     client, orgs, _ = make_client(FilteredMemberAdmin)
     orgs.store[1] = Org(1, "Acme")
@@ -324,9 +318,6 @@ def test_an_async_target_labels_the_relation_filter_combobox():
     page = client.get("/admin/members", params={"filter[organization]": "1"}).text
 
     assert "Acme" in page
-
-
-# --- as an inline child ---------------------------------------------------
 
 
 def test_an_async_child_renders_as_an_inline_on_the_edit_page():

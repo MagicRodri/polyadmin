@@ -67,8 +67,8 @@ SHARED_LAYOUT = {
 # markup is assembled there rather than in html/template. Listed so the
 # exception stays a deliberate two-file set rather than growing quietly.
 PYTHON_ONLY = {
-    "admin/components/icons.html",  # Go: fiber/icons.go
-    "admin/components/field.html",  # Go: fiber/render_helpers.go
+    "admin/components/icons.html",
+    "admin/components/field.html",
 }
 
 

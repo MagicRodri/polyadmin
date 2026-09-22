@@ -1,6 +1,6 @@
 """Strings built in Python code -- validation, flash/success messages,
 error pages, login messages, export headers -- translate from the
-host's catalog. Mirrors Go's fiber/codestrings_test.go.
+host's catalog.
 """
 
 from fastapi import FastAPI
