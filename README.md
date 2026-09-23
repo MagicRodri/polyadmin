@@ -29,6 +29,7 @@ permissions) and you get:
 - Relation fields rendered as links, or as a searchable shadcn/ui
   Command-style autocomplete backed by a server-side `/lookup` route
   (never dumps the target model's full queryset into the page)
+- Image fields with upload handling and preview rendering
 - Inline related records (`StackedInline`/`TabularInline`) — a
   parent's create/detail/edit pages can show and manage a child's
   records that point back at it, directly within the parent workflow
@@ -43,6 +44,7 @@ permissions) and you get:
 - CSV and XLSX export
 - Internationalisation: per-request locale, language switcher, French
   and Russian
+- Built-in favicon support for the admin shell
 - Toast notifications for every create/update/delete/action
 - Per-resource (and per-widget) template overrides, so an application
   can replace one view's markup without forking the framework
@@ -62,7 +64,7 @@ See [`docs/components.md`](docs/components.md).
 The first beta release is available on PyPI:
 
 ```bash
-pip install "polyadmin[fastapi]==0.1.0b2"
+pip install "polyadmin[fastapi]==0.1.0b3"
 ```
 
 For the latest unreleased code, install from Git:
