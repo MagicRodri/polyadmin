@@ -6,10 +6,11 @@ that makes a host's answer safe to show one principal.
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Awaitable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.authorization import resource_permission
 
 # How many records of a group are listed; the rest are counted.
@@ -46,9 +47,12 @@ class DeletePreviewer(Protocol):
     `objects` is always a list -- one record from the delete page, the whole
     selection from delete_selected -- so an implementation over SQL can
     answer a bulk delete with one count and one sample query per relation.
+
+    May be a coroutine function; resolve_delete_preview awaits it when it is
+    one, the same optional-async shape as get_object/create/update/delete.
     """
 
-    def delete_preview(self, objects: list[Any]) -> DeletePreview: ...
+    def delete_preview(self, objects: list[Any]) -> DeletePreview | Awaitable[DeletePreview]: ...
 
 
 @dataclass
@@ -74,14 +78,14 @@ def previews_deletes(model_admin: Any) -> bool:
     return callable(getattr(model_admin, "delete_preview", None))
 
 
-def resolve_delete_preview(admin: Any, model_admin: Any, principal: Any, objects: Sequence[Any]) -> ResolvedDeletePreview:
+async def resolve_delete_preview(admin: Any, model_admin: Any, principal: Any, objects: Sequence[Any]) -> ResolvedDeletePreview:
     """Ask model_admin what deleting objects takes with it and filter the answer
     for principal. Without the capability: an empty, non-blocking result, and
     nothing is called.
     """
     if not previews_deletes(model_admin):
         return ResolvedDeletePreview()
-    preview = model_admin.delete_preview(list(objects))
+    preview = await maybe_await(model_admin.delete_preview(list(objects)))
     out = ResolvedDeletePreview()
     for group in preview.cascades:
         resolved = _resolve_group(admin, principal, group)

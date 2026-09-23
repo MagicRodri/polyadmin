@@ -39,6 +39,10 @@ class DeletePreviewer(Protocol):
     def delete_preview(self, objects: list[Any]) -> DeletePreview: ...
 ```
 
+It may be a coroutine function — the same optional-async shape as
+`get_object`/`create`/`update`/`delete` — for a ModelAdmin backed by an
+async client that needs to look up the cascade over the network.
+
 `objects` is always a list — one record from the delete page, the whole
 selection from `delete_selected` — so one implementation serves both,
 and a bulk delete costs one query per relation rather than one per row:

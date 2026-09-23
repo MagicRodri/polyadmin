@@ -54,11 +54,15 @@
               {% endif %}
 
               <div class="{{ ui('login', 'group') }}">
-                <label for="login-identifier" class="{{ ui('label') }}">{{ _("Email") }}</label>
+                <label for="login-identifier" class="{{ ui('label') }}">{{ _("Username or email") }}</label>
                 {# The submitted value is echoed back so a typo in the
-                   password does not cost the email as well. #}
-                <input type="email" id="login-identifier" name="identifier"
-                       value="{{ identifier }}" placeholder="{{ _('m@example.com') }}"
+                   password does not cost the identifier as well.
+                   type="text", not "email": a plain username must not
+                   be rejected by HTML5 validation before it reaches the
+                   backend, which is the one that actually knows what
+                   identifiers it accepts. #}
+                <input type="text" id="login-identifier" name="identifier"
+                       value="{{ identifier }}" placeholder="{{ _('m@example.com or username') }}"
                        autocomplete="username" required autofocus
                        class="{{ ui('input') }}">
               </div>

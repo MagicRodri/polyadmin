@@ -68,7 +68,7 @@ def test_bulk_action_with_no_selection_flashes_warning_and_skips_handler():
         "/admin/users/actions/deactivate", data={}, follow_redirects=False, headers=csrf(client)
     )
     assert response.status_code == 303
-    assert user_admin.get_object(a.id).is_active is True  # handler never ran
+    assert user_admin.get_object(a.id).is_active is True
 
 
 def test_unknown_action_name_is_404():

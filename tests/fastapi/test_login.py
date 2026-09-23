@@ -35,7 +35,7 @@ class FakeLoginBackend:
         self.begin_error = None
 
     def verify_credentials(self, request, identifier, password):
-        if identifier != "demo@example.com" or password != self.password:
+        if identifier not in ("demo@example.com", "demo") or password != self.password:
             return None
         return Principal(id="demo", display_name="Demo Admin", is_superuser=True)
 
@@ -90,7 +90,6 @@ def test_unauthenticated_request_redirects_to_login(client):
     assert response.status_code == 303
     location = response.headers["location"]
     assert location.startswith("/admin/login?")
-    # The whole point of the redirect: it has to come back afterwards.
     assert _next_of(location) == "/admin/users"
 
 
@@ -119,6 +118,22 @@ def test_login_page_is_publicly_reachable(client):
     assert response.status_code == 200
     for want in ['name="identifier"', 'type="password"', 'name="_csrf"', "Welcome back"]:
         assert want in response.text, want
+
+
+def test_login_identifier_field_accepts_plain_text(client):
+    page = client.get("/admin/login").text
+    assert 'type="email"' not in page, "identifier input rejects a plain username before it reaches the server"
+    assert "Username or email" in page
+
+
+def test_login_accepts_a_username_not_only_an_email(client, backend):
+    response = client.post(
+        "/admin/login?next=%2Fadmin%2Fusers",
+        data={"identifier": "demo", "password": "correct horse"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 303
+    assert backend.begins == 1
 
 
 def test_login_page_renders_without_the_admin_shell(client):

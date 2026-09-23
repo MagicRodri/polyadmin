@@ -172,9 +172,6 @@ def test_select_label_is_a_data_attribute_not_a_js_string_literal(task_client):
     assert "label: 'Medium'" not in page and 'label: "Medium"' not in page, (
         "the label must not be interpolated into a JS string literal"
     )
-    # (The blanket `'label: "' not in page` this replaces now matches the
-    # factory's own `label: ""` initializer -- the assertion above is the
-    # precise form of the same guarantee.)
 
 
 def _boolean_client():
@@ -448,7 +445,6 @@ def test_boolean_field_renders_as_a_switch_inline_with_its_label():
 
 
 def test_non_boolean_fields_keep_the_stacked_layout(task_client):
-    # The inline row is specific to booleans.
     page = task_client.get("/admin/tasks/create").text
     assert ui("field", "row") not in page
 

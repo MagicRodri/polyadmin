@@ -24,8 +24,8 @@ def test_render_list_shows_rows_and_nav():
 
     assert "john@example.com" in html
     assert "mary@example.com" in html
-    assert "Email" in html  # column header from the field label
-    assert 'href="/admin/users"' in html  # nav item
+    assert "Email" in html
+    assert 'href="/admin/users"' in html
 
 
 def test_render_list_shows_empty_state():
@@ -46,7 +46,7 @@ def test_render_list_pagination_links():
     assert "Page 2 of 2" in html
     # page=1 is the implied default, so the first/previous jumps are the
     # bare list URL rather than an explicit page=1.
-    assert "page=3" not in html  # no next link on the last page
+    assert "page=3" not in html
     assert "Rows per page" in html
 
 
@@ -57,7 +57,7 @@ def test_render_detail_shows_field_values():
     html = Renderer().render_detail(admin, user_admin, user)
 
     assert "john@example.com" in html
-    assert "Yes" in html  # is_active defaults to True
+    assert "Yes" in html
 
 
 def test_render_form_prefills_from_object_on_edit():

@@ -90,6 +90,30 @@ def test_category_breadcrumb_is_a_plain_non_active_non_link_crumb():
     assert category_breadcrumb("Directory") == [{"label": "Directory", "url": None, "active": False}]
 
 
+def test_favicon_url_prefers_the_model_admins_own():
+    class FaviconUserAdmin(UserAdmin):
+        favicon_url = "https://example.com/user.ico"
+
+    user_admin = FaviconUserAdmin()
+    admin = Admin(model_admins=[user_admin], site_favicon_url="https://example.com/site.ico")
+    ctx = list_context(admin, user_admin, paginate([], page=1, page_size=10))
+    assert ctx["favicon_url"] == "https://example.com/user.ico"
+
+
+def test_favicon_url_falls_back_to_the_site_wide_one():
+    user_admin = UserAdmin()
+    admin = Admin(model_admins=[user_admin], site_favicon_url="https://example.com/site.ico")
+    ctx = list_context(admin, user_admin, paginate([], page=1, page_size=10))
+    assert ctx["favicon_url"] == "https://example.com/site.ico"
+
+
+def test_favicon_url_is_empty_when_neither_is_set():
+    user_admin = UserAdmin()
+    admin = Admin(model_admins=[user_admin])
+    ctx = list_context(admin, user_admin, paginate([], page=1, page_size=10))
+    assert ctx["favicon_url"] == ""
+
+
 def test_list_context_breadcrumbs_include_category_and_mark_active():
     class GroupedUserAdmin(UserAdmin):
         category = "Directory"

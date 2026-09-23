@@ -40,7 +40,6 @@ def test_delete_selected_actually_deletes():
     remaining = {u.id for u in a.get_queryset()}
     assert 1 not in remaining
     assert 2 not in remaining
-    # The unticked one must not be touched.
     assert 3 in remaining
 
 

@@ -132,7 +132,7 @@ def test_edit_post_invalid_rerenders_form_with_errors():
     )
     assert response.status_code == 422
     assert "is required" in response.text
-    assert user.email == "john@example.com"  # unchanged
+    assert user.email == "john@example.com"
 
 
 def test_delete_get_renders_confirmation():

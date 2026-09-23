@@ -54,6 +54,18 @@
 <time datetime="{{ value|iso_datetime }}" data-format="datetime">{{ value|iso_datetime }}</time>
 {%- elif field.field_type == "decimal" -%}
 <span data-format="decimal" data-value="{{ value|decimal_display }}">{{ value|decimal_display }}</span>
+{%- elif field.field_type == "image" -%}
+{# A failed load flips the img and its fallback sibling's inline
+   display rather than replacing DOM: no JS dependency beyond the
+   one-line onerror.
+
+   Hidden via an inline style, not the `hidden` attribute: the browser's
+   `[hidden] { display: none }` is a lowest-priority UA rule, so the
+   fallback's own display:inline-flex (an ordinary author-stylesheet
+   rule, which always outranks a UA one regardless of selector order)
+   would otherwise win and show it beside every successfully-loaded
+   thumbnail. An inline style outranks both. #}
+<a href="{{ value }}" target="_blank" rel="noopener"><img src="{{ value }}" alt="" class="{{ ui('image', 'thumb') }}" onerror="this.style.display='none';this.nextElementSibling.style.display=''"><span class="{{ ui('image', 'fallback') }}" style="display:none">{{ icon("photo", "size-4") }}</span></a>
 {%- else -%}
 {{ value }}
 {%- endif -%}

@@ -34,12 +34,14 @@
 {% for row in inline.rows %}
 <form class="{{ ui('panel') }}"
       hx-post="{{ row.update_url }}" hx-target="#inline-{{ inline.slug }}" hx-swap="outerHTML">
+  <div class="{{ ui('panel', 'body') }}">
   {% for name in inline.field_names %}
   {% set field = inline.child_admin.get_field(name) %}
   {% set value = row.data.get(name) if row.data is not none else field.get_value(row.obj) %}
   {{ render_form_input(field, value, row.errors.get(name), row.relation_options.get(name), key=inline.slug ~ "-" ~ row.pk) }}
   {% endfor %}
-  <div class="flex gap-2">
+  </div>
+  <div class="flex gap-2 pt-3">
     {% if inline.can_change %}
     <button type="submit"
             class="{{ ui('button', 'size-xs') }}">
@@ -128,10 +130,14 @@
 <div class="{{ ui('table', 'wrapper') }}">
 {# The wrapper is overflow-hidden (it owns the rounded border), so
    without this the table is clipped at the card's edge and the row's own
-   actions become unreachable. #}
-<div class="{{ ui('table', 'scroll') }}">
+   actions become unreachable. Bounded (not the plain list's "scroll")
+   because this sits inside a parent's own page instead of being the
+   page -- many child rows should scroll in place, not stretch it.
+   bg-card (not bg-muted/50) keeps the sticky header opaque over rows
+   scrolling underneath it. #}
+<div class="{{ ui('table', 'inline-scroll') }}">
 <table class="min-w-full divide-y divide-border">
-  <thead class="bg-muted/50"><tr>
+  <thead class="sticky top-0 z-10 bg-card"><tr>
     {% for name in inline.field_names %}
     <th class="{{ ui('table', 'th-compact') }}">{{ _(inline.child_admin.get_field(name).label) }}</th>
     {% endfor %}
@@ -195,7 +201,7 @@
 {% for row in inline.rows %}
 <div class="{{ ui('panel') }}">
   <a href="{{ row.detail_url }}" class="{{ ui('text', 'link') }}">{{ row.pk }}</a>
-  <dl class="mt-2 divide-y divide-border">
+  <dl class="{{ ui('panel', 'body') }} mt-2 divide-y divide-border">
     {% for name in inline.detail_field_names %}
     {% set field = inline.child_admin.get_field(name) %}
     <div class="flex justify-between gap-4 py-1 text-sm">
@@ -213,10 +219,14 @@
 <div class="{{ ui('table', 'wrapper') }}">
 {# The wrapper is overflow-hidden (it owns the rounded border), so
    without this the table is clipped at the card's edge and the row's own
-   actions become unreachable. #}
-<div class="{{ ui('table', 'scroll') }}">
+   actions become unreachable. Bounded (not the plain list's "scroll")
+   because this sits inside a parent's own page instead of being the
+   page -- many child rows should scroll in place, not stretch it.
+   bg-card (not bg-muted/50) keeps the sticky header opaque over rows
+   scrolling underneath it. #}
+<div class="{{ ui('table', 'inline-scroll') }}">
 <table class="min-w-full divide-y divide-border">
-  <thead class="bg-muted/50"><tr>
+  <thead class="sticky top-0 z-10 bg-card"><tr>
     {% for name in inline.detail_field_names %}
     <th class="{{ ui('table', 'th-compact') }}">{{ _(inline.child_admin.get_field(name).label) }}</th>
     {% endfor %}

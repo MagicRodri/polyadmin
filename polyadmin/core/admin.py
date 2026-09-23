@@ -28,6 +28,7 @@ class Admin:
         authorizer: Any | None = None,
         site_title: str = "PolyAdmin",
         site_logo_url: str | None = None,
+        site_favicon_url: str | None = None,
         disable_csrf: bool = False,
         audit_logger: Any | None = None,
         login_backend: Any | None = None,
@@ -45,6 +46,7 @@ class Admin:
         self.authorizer = authorizer
         self.site_title = site_title
         self.site_logo_url = site_logo_url
+        self.site_favicon_url = site_favicon_url
         # Opt-out, never opt-in: a security control that defaults to off
         # is one nobody turns on. The token cookie is still minted when
         # this is set, so templates and custom pages behave identically.

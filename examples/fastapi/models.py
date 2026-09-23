@@ -163,9 +163,8 @@ def seed(
     organizations: OrganizationRepository,
     roles: RoleRepository,
 ) -> None:
-    # Founded in the same month for every organization: Task 15's browser
-    # test checks that this date renders with a French month name under
-    # the fr locale, and it doesn't matter which organization it looks at.
+    # A browser test checks that this date renders with a French month name
+    # under the fr locale, regardless of which organization it looks at.
     # Acme keeps March 2019: a browser test pins "Mar 1, 2019" as a data
     # value and checks the same date renders "mars" under fr. The others
     # spread out, so the date drill-down has years and months to walk.

@@ -299,7 +299,6 @@ class RelationFilter(Filter):
             if not many:
                 if self._pk(related) == raw_value:
                     kept.append(obj)
-            # A `many` relation matches when any member does.
             elif any(self._pk(member) == raw_value for member in related):
                 kept.append(obj)
         return kept

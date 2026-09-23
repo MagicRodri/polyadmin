@@ -21,7 +21,7 @@ FINGERPRINT_FIELD = "_fingerprint"
 RETURN_FIELD = "_return"
 
 
-def confirm_delete_selected(
+async def confirm_delete_selected(
     request: Request,
     form: Any,
     admin: Any,
@@ -39,7 +39,7 @@ def confirm_delete_selected(
     fingerprint = selection_fingerprint(model_admin, objects)
     confirmed = bool(form.get(CONFIRMED_FIELD))
     changed = confirmed and select_all and form.get(FINGERPRINT_FIELD) != fingerprint
-    preview = resolve_delete_preview(admin, model_admin, principal, objects)
+    preview = await resolve_delete_preview(admin, model_admin, principal, objects)
     if confirmed and not changed and not preview.blocked:
         return None
     slug = model_admin.get_slug()

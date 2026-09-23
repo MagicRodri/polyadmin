@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-21 18:34+0500\n"
+"POT-Creation-Date: 2026-09-23 18:58+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -180,9 +180,6 @@ msgid "Drag to reorder (not saved)"
 msgstr ""
 
 msgid "Edit"
-msgstr ""
-
-msgid "Email"
 msgstr ""
 
 msgid "Empty"
@@ -377,10 +374,10 @@ msgstr ""
 msgid "Superuser"
 msgstr ""
 
-msgid "That email and password don't match an account."
+msgid "That record doesn't exist, or it was deleted."
 msgstr ""
 
-msgid "That record doesn't exist, or it was deleted."
+msgid "That username or email and password don't match an account."
 msgstr ""
 
 #, python-format
@@ -434,6 +431,9 @@ msgstr ""
 msgid "Total"
 msgstr ""
 
+msgid "Username or email"
+msgstr ""
+
 msgid "View"
 msgstr ""
 
@@ -465,7 +465,7 @@ msgstr ""
 msgid "delete"
 msgstr ""
 
-msgid "m@example.com"
+msgid "m@example.com or username"
 msgstr ""
 
 msgid "no change"

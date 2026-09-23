@@ -40,6 +40,7 @@ class DemoAccount:
     """One row of what would be a users table."""
 
     email: str
+    username: str
     # Salt and hash, never the password. Derived at import time only
     # because a runnable demo has to document its own credentials; a real
     # table stores these and has never seen the plaintext.
@@ -55,9 +56,9 @@ class DemoAccount:
 # whose preferred locale the host resolver -- not the switcher cookie or
 # Accept-Language -- decides.
 DEMO_CREDENTIALS = [
-    ("admin@example.com", "polyadmin", "Demo Admin", True, ""),
-    ("viewer@example.com", "polyadmin", "Demo Viewer", False, ""),
-    ("amelie@example.com", "polyadmin", "Amélie", True, "fr"),
+    ("admin@example.com", "admin", "polyadmin", "Demo Admin", True, ""),
+    ("viewer@example.com", "viewer", "polyadmin", "Demo Viewer", False, ""),
+    ("amelie@example.com", "amelie", "polyadmin", "Amélie", True, "fr"),
 ]
 
 
@@ -114,16 +115,21 @@ class CookieSessionBackend:
     def __init__(self) -> None:
         self._secret = _session_secret()
         self._accounts: dict[str, DemoAccount] = {}
-        for email, password, display_name, is_superuser, locale in DEMO_CREDENTIALS:
+        for email, username, password, display_name, is_superuser, locale in DEMO_CREDENTIALS:
             salt = secrets.token_bytes(16)
-            self._accounts[email] = DemoAccount(
+            account = DemoAccount(
                 email=email,
+                username=username,
                 salt=salt,
                 hash=_derive(password, salt),
                 display_name=display_name,
                 is_superuser=is_superuser,
                 locale=locale,
             )
+            # Indexed under both so the login page's "username or email"
+            # field resolves either one to the same account.
+            self._accounts[email] = account
+            self._accounts[username] = account
 
     def verify_credentials(self, request: Any, identifier: str, password: str) -> Principal | None:
         """Answers "are these good?" and does not touch the response. Establishing

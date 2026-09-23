@@ -335,6 +335,11 @@
   .ui-scroll-area {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
+    /* Without this, wheel input that outruns the box's own scroll range
+       chains into whichever ancestor scrolls next -- on a page-level
+       scroller that is a sudden jump of the whole page, which reads as
+       broken rather than as "reached the end of this list." */
+    overscroll-behavior: contain;
   }
   .ui-scroll-area::-webkit-scrollbar { width: 6px; height: 6px; }
   .ui-scroll-area::-webkit-scrollbar-track { background: transparent; }

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-21 18:34+0500\n"
+"POT-Creation-Date: 2026-09-23 18:58+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -188,9 +188,6 @@ msgstr "Перетащите, чтобы изменить порядок (не �
 
 msgid "Edit"
 msgstr "Изменить"
-
-msgid "Email"
-msgstr "Эл. почта"
 
 msgid "Empty"
 msgstr "Пусто"
@@ -385,11 +382,11 @@ msgstr "Вход выполнен"
 msgid "Superuser"
 msgstr "Суперпользователь"
 
-msgid "That email and password don't match an account."
-msgstr "Такой адрес электронной почты и пароль не соответствуют ни одной учётной записи."
-
 msgid "That record doesn't exist, or it was deleted."
 msgstr "Такой записи не существует, либо она была удалена."
+
+msgid "That username or email and password don't match an account."
+msgstr "Такое имя пользователя или адрес электронной почты и пароль не соответствуют ни одной учётной записи."
 
 #, python-format
 msgid "The %(num)d matching this filter is selected."
@@ -444,6 +441,9 @@ msgstr "Переключить боковую панель"
 msgid "Total"
 msgstr "Всего"
 
+msgid "Username or email"
+msgstr "Имя пользователя или эл. почта"
+
 msgid "View"
 msgstr "Просмотр"
 
@@ -475,8 +475,8 @@ msgstr "создание"
 msgid "delete"
 msgstr "удаление"
 
-msgid "m@example.com"
-msgstr "m@example.com"
+msgid "m@example.com or username"
+msgstr "m@example.com или имя пользователя"
 
 msgid "no change"
 msgstr "без изменений"
@@ -493,4 +493,13 @@ msgid_plural "…and %(num)d more"
 msgstr[0] "…и ещё %(num)d"
 msgstr[1] "…и ещё %(num)d"
 msgstr[2] "…и ещё %(num)d"
+
+#~ msgid "Email"
+#~ msgstr "Эл. почта"
+
+#~ msgid "That email and password don't match an account."
+#~ msgstr "Такой адрес электронной почты и пароль не соответствуют ни одной учётной записи."
+
+#~ msgid "m@example.com"
+#~ msgstr "m@example.com"
 

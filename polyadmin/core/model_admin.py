@@ -49,6 +49,9 @@ class ModelAdmin:
     # Sidebar icon name (see components/icons.html), shown flat or nested
     # inside a category's accordion alike.
     icon: ClassVar[str] = "collection"
+    # Browser-tab icon shown while viewing this ModelAdmin's pages. ""
+    # falls back to Admin.site_favicon_url.
+    favicon_url: ClassVar[str] = ""
 
     list_display: ClassVar[Sequence[str]] = ()
     form_fields: ClassVar[Sequence[str]] = ()

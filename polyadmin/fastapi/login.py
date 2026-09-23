@@ -22,7 +22,7 @@ logger = logging.getLogger("polyadmin")
 # telling them apart turns the form into an account enumerator.
 # core.login.LoginBackend asks implementations not to distinguish them
 # either, for the same reason.
-INVALID_CREDENTIALS = N_("That email and password don't match an account.")
+INVALID_CREDENTIALS = N_("That username or email and password don't match an account.")
 SIGNED_OUT = N_("You have been signed out.")
 SESSION_FAILED = N_("Sign-in could not be completed. Please try again.")
 

@@ -21,13 +21,12 @@ prefixed ``size-`` because the reference design system has both a variant
 and a size named "default"; the prefix also tells the resolver which axis
 was given.
 """
+
 from __future__ import annotations
 
 # Each value is a dict with optional "base" (str) and optional
 # "variants"/"sizes"/"parts" (dict[str, str]) keys.
 UI_REGISTRY: dict[str, dict[str, object]] = {
-
-
     "button": {
         # No height, padding, or background here -- see the uiComponent
         # note on why a base must not fight its own axes.
@@ -63,7 +62,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "size-icon-xs": "h-7 w-7 shrink-0",
         },
     },
-
     "input": {
         "base": "flex w-full rounded-md border border-input bg-background text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         "sizes": {
@@ -78,12 +76,10 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "bare": "flex h-10 w-full bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
         },
     },
-
     "textarea": {
         "base": "flex w-full rounded-md border border-input bg-background text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         "sizes": {"size-default": "min-h-[80px] px-3 py-2"},
     },
-
     # A native <select>, not the reference design system's Radix-backed
     # SelectTrigger: a custom listbox does not post its value with a
     # plain form submit, and the admin's forms have to keep working
@@ -108,22 +104,18 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "cell-multi": "flex h-auto w-auto max-w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         },
     },
-
     "label": {
         "base": "block text-sm font-medium leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
     },
-
     # appearance-none is what makes the rest apply: a native checkbox
     # draws itself and ignores border/radius/background. The check glyph
     # is a background image on .ui-checkbox in theme.html.
     "checkbox": {
         "base": "ui-checkbox peer size-4 shrink-0 appearance-none rounded-[4px] border border-input bg-background shadow-sm outline-none transition-shadow checked:border-primary checked:bg-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
     },
-
     "radio": {
         "base": "h-4 w-4 shrink-0 border-input bg-background accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
     },
-
     # Built on a native checkbox rather than a button, so it toggles with
     # no JavaScript and posts like the checkbox it replaces. track and
     # thumb are siblings of the input, not children: `peer` compiles to a
@@ -136,7 +128,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "thumb": "pointer-events-none absolute left-0.5 block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform peer-checked:translate-x-4",
         },
     },
-
     "badge": {
         "base": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none",
         "variants": {
@@ -146,7 +137,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "outline": "border-border text-foreground",
         },
     },
-
     "card": {
         "base": "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
         "parts": {
@@ -157,7 +147,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "footer": "flex items-center p-6 pt-0",
         },
     },
-
     # The reference login block. Its social buttons, "Sign up" and
     # "Forgot your password?" are deliberately absent: the framework has
     # no route behind any of them. That block fills the right column
@@ -187,7 +176,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "brand": "text-xl font-semibold text-foreground",
         },
     },
-
     # The 401/403/404 page. Parts only, like `login`: a centred card
     # with the status number set large and quiet above the headline, so
     # the page reads as an explanation rather than a stack trace.
@@ -200,7 +188,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "message": "text-balance text-sm text-muted-foreground",
         },
     },
-
     # The native overflow box, with the scrollbar restyled by the .ui-
     # scroll-area rules in theme.html (a scrollbar cannot be expressed as
     # Tailwind utilities without a plugin). The axis is the whole
@@ -211,7 +198,18 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "y": "ui-scroll-area block max-h-40 overflow-y-auto overflow-x-hidden",
         },
     },
-
+    # An image field's read-only value: a small thumbnail, linked to the
+    # full image. One fixed size everywhere -- field-value rendering has
+    # no per-context variation for any other type either.
+    "image": {
+        "parts": {
+            "thumb": "inline-block size-8 shrink-0 rounded-md border border-border object-cover align-middle",
+            # Swapped in by the thumbnail's onerror when the URL 404s or
+            # the host refuses to load -- a themed stand-in for the
+            # browser's own broken-image icon.
+            "fallback": "inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground align-middle",
+        },
+    },
     "alert": {
         # `border` with no color; the variants supply the color.
         "base": "relative w-full rounded-lg border p-4",
@@ -224,7 +222,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "description": "text-sm opacity-90",
         },
     },
-
     "separator": {
         "base": "shrink-0 bg-border",
         "variants": {
@@ -232,9 +229,7 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "vertical": "h-full w-px",
         },
     },
-
     "skeleton": {"base": "animate-pulse rounded-md bg-muted"},
-
     "avatar": {
         "base": "relative flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted",
         "parts": {
@@ -242,7 +237,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "fallback": "flex h-full w-full items-center justify-center bg-muted text-xs font-medium text-muted-foreground",
         },
     },
-
     # Shared text roles, so "the muted small text" is one decision
     # rather than a repeated literal in twelve templates.
     "text": {
@@ -258,8 +252,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "error": "text-xs font-medium text-destructive",
         },
     },
-
-
     "dialog": {
         "parts": {
             "overlay": "fixed inset-0 bg-black/80",
@@ -271,7 +263,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "footer": "mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         },
     },
-
     "dropdown": {
         "parts": {
             "content": "z-50 min-w-[10rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
@@ -280,19 +271,16 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "separator": "-mx-1 my-1 h-px bg-muted",
         },
     },
-
     "popover": {
         "parts": {
             "content": "z-50 w-72 rounded-md border border-border bg-popover p-4 text-popover-foreground shadow-md outline-none",
         },
     },
-
     "tooltip": {
         "parts": {
             "content": "z-50 overflow-hidden rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground shadow-md",
         },
     },
-
     # Sonner, the toaster the reference design system ships. Its
     # geometry is kept as it ships: a 356px column in the viewport's
     # corner, 14px between toasts,
@@ -332,7 +320,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             ),
         },
     },
-
     "sheet": {
         "parts": {
             "overlay": "fixed inset-0 z-40 bg-black/60",
@@ -347,8 +334,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "width-panel": "w-72",
         },
     },
-
-
     # The reference sidebar block, at its exact widths (16rem open, 3rem
     # collapsed, 18rem mobile sheet). Its --sidebar-* colour scale is
     # deliberately not reproduced: the Zinc values are within a hair of
@@ -389,7 +374,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "topbar": "flex h-16 shrink-0 items-center gap-2 border-b border-border px-4",
         },
     },
-
     # SidebarMenuButton. p-2 + a size-4 icon is exactly the collapsed
     # sidebar's 3rem, so nothing shifts horizontally as it animates --
     # only the label clips away.
@@ -407,7 +391,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "size-lg": "h-12",
         },
     },
-
     "tabs": {
         "parts": {
             "list": "inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-muted p-1 text-muted-foreground",
@@ -422,7 +405,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "underline-trigger-off": "border-transparent text-muted-foreground hover:text-foreground",
         },
     },
-
     "accordion": {
         "parts": {
             "item": "border-b border-border",
@@ -431,7 +413,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "chevron": "shrink-0 transition-transform duration-200",
         },
     },
-
     "breadcrumb": {
         "base": "flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground",
         "parts": {
@@ -442,7 +423,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "separator": "text-border",
         },
     },
-
     # Toolbar + footer of the list table, from the reference data-table
     # example: search and filters left, page actions right; below, the
     # DataTablePagination row.
@@ -499,7 +479,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "form-input": "h-8 flex-1 text-sm",
         },
     },
-
     "pagination": {
         "base": "flex flex-col items-center gap-3 sm:flex-row sm:justify-between",
         "parts": {
@@ -527,12 +506,18 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "jump": "h-8 w-8 p-0",
         },
     },
-
     "table": {
         "base": "w-full min-w-full caption-bottom text-sm",
         "parts": {
             "wrapper": "overflow-hidden rounded-lg border border-border bg-card",
+            # The top-level list table: the page itself is the scroller,
+            # so only the horizontal axis is bounded here.
             "scroll": "overflow-x-auto",
+            # A tabular inline sits inside a parent's detail/edit page
+            # instead of being the page -- many child rows should scroll
+            # in place there, not stretch the page, same reasoning as
+            # widget.body and panel.body.
+            "inline-scroll": "ui-scroll-area max-h-80 overflow-y-auto overflow-x-auto",
             # The "select all N matching" strip: only ever visible once
             # a whole page is ticked, so it reads as a follow-up
             # question rather than permanent chrome.
@@ -555,8 +540,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "cell-compact": "px-3 py-2 align-middle whitespace-nowrap",
         },
     },
-
-
     # The label + control + description + error unit. The reference
     # design system calls this FormItem/FormLabel/FormDescription/FormMessage; here it is what
     # wraps every generated form input.
@@ -582,7 +565,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "readonly": "py-1.5 text-sm text-foreground",
         },
     },
-
     "combobox": {
         "base": "relative",
         "parts": {
@@ -600,7 +582,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "icon": "w-4 h-4 shrink-0 text-muted-foreground",
         },
     },
-
     # The many-to-many control: the reference design system's
     # Combobox/Command idiom over the relation's options, selection
     # shown as removable chips. Not a two-pane layout, which would need
@@ -621,7 +602,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "list": "max-h-56 overflow-y-auto py-1",
         },
     },
-
     "calendar": {
         "base": "w-auto p-3",
         "parts": {
@@ -638,7 +618,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "day-outside": "text-muted-foreground/50",
         },
     },
-
     "slider": {
         "base": "relative flex w-full touch-none select-none items-center",
         "parts": {
@@ -648,8 +627,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "output": "w-12 shrink-0 text-right text-sm tabular-nums text-muted-foreground",
         },
     },
-
-
     "widget": {
         "base": "rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-6",
         "parts": {
@@ -672,7 +649,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "bar-fill": "h-2 rounded-full bg-primary",
         },
     },
-
     # Form fieldset: a titled, collapsible group of fields inside the
     # record form. A group with no title renders
     # bare -- no header, no border -- so the default single-group case
@@ -687,7 +663,6 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "icon": "size-4 shrink-0 text-muted-foreground transition-transform",
         },
     },
-
     # The detail page's History panel: a compact recent-activity list,
     # shown only when the configured audit logger can read back.
     "history": {
@@ -701,12 +676,12 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "empty": "px-4 py-3 text-sm text-muted-foreground",
         },
     },
-
     "panel": {
         "base": "rounded-lg border border-border bg-card p-4 text-card-foreground",
         "parts": {
             "dashed": "rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground",
             "form": "w-full rounded-lg border border-border bg-card p-7 text-card-foreground shadow-sm",
+            "body": "ui-scroll-area max-h-80 overflow-y-auto overflow-x-hidden",
         },
     },
     # Record-page shell for detail/create/edit: one full-height column
@@ -790,7 +765,6 @@ def ui(component: str, *modifiers: str) -> str:
     sizes = _group(component, "sizes")
     parts = _group(component, "parts")
 
-    # A single part reference stands alone.
     if len(modifiers) == 1 and modifiers[0] in parts:
         return parts[modifiers[0]]
 

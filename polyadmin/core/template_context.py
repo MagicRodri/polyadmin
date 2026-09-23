@@ -8,6 +8,7 @@ locale: the resource's name and the crumbs' own literals go through gettext,
 an object's label is data and does not. Nav labels are left for the sidebar
 template to translate, so each string is translated once.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -59,10 +60,13 @@ def default_permissions(model_admin: ModelAdmin) -> dict[str, bool]:
 
 def _object_label(model_admin: ModelAdmin, obj: Any) -> str:
     """A short label for an object in a breadcrumb trail: the first search_fields
-    entry (usually the most identifying), else the first list_display column,
-    else the primary key.
+    entry (usually the most identifying), else the first list_display column,the primary key.
     """
-    display_fields = list(model_admin.search_fields) or list(model_admin.list_display) or model_admin.get_detail_fields()
+    display_fields = (
+        list(model_admin.search_fields)
+        or list(model_admin.list_display)
+        or model_admin.get_detail_fields()
+    )
     if display_fields:
         field = model_admin.get_field(display_fields[0])
         return str(field.get_value(obj))
@@ -117,7 +121,9 @@ def _list_url(
     return f"{base_path}/{model_admin.get_slug()}{query}"
 
 
-def _filter_form_hidden(list_request: ListRequest, exclude: str) -> list[dict[str, str]]:
+def _filter_form_hidden(
+    list_request: ListRequest, exclude: str
+) -> list[dict[str, str]]:
     """Every list parameter except the one the form is about, as hidden
     fields. Without them, submitting the form would drop the reader's
     search, sort and other filters.
@@ -171,59 +177,73 @@ def _filter_controls(
         choices = []
         for value, label in pairs:
             combined = {**others, filt.name: value} if value else others
-            choices.append({
-                "value": value,
-                "label": label,
-                "selected": value == current,
-                "url": _list_url(model_admin, list_request, base_path, filters=combined),
-            })
+            choices.append(
+                {
+                    "value": value,
+                    "label": label,
+                    "selected": value == current,
+                    "url": _list_url(
+                        model_admin, list_request, base_path, filters=combined
+                    ),
+                }
+            )
         range_from, range_to = "", ""
         if filt.control_kind == FILTER_KIND_DATE_RANGE:
             values = date_filter_range_values(current)
             if values is not None:
                 range_from, range_to = values
-        controls.append({
-            "name": filt.name,
-            "label": filt.label,
-            "choices": choices,
-            # The toolbar renders each filter as a dropdown trigger, so it
-            # needs the active choice's label for the trigger itself and
-            # a URL that clears just this filter.
-            "active": next((c["label"] for c in choices if c["selected"] and c["value"]), None),
-            "clear_url": _list_url(model_admin, list_request, base_path, filters=others),
-            # This filter's raw value on this request. The badge counts on
-            # it rather than on a selected choice: a custom date range and
-            # a combobox selection are both real values that match no
-            # declared choice, and counting choices treated those lists as
-            # unfiltered.
-            "current": current,
-            # core.filter's control_kind as a plain string: "" for a link
-            # list, "daterange" for the two date inputs, "relation" for
-            # the combobox.
-            "kind": filt.control_kind,
-            # Prefilled into the range inputs when the current value is a
-            # range rather than a preset. Both "" otherwise.
-            "range_from": range_from,
-            "range_to": range_to,
-            # The GET form an input-bearing control submits: the list's own
-            # path, plus every other parameter as a hidden field, so
-            # submitting reproduces the list it was opened from with one
-            # thing changed.
-            "form_action": f"{base_path}/{model_admin.get_slug()}",
-            "hidden": _filter_form_hidden(list_request, filt.name),
-            # A relation filter whose field is in autocomplete_fields
-            # renders the lookup-backed combobox instead of a link list --
-            # the same declaration, and the same control, the form uses.
-            "uses_combobox": combobox is not None,
-            "lookup_url": (combobox or {}).get("lookup_url", ""),
-            "selected_pk": (combobox or {}).get("selected_pk", ""),
-            "selected_label": (combobox or {}).get("selected_label", ""),
-        })
+        controls.append(
+            {
+                "name": filt.name,
+                "label": filt.label,
+                "choices": choices,
+                # The toolbar renders each filter as a dropdown trigger, so it
+                # needs the active choice's label for the trigger itself and
+                # a URL that clears just this filter.
+                "active": next(
+                    (c["label"] for c in choices if c["selected"] and c["value"]), None
+                ),
+                "clear_url": _list_url(
+                    model_admin, list_request, base_path, filters=others
+                ),
+                # This filter's raw value on this request. The badge counts on
+                # it rather than on a selected choice: a custom date range and
+                # a combobox selection are both real values that match no
+                # declared choice, and counting choices treated those lists as
+                # unfiltered.
+                "current": current,
+                # core.filter's control_kind as a plain string: "" for a link
+                # list, "daterange" for the two date inputs, "relation" for
+                # the combobox.
+                "kind": filt.control_kind,
+                # Prefilled into the range inputs when the current value is a
+                # range rather than a preset. Both "" otherwise.
+                "range_from": range_from,
+                "range_to": range_to,
+                # The GET form an input-bearing control submits: the list's own
+                # path, plus every other parameter as a hidden field, so
+                # submitting reproduces the list it was opened from with one
+                # thing changed.
+                "form_action": f"{base_path}/{model_admin.get_slug()}",
+                "hidden": _filter_form_hidden(list_request, filt.name),
+                # A relation filter whose field is in autocomplete_fields
+                # renders the lookup-backed combobox instead of a link list --
+                # the same declaration, and the same control, the form uses.
+                "uses_combobox": combobox is not None,
+                "lookup_url": (combobox or {}).get("lookup_url", ""),
+                "selected_pk": (combobox or {}).get("selected_pk", ""),
+                "selected_label": (combobox or {}).get("selected_label", ""),
+            }
+        )
     return controls
 
 
 def _filter_choice_url(
-    model_admin: ModelAdmin, list_request: ListRequest, base_path: str, name: str, value: str
+    model_admin: ModelAdmin,
+    list_request: ListRequest,
+    base_path: str,
+    name: str,
+    value: str,
 ) -> str:
     """The list URL with one filter set to `value`, or cleared when it is
     empty -- every other parameter carried over."""
@@ -233,24 +253,32 @@ def _filter_choice_url(
     return _list_url(model_admin, list_request, base_path, filters=filters)
 
 
-def _sort_controls(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> dict[str, Any]:
+def _sort_controls(
+    model_admin: ModelAdmin, list_request: ListRequest, base_path: str
+) -> dict[str, Any]:
     """Per-column ascending/descending URLs and the current direction,
     for the sortable column-header dropdowns."""
     ordering = list_request.ordering or ""
     controls = {}
     for name in model_admin.list_display:
-        direction = "asc" if ordering == name else ("desc" if ordering == f"-{name}" else None)
+        direction = (
+            "asc" if ordering == name else ("desc" if ordering == f"-{name}" else None)
+        )
         controls[name] = {
             "direction": direction,
             # Outside sortable_by: the header renders as a plain label.
             "sortable": is_sortable(model_admin, name),
             "asc_url": _list_url(model_admin, list_request, base_path, ordering=name),
-            "desc_url": _list_url(model_admin, list_request, base_path, ordering=f"-{name}"),
+            "desc_url": _list_url(
+                model_admin, list_request, base_path, ordering=f"-{name}"
+            ),
         }
     return controls
 
 
-def _page_size_options(model_admin: ModelAdmin, list_request: ListRequest, base_path: str) -> list[dict[str, Any]]:
+def _page_size_options(
+    model_admin: ModelAdmin, list_request: ListRequest, base_path: str
+) -> list[dict[str, Any]]:
     """Rows-per-page choices. Changing the size returns to page 1: staying on page
     7 while quadrupling the size would land the reader somewhere they never
     asked to be.
@@ -259,14 +287,25 @@ def _page_size_options(model_admin: ModelAdmin, list_request: ListRequest, base_
         {
             "size": size,
             "selected": size == list_request.page_size,
-            "url": _list_url(model_admin, list_request, base_path, page=None, page_size=size),
+            "url": _list_url(
+                model_admin, list_request, base_path, page=None, page_size=size
+            ),
         }
         for size in PAGE_SIZE_CHOICES
     ]
 
 
-def _nav_link(key: str, label: str, url: str, icon: str, active_key: str | None) -> dict[str, Any]:
-    return {"type": "link", "key": key, "label": label, "url": url, "icon": icon, "active": key == active_key}
+def _nav_link(
+    key: str, label: str, url: str, icon: str, active_key: str | None
+) -> dict[str, Any]:
+    return {
+        "type": "link",
+        "key": key,
+        "label": label,
+        "url": url,
+        "icon": icon,
+        "active": key == active_key,
+    }
 
 
 # GROUP_ICON is fixed, not per-category: a category is a string, not an
@@ -274,7 +313,9 @@ def _nav_link(key: str, label: str, url: str, icon: str, active_key: str | None)
 GROUP_ICON = "folder"
 
 
-def build_nav(admin: Admin, base_path: str, active_key: str | None) -> list[dict[str, Any]]:
+def build_nav(
+    admin: Admin, base_path: str, active_key: str | None
+) -> list[dict[str, Any]]:
     """Ordered sidebar entries: flat links and category groups, interleaved in
     first-registration order. Entries the principal cannot view, and pages with
     show_in_nav=False, are omitted. A group's "active" flag defaults its
@@ -289,7 +330,12 @@ def build_nav(admin: Admin, base_path: str, active_key: str | None) -> list[dict
             return
         group = groups.get(category)
         if group is None:
-            group = {"type": "group", "label": category, "icon": GROUP_ICON, "links": []}
+            group = {
+                "type": "group",
+                "label": category,
+                "icon": GROUP_ICON,
+                "links": [],
+            }
             groups[category] = group
             order.append(group)
         group["links"].append(link)
@@ -298,13 +344,24 @@ def build_nav(admin: Admin, base_path: str, active_key: str | None) -> list[dict
         if ma.can_view:
             key = f"resource:{ma.get_slug()}"
             add(
-                _nav_link(key, ma.get_verbose_name(), f"{base_path}/{ma.get_slug()}", ma.icon, active_key),
+                _nav_link(
+                    key,
+                    ma.get_verbose_name(),
+                    f"{base_path}/{ma.get_slug()}",
+                    ma.icon,
+                    active_key,
+                ),
                 ma.category,
             )
     for page in admin.pages:
         if page.show_in_nav:
             key = f"page:{page.path}"
-            add(_nav_link(key, page.label, f"{base_path}{page.path}", page.icon, active_key), page.category)
+            add(
+                _nav_link(
+                    key, page.label, f"{base_path}{page.path}", page.icon, active_key
+                ),
+                page.category,
+            )
 
     for entry in order:
         if entry["type"] == "group":
@@ -352,6 +409,7 @@ def base_context(
         "messages": messages or [],
         "site_title": admin.site_title,
         "site_logo_url": admin.site_logo_url,
+        "favicon_url": (model_admin.favicon_url if model_admin and model_admin.favicon_url else "") or (admin.site_favicon_url or ""),
         "breadcrumbs": breadcrumbs or [],
         "nav_items": build_nav(admin, base_path, active_nav_key),
         # The sidebar footer shows who is signed in, so the principal has
@@ -404,14 +462,26 @@ def list_context(
     ]
 
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            messages=messages,
+            breadcrumbs=breadcrumbs,
+        ),
         "page": page,
         "actions": _action_infos(model_admin, model_admin.get_list_actions()),
         # A previewing resource has something to say before the delete, so
         # the row's Delete leads to the page that says it.
         "previews_deletes": previews_deletes(model_admin),
         # Which cells link to the record -- list_display_links.
-        "linked_columns": [name for name in model_admin.list_display if links_to_record(model_admin, name)],
+        "linked_columns": [
+            name
+            for name in model_admin.list_display
+            if links_to_record(model_admin, name)
+        ],
         # "?_list=<this list>" for the pages reached from here, so they lead
         # back into the list as it was left -- preserve_filters. Empty when
         # the ModelAdmin has it off.
@@ -444,18 +514,30 @@ def list_context(
         # template should never assemble a query string.
         "page_urls": {
             "first": _list_url(model_admin, list_request, base_path, page=None),
-            "previous": _list_url(model_admin, list_request, base_path, page=page.previous_page) if page.has_previous else None,
-            "next": _list_url(model_admin, list_request, base_path, page=page.next_page) if page.has_next else None,
-            "last": _list_url(model_admin, list_request, base_path, page=page.num_pages),
+            "previous": _list_url(
+                model_admin, list_request, base_path, page=page.previous_page
+            )
+            if page.has_previous
+            else None,
+            "next": _list_url(model_admin, list_request, base_path, page=page.next_page)
+            if page.has_next
+            else None,
+            "last": _list_url(
+                model_admin, list_request, base_path, page=page.num_pages
+            ),
         },
         # Keeps sort and page size: those are how you are reading the
         # table, not what you are narrowing it to.
-        "reset_url": _list_url(model_admin, list_request, base_path, search=None, filters=None, page=None),
+        "reset_url": _list_url(
+            model_admin, list_request, base_path, search=None, filters=None, page=None
+        ),
         "has_active_filters": bool(list_request.search or list_request.filters),
         # Badges the Filters trigger, so the panel says how much it hides
         # without being opened. Search is excluded: it has its own visible
         # box.
-        "active_filter_count": sum(1 for control in filter_controls if control["current"]),
+        "active_filter_count": sum(
+            1 for control in filter_controls if control["current"]
+        ),
         "ordering": list_request.ordering or "",
         "export_query": export_query,
         "permissions": permissions or default_permissions(model_admin),
@@ -479,11 +561,23 @@ def detail_context(
 ) -> dict[str, Any]:
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
+        {
+            "label": gettext(model_admin.get_verbose_name()),
+            "url": _list_crumb_url(model_admin, base_path, list_token),
+        },
         {"label": _object_label(model_admin, obj), "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            messages=messages,
+            breadcrumbs=breadcrumbs,
+            list_token=list_token,
+        ),
         "object": obj,
         "detail_fields": model_admin.get_detail_fields(),
         "actions": _action_infos(model_admin, model_admin.get_detail_actions()),
@@ -516,19 +610,35 @@ def form_context(
 
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
+        {
+            "label": gettext(model_admin.get_verbose_name()),
+            "url": _list_crumb_url(model_admin, base_path, list_token),
+        },
     ]
     if obj is not None:
-        breadcrumbs.append({
-            "label": _object_label(model_admin, obj),
-            "url": with_list_token(f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token),
-        })
+        breadcrumbs.append(
+            {
+                "label": _object_label(model_admin, obj),
+                "url": with_list_token(
+                    f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token
+                ),
+            }
+        )
         breadcrumbs.append({"label": gettext("Edit"), "url": None, "active": True})
     else:
         breadcrumbs.append({"label": gettext("New"), "url": None, "active": True})
 
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            messages=messages,
+            breadcrumbs=breadcrumbs,
+            list_token=list_token,
+        ),
         "object": obj,
         "data": data,
         "errors": errors or {},
@@ -547,7 +657,10 @@ def form_context(
         # rewriting it from the title is how links rot.
         "prepopulated": (
             {
-                target: {"from": list(sources), "unicode": target in model_admin.prepopulated_unicode}
+                target: {
+                    "from": list(sources),
+                    "unicode": target in model_admin.prepopulated_unicode,
+                }
                 for target, sources in model_admin.prepopulated_fields.items()
             }
             if obj is None
@@ -573,9 +686,23 @@ def dashboard_context(
 ) -> dict[str, Any]:
     # A single active crumb -- since base.html has no separate <h1>,
     # this is the only page-title element the dashboard gets.
-    breadcrumbs = [{"label": gettext(getattr(dashboard, "title", None) or "Dashboard"), "url": None, "active": True}]
+    breadcrumbs = [
+        {
+            "label": gettext(getattr(dashboard, "title", None) or "Dashboard"),
+            "url": None,
+            "active": True,
+        }
+    ]
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=None, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=None,
+            base_path=base_path,
+            messages=messages,
+            breadcrumbs=breadcrumbs,
+        ),
         "dashboard": dashboard,
         "widgets": widgets,
     }
@@ -599,12 +726,24 @@ def delete_selected_context(
     objects = selection["objects"]
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
+        {
+            "label": gettext(model_admin.get_verbose_name()),
+            "url": f"{base_path}/{slug}",
+        },
         {"label": gettext("Delete"), "url": None, "active": True},
     ]
-    heading = ngettext("Delete %(num)d record?", "Delete %(num)d records?", len(objects)) % {"num": len(objects)}
+    heading = ngettext(
+        "Delete %(num)d record?", "Delete %(num)d records?", len(objects)
+    ) % {"num": len(objects)}
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, breadcrumbs=breadcrumbs),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            breadcrumbs=breadcrumbs,
+        ),
         "heading": heading,
         "items": selection["items"],
         "more": max(len(objects) - DELETE_PREVIEW_SAMPLE, 0),
@@ -622,11 +761,20 @@ def _action_infos(model_admin: ModelAdmin, actions: list[Any]) -> list[dict[str,
     infos = []
     for a in actions:
         preview = previews and a.name == DELETE_SELECTED_NAME
-        infos.append({"name": a.name, "label": a.label, "confirm": None if preview else a.confirm, "preview": preview})
+        infos.append(
+            {
+                "name": a.name,
+                "label": a.label,
+                "confirm": None if preview else a.confirm,
+                "preview": preview,
+            }
+        )
     return infos
 
 
-def delete_preview_view(preview: ResolvedDeletePreview | None, base_path: str) -> dict[str, Any]:
+def delete_preview_view(
+    preview: ResolvedDeletePreview | None, base_path: str
+) -> dict[str, Any]:
     """The delete preview as the templates see it (docs/deletes.md): headings
     translated, records labelled and linked, nothing the principal may not
     view named. None renders as an empty, unblocked preview."""
@@ -641,7 +789,10 @@ def delete_preview_view(preview: ResolvedDeletePreview | None, base_path: str) -
             for obj in g.visible
         ]
         items += [{"label": text, "url": None} for text in g.texts]
-        heading = gettext("%(label)s (%(num)d)") % {"label": gettext(g.label), "num": g.total}
+        heading = gettext("%(label)s (%(num)d)") % {
+            "label": gettext(g.label),
+            "num": g.total,
+        }
         return {"heading": heading, "items": items, "more": g.more, "hidden": g.hidden}
 
     return {
@@ -667,12 +818,29 @@ def delete_context(
     slug = model_admin.get_slug()
     breadcrumbs = [
         *category_breadcrumb(model_admin.category),
-        {"label": gettext(model_admin.get_verbose_name()), "url": _list_crumb_url(model_admin, base_path, list_token)},
-        {"label": _object_label(model_admin, obj), "url": with_list_token(f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token)},
+        {
+            "label": gettext(model_admin.get_verbose_name()),
+            "url": _list_crumb_url(model_admin, base_path, list_token),
+        },
+        {
+            "label": _object_label(model_admin, obj),
+            "url": with_list_token(
+                f"{base_path}/{slug}/{model_admin.get_pk(obj)}", list_token
+            ),
+        },
         {"label": gettext("Delete"), "url": None, "active": True},
     ]
     return {
-        **base_context(admin, principal=principal, csrf_token=csrf_token, model_admin=model_admin, base_path=base_path, messages=messages, breadcrumbs=breadcrumbs, list_token=list_token),
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            messages=messages,
+            breadcrumbs=breadcrumbs,
+            list_token=list_token,
+        ),
         "object": obj,
         "object_label": _object_label(model_admin, obj),
         "preview": delete_preview_view(preview, base_path),

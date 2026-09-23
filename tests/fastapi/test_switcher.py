@@ -12,8 +12,8 @@ from tests.fastapi.test_login import FakeLoginBackend
 
 @pytest.fixture
 def switcher_client(tmp_path):
-    """fr and ru need catalogs to be supported; the framework's arrive in
-    Task 14, so these tests bring their own (empty) ones."""
+    """fr and ru need catalogs to be supported; the framework doesn't ship
+    any yet, so these tests bring their own (empty) ones."""
     write_catalog(tmp_path, "fr", {}, domain="host")
     write_catalog(tmp_path, "ru", {}, domain="host")
 

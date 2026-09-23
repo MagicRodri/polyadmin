@@ -130,7 +130,7 @@ def test_create_organization_persists_founded_and_balance():
     location = response.headers["location"]
     detail = client.get(location)
     assert detail.status_code == 200
-    # Rendered as the markup contract (Task 12): a <time datetime="...">
+    # Rendered as the markup contract: a <time datetime="...">
     # for the date and a data-value carrying the exact posted precision.
     # This exercises the real create() pipeline end to end -- Field.parse_
     # form_value (float for "decimal", raw string for "date"), the example

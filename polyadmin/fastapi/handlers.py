@@ -479,7 +479,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return not_found(request, admin, base_path)
         if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
             return forbidden(request, admin, base_path)
-        preview = resolve_delete_preview(admin, model_admin, principal, [obj])
+        preview = await resolve_delete_preview(admin, model_admin, principal, [obj])
         html = renderer.render_delete(
             admin,
             model_admin,
@@ -500,7 +500,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
-            if resolve_delete_preview(admin, model_admin, principal, [obj]).blocked:
+            if (await resolve_delete_preview(admin, model_admin, principal, [obj])).blocked:
                 # Back to the delete page, which says why; redirect() sends
                 # HX-Redirect for the htmx route and a 303 otherwise.
                 return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
@@ -527,7 +527,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         if obj is not None:
             if not authorize_object(admin, principal, resource_permission(slug, "delete"), obj):
                 return forbidden(request, admin, base_path)
-            if resolve_delete_preview(admin, model_admin, principal, [obj]).blocked:
+            if (await resolve_delete_preview(admin, model_admin, principal, [obj])).blocked:
                 # Back to the delete page, which says why; redirect() sends
                 # HX-Redirect for the htmx route and a 303 otherwise.
                 return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
@@ -601,7 +601,7 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             set_flash(response, "warning", gettext("No items selected."))
             return response
         if action.name == DELETE_SELECTED_NAME and previews_deletes(model_admin):
-            page = confirm_delete_selected(
+            page = await confirm_delete_selected(
                 request, form, admin, model_admin, renderer, principal, objects, select_all, redirect_to, list_request, base_path
             )
             if page is not None:
@@ -783,7 +783,7 @@ def build_inline_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             return error
         child_obj = await maybe_await(child_admin.get_object(child_pk))
         if child_obj is not None:
-            preview = resolve_delete_preview(admin, child_admin, principal, [child_obj])
+            preview = await resolve_delete_preview(admin, child_admin, principal, [child_obj])
             if preview.blocked:
                 # 200 with the rebuilt section and the reason on top: htmx
                 # would drop a 4xx body, and a redirect would lose the

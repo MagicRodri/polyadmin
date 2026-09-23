@@ -14,6 +14,7 @@
      listener. #}
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}{{ _(site_title) }}{% endblock %} &middot; {{ _(site_title) }}</title>
+  {% if favicon_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
   {# Design tokens, Tailwind config, Alpine + plugins, HTMX, and the
      theme store -- all of it, in the one load order that works. See
      admin/theme.html. #}

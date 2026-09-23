@@ -7,8 +7,6 @@ from polyadmin.ui import UI_REGISTRY, UnknownUIVariant, ui
 
 
 def test_fills_in_both_default_axes():
-    # Neither axis given: the reference design system's defaults for
-    # variant *and* size should both appear.
     classes = ui("button")
     assert "inline-flex" in classes  # base
     assert "bg-primary" in classes  # variant "default"
@@ -206,5 +204,7 @@ def test_registry_matches_the_go_implementation_key_for_key():
         "error",
         # bounded scrolling region (the reference design system's ScrollArea)
         "scroll-area",
+        # image field's list/detail thumbnail
+        "image",
     }
     assert set(UI_REGISTRY) == expected_components

@@ -13,6 +13,30 @@ def _inline_section(page):
     return section.split(ui("page", "actions"))[0]
 
 
+def test_a_readonly_stacked_inline_record_scrolls_inside_its_own_card():
+    """A related record with many fields otherwise grows its card to fit
+    them, same problem as a long dashboard widget -- see
+    TestAStackedInlineRecordScrollsInsideItsOwnCard on the Go side."""
+    client, org_admin, user_admin = make_client(inline_layout="stacked")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = _inline_section(client.get(f"/admin/organizations/{org.id}").text)
+    assert "a@example.com" in section, "the related record rendered nothing"
+    panel_body = ui("panel", "body")
+    assert panel_body in section, "the related record's card is not the bounded scroll box"
+    assert "max-h-" in panel_body and "overflow-y-auto" in panel_body
+    assert "ui-scroll-area" in panel_body
+
+
+def test_an_editable_stacked_inline_record_scrolls_inside_its_own_card():
+    client, org_admin, user_admin = make_client(inline_layout="stacked")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = _inline_section(client.get(f"/admin/organizations/{org.id}/edit").text)
+    assert "<form" in section, "the edit row rendered nothing; the assertion below would be vacuous"
+    assert ui("panel", "body") in section, "the editable row's card is not the bounded scroll box"
+
+
 def test_many_to_many_cell_in_a_tabular_inline_is_bounded():
     client, org_admin, user_admin = make_client()
     org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
@@ -39,7 +63,42 @@ def test_tabular_inline_table_can_scroll_rather_than_clip():
     org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
 
     section = _inline_section(client.get(f"/admin/organizations/{org.id}").text)
-    assert ui("table", "scroll") in section
+    assert ui("table", "inline-scroll") in section
+
+
+def test_a_long_tabular_inline_scrolls_inside_its_own_card():
+    """Unlike the top-level list table (meant to grow the page), a
+    tabular inline sits inside a parent's detail/edit page -- many child
+    rows should scroll in place, not stretch the page, same reasoning as
+    the widget and stacked-inline cards."""
+    client, org_admin, user_admin = make_client()
+    emails = [f"user{i}@example.com" for i in range(50)]
+    org, _ = seed_org_with_users(org_admin, user_admin, *emails)
+
+    section = _inline_section(client.get(f"/admin/organizations/{org.id}").text)
+    assert "user49@example.com" in section, "not every row rendered; the assertion below would be vacuous"
+    inline_scroll = ui("table", "inline-scroll")
+    assert "max-h-" in inline_scroll and "overflow-y-auto" in inline_scroll
+    assert "ui-scroll-area" in inline_scroll
+    # The main list table must keep the page-level scroll it already had.
+    assert "max-h-" not in ui("table", "scroll")
+
+
+def test_scroll_area_contains_overscroll_rather_than_chaining_to_the_page():
+    """Without overscroll-behavior, wheel input that outruns a bounded
+    box's own scroll range chains into whichever ancestor scrolls next --
+    on the edit page that is the whole document, so scrolling to the
+    bottom of a tabular inline suddenly yanks the page too. Verified live
+    with Playwright: scrollY stayed 0 with `overscroll-behavior: contain`
+    set, and jumped to 1200 without it."""
+    client, _, _ = make_client()
+    page = client.get("/admin/users").text
+    idx = page.find(".ui-scroll-area {")
+    assert idx >= 0, "no .ui-scroll-area rule on the page; the assertion below would be vacuous"
+    rule = page[idx : idx + 500]
+    assert "overscroll-behavior: contain" in rule, (
+        f"the scroll area does not contain overscroll, so scrolling past its own edge leaks into the page: {rule!r}"
+    )
 
 
 def test_list_table_uses_the_registrys_scroll_part():

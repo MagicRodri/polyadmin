@@ -1,9 +1,8 @@
 """Field abstraction.
 
 A Field represents a model property plus its admin presentation, not
-merely an HTML input. Context-aware rendering (list/detail/form/filter)
-is added in Phase 2; this module defines the data-level contract that
-rendering will build on.
+merely an HTML input. This module defines the data-level contract that
+context-aware rendering (list/detail/form/filter) builds on.
 """
 
 from __future__ import annotations
@@ -87,7 +86,9 @@ class Field:
         """Run configured validators, returning a list of error messages."""
         errors: list[str] = []
         if self.required and (value is None or value == ""):
-            errors.append(gettext("%(label)s is required.") % {"label": gettext(self.label)})
+            errors.append(
+                gettext("%(label)s is required.") % {"label": gettext(self.label)}
+            )
             return errors
         for validator in self.validators:
             try:
@@ -136,6 +137,10 @@ class EmailField(Field):
 
 class URLField(Field):
     field_type = "url"
+
+
+class ImageField(Field):
+    field_type = "image"
 
 
 class UUIDField(Field):
@@ -192,5 +197,9 @@ class ManyToManyField(Field):
         self.relation = relation
 
     def get_value(self, obj: Any) -> Any:
-        value = self.relation.get_related(obj) if self.relation.get_related is not None else super().get_value(obj)
+        value = (
+            self.relation.get_related(obj)
+            if self.relation.get_related is not None
+            else super().get_value(obj)
+        )
         return value if value is not None else []
