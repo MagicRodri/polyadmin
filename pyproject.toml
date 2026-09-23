@@ -1,6 +1,6 @@
 [project]
 name = "polyadmin"
-version = "0.1.0b1"
+version = "0.1.0b2"
 description = "PolyAdmin: cross-language server-rendered admin framework (Python core)"
 readme = "README.md"
 license = { text = "MIT" }

@@ -62,7 +62,7 @@ See [`docs/components.md`](docs/components.md).
 The first beta release is available on PyPI:
 
 ```bash
-pip install "polyadmin[fastapi]==0.1.0b1"
+pip install "polyadmin[fastapi]==0.1.0b2"
 ```
 
 For the latest unreleased code, install from Git:

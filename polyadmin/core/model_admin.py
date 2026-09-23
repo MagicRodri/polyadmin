@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from polyadmin.core._async import maybe_await
 from polyadmin.core.action import DELETE_SELECTED_NAME, Action, action, collect_actions
 from polyadmin.core.auth import Principal
 from polyadmin.core.field import Field
@@ -271,7 +272,7 @@ class ModelAdmin:
         permission="delete",
         where="list",
     )
-    def delete_selected(self, objects: Sequence[Any], principal: Principal | None) -> str | None:
+    async def delete_selected(self, objects: Sequence[Any], principal: Principal | None) -> str | None:
         """The bulk delete every admin gets for free.
 
         This is the single most common action anyone would otherwise write
@@ -288,7 +289,7 @@ class ModelAdmin:
         deleted = 0
         for obj in objects:
             try:
-                self.delete(obj)
+                await maybe_await(self.delete(obj))
             except Exception as exc:
                 # Stop at the first failure and report how far it got:
                 # silently continuing would leave the user unable to

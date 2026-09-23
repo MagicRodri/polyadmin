@@ -1,5 +1,6 @@
 """@action: declaring actions as ModelAdmin methods."""
 
+import asyncio
 from collections.abc import Sequence
 
 import pytest
@@ -168,6 +169,6 @@ def test_overriding_delete_selected_replaces_the_deletion_and_keeps_the_rest():
 def test_delete_selected_deletes_through_the_delete_hook():
     model_admin = InMemoryUserAdmin()
     user = model_admin.create({"email": "a@example.com"})
-    message = model_admin.delete_selected([user], None)
+    message = asyncio.run(model_admin.delete_selected([user], None))
     assert model_admin.get_object(user.id) is None
     assert "1" in message

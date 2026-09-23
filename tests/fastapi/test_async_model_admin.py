@@ -75,6 +75,19 @@ def test_delete_post_awaits_async_get_object_and_async_delete():
     assert asyncio.run(user_admin.get_object(user.id)) is None
 
 
+def test_delete_selected_awaits_async_delete():
+    client, user_admin = async_client()
+    user = asyncio.run(user_admin.create({"email": "gone@example.com"}))
+    response = client.post(
+        "/admin/users/actions/delete_selected",
+        data={"pks": [str(user.id)]},
+        headers=csrf(client),
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 303)
+    assert asyncio.run(user_admin.get_object(user.id)) is None
+
+
 class AsyncListPageUserAdmin(InMemoryUserAdmin):
     async def list_page(self, list_request):
         await asyncio.sleep(0)

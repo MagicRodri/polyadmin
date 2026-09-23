@@ -1,5 +1,7 @@
 """delete_selected's failure message reads in the request's language."""
 
+import asyncio
+
 import pytest
 
 from polyadmin.i18n import GettextTranslator, use_locale
@@ -19,6 +21,6 @@ def test_failure_message_is_translated(locale, expected):
     model_admin = FailingUserAdmin()
     user = model_admin.create({"email": "a@example.com"})
     with use_locale(locale, GettextTranslator()), pytest.raises(RuntimeError) as caught:
-        model_admin.delete_selected([user], None)
+        asyncio.run(model_admin.delete_selected([user], None))
     assert expected in str(caught.value)
     assert "disk full" in str(caught.value)
