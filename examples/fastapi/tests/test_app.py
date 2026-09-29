@@ -312,3 +312,61 @@ def test_an_unassigned_role_can_be_deleted():
     role = main.roles.create(name="Temporary")
     client.post(f"/admin/roles/{role.id}/delete", headers=csrf(), follow_redirects=False)
     assert main.roles.get(role.id) is None
+
+
+def test_bulk_edit_changes_the_plan_and_keeps_everything_else():
+    from main import users
+
+    user = next(u for u in users.list() if u.organization is not None and u.roles)
+    before = (user.email, user.is_active, user.organization, list(user.roles))
+    response = client.post(
+        "/admin/users/actions/bulk_edit",
+        data={"pks": [str(user.id)], "_confirmed": "1", "_change_plan": "1", "plan": "Enterprise"},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert response.status_code == 303
+    assert user.plan == "Enterprise"
+    assert (user.email, user.is_active, user.organization, list(user.roles)) == before
+
+
+def test_export_emails_downloads_a_csv():
+    from main import users
+
+    user = users.list()[0]
+    response = client.post(
+        "/admin/users/actions/export_emails", data={"pks": [str(user.id)]}, follow_redirects=False, headers=csrf()
+    )
+    assert response.headers["content-disposition"].startswith('attachment; filename="users.csv"')
+    assert user.email in response.text
+
+
+def test_assign_organization_moves_the_selected_users():
+    from main import organizations, users
+
+    user = users.list()[0]
+    target = organizations.list()[-1]
+    response = client.post(
+        "/admin/users/actions/assign_organization",
+        data={"pks": [str(user.id)], "_confirmed": "1", "organization": str(target.id)},
+        follow_redirects=False,
+        headers=csrf(),
+    )
+    assert response.status_code == 303
+    assert user.organization is target
+
+
+def test_dashboard_widgets_load_through_their_fragments():
+    page = client.get("/admin").text
+    assert 'id="dashboard-filters"' in page and 'data-dashboard-export="users-csv"' in page
+    tiles = client.get("/admin/_widgets/overview").text
+    assert tiles.count("data-tile") == 4
+    users_page = client.get("/admin/_widgets/users?search=user00").text
+    assert "data-row" in users_page
+    assert 'data-widget-state="unavailable"' in client.get("/admin/_widgets/billing").text
+
+
+def test_dashboard_export_downloads_the_users_csv():
+    response = client.get("/admin/_exports/users-csv")
+    assert response.headers["content-disposition"].startswith('attachment; filename="users.csv"')
+    assert "email" in response.text

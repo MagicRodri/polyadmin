@@ -417,3 +417,160 @@ def test_detail_page_offers_only_the_allowlisted_actions(admin_page):
     expect(admin_page.get_by_role("button", name="Deactivate")).to_be_visible()
     expect(admin_page.get_by_role("button", name="Activate", exact=True)).to_have_count(0)
     expect(admin_page.get_by_role("button", name="Delete selected")).to_have_count(0)
+
+
+def _run_bulk_action(page, email, label):
+    rows = rows_matching(page, email)
+    expect(rows).to_have_count(1)
+    rows.locator('input[type="checkbox"]').check()
+    page.locator("#bulk-actions-form button").click()
+    page.get_by_role("option", name=label).click()
+
+
+def test_bulk_edit_changes_only_the_ticked_field(admin_page):
+    email = unique_email()
+    create_user(admin_page, email)
+    _run_bulk_action(admin_page, email, "Edit selected")
+
+    form = admin_page.locator("#action-form")
+    expect(form).to_be_visible()
+    plan_row = form.locator("fieldset").filter(has=admin_page.locator('[name="plan"]'))
+    plan_control = plan_row.locator("[x-data*='adminSelect'] button").first
+    expect(plan_control).to_be_disabled()
+    form.locator('input[name="_change_plan"]').check()
+    expect(plan_control).to_be_enabled()
+    plan_control.click()
+    admin_page.get_by_role("option", name="Enterprise").click()
+    admin_page.locator("#action-form-submit").click()
+
+    expect(admin_page.locator("body > ol[aria-label] > li")).to_have_count(1)
+    expect(rows_matching(admin_page, email).first).to_contain_text("Enterprise")
+
+
+def test_action_form_relation_picker_assigns_an_organization(admin_page):
+    email = unique_email()
+    create_user(admin_page, email)
+    _run_bulk_action(admin_page, email, "Assign organization")
+
+    trigger = admin_page.locator('#action-form input[role="combobox"]').first
+    trigger.click()
+    trigger.press_sequentially("Acme", delay=30)
+    option = admin_page.locator('[role="listbox"] [data-pk]').first
+    expect(option).to_be_visible()
+    option.click()
+    admin_page.locator("#action-form-submit").click()
+
+    expect(admin_page.locator("body > ol[aria-label] > li").first).to_contain_text("Assigned 1 user(s)")
+    expect(rows_matching(admin_page, email).first).to_contain_text("Acme")
+
+
+def test_download_action_saves_a_file(admin_page):
+    email = unique_email()
+    create_user(admin_page, email)
+    rows = rows_matching(admin_page, email)
+    rows.locator('input[type="checkbox"]').check()
+    admin_page.locator("#bulk-actions-form button").click()
+    with admin_page.expect_download() as info:
+        admin_page.get_by_role("option", name="Export emails").click()
+    download = info.value
+    assert download.suggested_filename == "users.csv"
+    with open(download.path()) as f:
+        assert email in f.read()
+
+
+def test_dashboard_widgets_load_lazily(admin_page):
+    admin_page.goto(ADMIN_URL)
+    expect(admin_page.locator("#widget-body-overview [data-tile]")).to_have_count(4)
+    expect(admin_page.locator("#widget-body-users [data-row]").first).to_be_visible()
+    expect(admin_page.locator('#widget-body-billing [data-widget-state="unavailable"]')).to_be_visible()
+
+
+def test_changing_the_organization_reloads_only_dependent_widgets(admin_page):
+    admin_page.goto(ADMIN_URL)
+    expect(admin_page.locator("#widget-body-organizations [data-row]").first).to_be_visible()
+    admin_page.evaluate("el => el.dataset.probe = 'kept'", admin_page.locator("#widget-body-organizations [data-row]").first.element_handle())
+    trigger = admin_page.locator('[data-dashboard-filter="organization"] [x-data*="adminSelect"] button').first
+    trigger.click()
+    admin_page.get_by_role("option").nth(1).click()
+    expect(admin_page).to_have_url(re.compile(r"organization="))
+    expect(admin_page.locator("#widget-body-organizations [data-row]").first).to_have_attribute("data-probe", "kept")
+
+
+def test_scrolling_the_users_table_appends_rows(admin_page):
+    admin_page.goto(ADMIN_URL)
+    rows = admin_page.locator("#widget-body-users [data-row]")
+    expect(rows.first).to_be_visible()
+    first_count = rows.count()
+    admin_page.locator("#widget-body-users [data-next-page]").scroll_into_view_if_needed()
+    expect(rows).not_to_have_count(first_count)
+
+
+def test_searching_narrows_the_users_table(admin_page):
+    admin_page.goto(ADMIN_URL)
+    admin_page.locator("#widget-search-users").fill("user100")
+    expect(admin_page.locator("#widget-body-users [data-row]")).to_have_count(1)
+
+
+def test_dashboard_export_downloads_a_file(admin_page):
+    admin_page.goto(ADMIN_URL)
+    with admin_page.expect_download() as info:
+        admin_page.locator('[data-dashboard-export="users-csv"]').click()
+    assert info.value.suggested_filename == "users.csv"
+
+
+def test_scrolling_inside_the_users_card_appends_rows(admin_page):
+    admin_page.goto(ADMIN_URL)
+    rows = admin_page.locator("#widget-body-users [data-row]")
+    expect(rows.first).to_be_visible()
+    first_count = rows.count()
+    admin_page.locator("#widget-users").scroll_into_view_if_needed()
+    admin_page.wait_for_timeout(500)
+    assert rows.count() == first_count, "the next page loaded before the table was scrolled"
+    admin_page.evaluate(
+        "() => { const body = document.querySelector('#widget-body-users'); body.scrollTop = body.scrollHeight; }"
+    )
+    expect(rows).not_to_have_count(first_count, timeout=3000)
+
+
+def test_the_overview_sits_above_the_filters_without_a_header(admin_page):
+    admin_page.goto(ADMIN_URL)
+    overview = admin_page.locator('[data-placement="top"]#widget-overview')
+    expect(overview.locator("[data-tile]")).to_have_count(4)
+    expect(overview.locator("h2")).to_have_count(0)
+    assert overview.bounding_box()["y"] < admin_page.locator("#dashboard-filters").bounding_box()["y"]
+
+
+def test_clicking_a_date_field_opens_the_calendar_and_typing_still_works(admin_page):
+    admin_page.goto(ADMIN_URL)
+    period = admin_page.locator('[data-dashboard-filter="period"]')
+    expect(period.locator('button[aria-label="Open calendar"]')).to_have_count(0)
+    field = period.locator('input[type="date"]').first
+    field.click()
+    grid = period.locator('[role="grid"]').first
+    expect(grid).to_be_visible()
+    assert grid.bounding_box()["width"] >= 220, grid.bounding_box()
+    admin_page.keyboard.press("Escape")
+    expect(grid).to_be_hidden()
+    field.click(position={"x": 16, "y": 12})
+    admin_page.keyboard.type("01152026")
+    expect(field).to_have_value("2026-01-15")
+
+
+def test_the_organization_filter_is_searchable(admin_page):
+    admin_page.goto(ADMIN_URL)
+    trigger = admin_page.locator('[data-dashboard-filter="organization"] [x-data*="adminSelect"] button').first
+    trigger.click()
+    search = admin_page.locator('[role="listbox"] input[x-ref="search"]:visible')
+    expect(search).to_be_focused()
+    search.click()
+    expect(search).to_be_visible()
+    options = admin_page.locator('[role="listbox"] [role="option"]:visible')
+    before = options.count()
+    admin_page.keyboard.type("glob")
+    expect(options.first).to_contain_text("Globex")
+    matches = options.all_inner_texts()
+    assert 0 < len(matches) < before, (len(matches), before)
+    assert all("glob" in text.lower() for text in matches), matches
+    admin_page.keyboard.press("Enter")
+    expect(admin_page).to_have_url(re.compile(r"organization=\d+"))
+    expect(trigger).to_contain_text(matches[0])

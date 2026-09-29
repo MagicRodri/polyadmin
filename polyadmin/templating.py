@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import jinja2
+from markupsafe import Markup
 
 from polyadmin.core.admin import Admin
 from polyadmin.core.inline import INLINE_MULTISELECT_ROWS, Inline
@@ -24,6 +25,7 @@ from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE, ListRequest
 from polyadmin.core.template_context import (
+    action_form_context,
     dashboard_context,
     delete_context,
     delete_selected_context,
@@ -64,6 +66,57 @@ def iso_datetime(value: Any) -> str | None:
     if isinstance(value, str) and _ISO_DATETIME.match(value):
         return value
     return None
+
+
+def _decimal_span(raw: str) -> Markup:
+    return Markup('<span data-format="decimal" data-value="{0}">{0}</span>').format(raw)
+
+
+def _tone(column: Any, value: Any) -> str | None:
+    if not column.tones or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    for minimum, tone in sorted(column.tones, key=lambda t: t[0], reverse=True):
+        if number >= minimum:
+            return tone
+    return None
+
+
+def data_cell(column: Any, value: Any) -> Markup:
+    cell = _data_cell(column, value)
+    tone = None if value is None or value == "" else _tone(column, value)
+    if tone is None:
+        return cell
+    return Markup('<span class="{}">{}</span>').format(ui("badge", tone), cell)
+
+
+def _data_cell(column: Any, value: Any) -> Markup:
+    """One DataTable cell, rendered per its column's format. Numbers carry
+    their raw value for theme.html's locale formatter, so they read in the
+    viewer's locale; the Go adapter's dataCellHTML emits the same markup."""
+    if value is None or value == "":
+        if column.empty:
+            return Markup('<span class="{}">{}</span>').format(ui("badge", "secondary"), gettext(column.empty))
+        return Markup('<span class="{}">—</span>').format(ui("text", "placeholder"))
+    if column.format == "number":
+        return _decimal_span(decimal_display(value))
+    if column.format == "percent":
+        return _decimal_span(f"{float(value):.1f}") + Markup("%")
+    if column.format == "share":
+        count = value.get("count") or 0
+        cell = _decimal_span(decimal_display(count))
+        if count:
+            percentage = _decimal_span(f"{float(value.get('percentage') or 0):.1f}")
+            cell += Markup(' <span class="{}">({}%)</span>').format(ui("text", "muted"), percentage)
+        return cell
+    if column.format == "datetime":
+        iso = iso_datetime(value)
+        if iso is not None:
+            return Markup('<time datetime="{0}" data-format="datetime">{0}</time>').format(iso)
+    return Markup("{}").format(value)
 
 
 def form_value(value: Any, field_type: str) -> str:
@@ -194,6 +247,7 @@ class Renderer:
         env.filters["iso_datetime"] = iso_datetime
         env.filters["decimal_display"] = decimal_display
         env.filters["form_value"] = form_value
+        env.globals["data_cell"] = data_cell
         return env
 
     def _switcher(self, locale: str) -> LocaleSwitcher | None:
@@ -402,13 +456,43 @@ class Renderer:
         dashboard: Any,
         widgets: list[Any],
         *,
+        cards: list[dict[str, Any]] | None = None,
+        filters_view: Sequence[dict[str, Any]] = (),
+        exports: Sequence[Any] = (),
         base_path: str = "/admin",
         messages: list[dict[str, Any]] | None = None,
         principal: Any = None,
         csrf_token: str = "",
     ) -> str:
-        context = dashboard_context(admin, dashboard, widgets, base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token)
+        if cards is None:
+            from polyadmin.fastapi.dashboard import dashboard_card
+
+            dc = dashboard.context({}, principal)
+            cards = [dashboard_card(w, dashboard=dashboard, dc=dc, base_path=base_path) for w in widgets]
+        context = dashboard_context(
+            admin, dashboard, widgets, cards=cards, filters_view=filters_view, exports=exports,
+            base_path=base_path, messages=messages, principal=principal, csrf_token=csrf_token,
+        )
         return self.render("admin/dashboard.html", context)
+
+    def render_widget_fragment(
+        self,
+        widget: Any,
+        *,
+        widget_data: Any,
+        state: str | None = None,
+        message: str | None = None,
+        next_url: str | None = None,
+        rows_only: bool = False,
+        description: str | None = None,
+    ) -> str:
+        template = "admin/widgets/data_table_rows.html" if rows_only else "admin/components/widget_body.html"
+        return self.render(
+            template,
+            {"widget": widget, "widget_data": widget_data, "widget_state": state,
+             "widget_message": message, "next_url": next_url,
+             "refresh_description": bool(widget.description) and not rows_only, "description": description},
+        )
 
     def render_login(
         self,
@@ -468,6 +552,40 @@ class Renderer:
     ) -> str:
         context = delete_selected_context(admin, model_admin, selection, preview, base_path=base_path, principal=principal, csrf_token=csrf_token)
         return self.render_candidates(model_admin.get_template_candidates("delete_selected"), context)
+
+    def render_action_form(
+        self,
+        admin: Admin,
+        model_admin: ModelAdmin,
+        action: Any,
+        selection: dict[str, Any],
+        *,
+        fields: list[Any],
+        data: dict[str, Any],
+        errors: dict[str, list[str]],
+        relation_options: dict[str, Any],
+        ticked: set[str],
+        blocked: list[str],
+        base_path: str = "/admin",
+        principal: Any = None,
+        csrf_token: str = "",
+    ) -> str:
+        context = action_form_context(
+            admin,
+            model_admin,
+            action,
+            selection,
+            fields=fields,
+            data=data,
+            errors=errors,
+            relation_options=relation_options,
+            ticked=ticked,
+            blocked=blocked,
+            base_path=base_path,
+            principal=principal,
+            csrf_token=csrf_token,
+        )
+        return self.render_candidates(model_admin.get_template_candidates("action_form"), context)
 
 
 # A summary of recent activity, not an audit browser: a logger wanting the

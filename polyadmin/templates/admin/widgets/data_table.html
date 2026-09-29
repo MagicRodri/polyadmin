@@ -1,0 +1,20 @@
+<table class="min-w-full text-sm" data-table="{{ widget.key }}">
+  <thead class="sticky top-0 z-10 bg-card">
+    <tr class="border-b border-border">
+      {% for column in widget.columns %}
+      <th class="{{ ui('table', 'th-compact') }}{% if column.align == 'end' %} text-right{% endif %}">{{ _(column.label) }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-border">
+    {% if widget_data.rows.totals %}
+    <tr class="font-semibold" data-totals>
+      {% for column in widget.columns %}
+      <td class="px-2 py-1.5 break-words{% if column.align == 'end' %} text-right{% endif %}">{{ data_cell(column, widget_data.rows.totals.get(column.key)) }}</td>
+      {% endfor %}
+    </tr>
+    {% endif %}
+    {% include "admin/widgets/data_table_rows.html" %}
+  </tbody>
+</table>
+{% if widget_data.footer %}<p class="mt-2 {{ ui('text', 'muted') }}" data-table-footer>{{ widget_data.footer }}</p>{% endif %}

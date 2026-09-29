@@ -53,6 +53,7 @@ nav:
       - Routing: routing.md
       - Relations and inlines: inlines.md
       - Actions and deletes: deletes.md
+      - Bulk editing: bulk-edit.md
       - Exports: exports.md
       - Internationalization: i18n.md
       - Templates and components: templates.md
@@ -67,6 +68,7 @@ nav:
       - Routing: go/reference/routing.md
       - Relations and inlines: go/reference/inlines.md
       - Actions and deletes: go/reference/deletes.md
+      - Bulk editing: go/reference/bulk-edit.md
       - Exports: go/reference/exports.md
       - Internationalization: go/reference/i18n.md
       - Templates and components: go/reference/templates.md

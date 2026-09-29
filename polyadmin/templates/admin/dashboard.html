@@ -1,35 +1,35 @@
 {% extends "admin/base.html" %}
-{% from "admin/components/icons.html" import icon %}
 {% block title %}{{ _(dashboard.title) }}{% endblock %}
 {% block content %}
-{% set widget_icons = {
-  "admin/widgets/metric.html": "metric",
-  "admin/widgets/progress.html": "progress",
-  "admin/widgets/table.html": "table",
-  "admin/widgets/chart.html": "chart",
-  "admin/widgets/activity.html": "activity",
-  "admin/widgets/donut.html": "donut",
-  "admin/widgets/stat.html": "stat",
-  "admin/widgets/timeline.html": "timeline",
-  "admin/widgets/tabs.html": "tabs",
-} %}
+{% for card in cards if card.widget.placement == "top" %}{% include "admin/components/widget_card.html" %}{% endfor %}
+{% if filters_view or exports %}{% include "admin/components/dashboard_filters.html" %}{% endif %}
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-  {% for widget in widgets %}
-  {% set widget_data = widget.get_data() %}
-  <div class="{{ ui('widget') }} {% if widget.size == 'lg' %}{{ ui('widget', 'span-lg') }}{% endif %}">
-    <div class="{{ ui('widget', 'header') }}">
-      <span class="{{ ui('widget', 'icon') }}">
-        {{ icon(widget_icons.get(widget.template, "metric"), "w-5 h-5") }}
-      </span>
-      <h2 class="{{ ui('widget', 'title') }}">{{ _(widget.title) }}</h2>
-    </div>
-    {# Bounded, so a widget with hundreds of rows scrolls inside its own
-       card instead of stretching every card beside it. #}
-    <div class="{{ ui('widget', 'body') }}">{% include widget.template %}</div>
-  </div>
-  {% endfor %}
-  {% if not widgets %}
+  {% for card in cards if card.widget.placement != "top" %}{% include "admin/components/widget_card.html" %}{% endfor %}
+  {% if not cards %}
   <p class="{{ ui('text', 'muted') }}">{{ _("No widgets configured.") }}</p>
   {% endif %}
 </div>
+<script>
+  window.polyadminDashboardFilterChanged = function (event, form) {
+    var wrapper = event.target.closest("[data-dashboard-filter]");
+    if (!wrapper) return;
+    var query = new URLSearchParams(new FormData(form)).toString();
+    history.replaceState(null, "", query ? "?" + query : location.pathname);
+    document.body.dispatchEvent(new CustomEvent("dashboard-filter-" + wrapper.dataset.dashboardFilter));
+  };
+  (function () {
+    function showError(evt) {
+      var target = evt.detail && evt.detail.target;
+      var body = target && target.closest && target.closest("[data-widget-body]");
+      if (!body) return;
+      var card = body.closest("[data-widget]");
+      body.innerHTML = card.querySelector("template[data-widget-error]").innerHTML;
+      body.querySelector("[data-widget-retry]").addEventListener("click", function () {
+        htmx.ajax("GET", body.getAttribute("hx-get"), { source: body, target: body });
+      });
+    }
+    document.addEventListener("htmx:responseError", showError);
+    document.addEventListener("htmx:sendError", showError);
+  })();
+</script>
 {% endblock %}

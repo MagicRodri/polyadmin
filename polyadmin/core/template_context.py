@@ -11,10 +11,11 @@ template to translate, so each string is translated once.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from polyadmin.core.action import DELETE_SELECTED_NAME
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME
 from polyadmin.core.admin import Admin
 from polyadmin.core.delete import (
     DELETE_PREVIEW_SAMPLE,
@@ -679,6 +680,9 @@ def dashboard_context(
     dashboard: Any,
     widgets: list[Any],
     *,
+    cards: Sequence[dict[str, Any]] = (),
+    filters_view: Sequence[dict[str, Any]] = (),
+    exports: Sequence[Any] = (),
     base_path: str = "/admin",
     messages: list[dict[str, Any]] | None = None,
     principal: Any = None,
@@ -705,6 +709,9 @@ def dashboard_context(
         ),
         "dashboard": dashboard,
         "widgets": widgets,
+        "cards": list(cards),
+        "filters_view": list(filters_view),
+        "exports": list(exports),
     }
 
 
@@ -770,6 +777,60 @@ def _action_infos(model_admin: ModelAdmin, actions: list[Any]) -> list[dict[str,
             }
         )
     return infos
+
+
+def action_form_context(
+    admin: Admin,
+    model_admin: ModelAdmin,
+    action: Any,
+    selection: dict[str, Any],
+    *,
+    fields: list[Any],
+    data: dict[str, Any],
+    errors: dict[str, list[str]],
+    relation_options: dict[str, Any],
+    ticked: set[str],
+    blocked: list[str],
+    base_path: str = "/admin",
+    principal: Any = None,
+    csrf_token: str = "",
+) -> dict[str, Any]:
+    """The page between choosing a form action and running it. `selection`
+    has the same shape as delete_selected_context's."""
+    slug = model_admin.get_slug()
+    objects = selection["objects"]
+    heading = gettext(action.label)
+    breadcrumbs = [
+        *category_breadcrumb(model_admin.category),
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
+        {"label": heading, "url": None, "active": True},
+    ]
+    return {
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            breadcrumbs=breadcrumbs,
+        ),
+        "heading": heading,
+        "action": action,
+        "submit_label": gettext(action.submit_label or action.label),
+        "count_text": ngettext("%(num)d record selected", "%(num)d records selected", len(objects))
+        % {"num": len(objects)},
+        "items": selection["items"],
+        "more": max(len(objects) - DELETE_PREVIEW_SAMPLE, 0),
+        "selection": selection,
+        "fields": fields,
+        "data": data,
+        "errors": errors,
+        "non_field_errors": errors.get("", []),
+        "relation_options": relation_options,
+        "bulk_edit": action.name == BULK_EDIT_NAME,
+        "ticked": ticked,
+        "blocked": blocked,
+    }
 
 
 def delete_preview_view(

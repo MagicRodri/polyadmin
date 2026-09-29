@@ -10,10 +10,10 @@ import re
 from typing import Any
 
 from fastapi import Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 
 from polyadmin.core._async import maybe_await
-from polyadmin.core.action import DELETE_SELECTED_NAME
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, ActionFormError, Download
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
@@ -36,6 +36,7 @@ from polyadmin.core.query import (
     with_list_token,
 )
 from polyadmin.core.template_context import delete_preview_view
+from polyadmin.fastapi.action_forms import ActionFormRequest, render_action_form_page, resolve_action_form
 from polyadmin.fastapi.audit import record_audit
 from polyadmin.fastapi.auth import authorize, authorize_object, compute_permissions
 from polyadmin.fastapi.deletes import RETURN_FIELD, confirm_delete_selected
@@ -49,6 +50,7 @@ from polyadmin.fastapi.relations import (
 )
 from polyadmin.fastapi.responses import (
     clear_flash,
+    download_response,
     is_htmx_request,
     pop_flash,
     redirect,
@@ -606,12 +608,47 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             )
             if page is not None:
                 return page
-        message = await maybe_await(action.handler(objects, principal))
+        form_ctx = None
+        data = None
+        if action.form is not None:
+            form_ctx = ActionFormRequest(
+                request=request,
+                form=form,
+                admin=admin,
+                model_admin=model_admin,
+                renderer=renderer,
+                principal=principal,
+                action=action,
+                objects=objects,
+                select_all=select_all,
+                return_to=redirect_to,
+                list_request=list_request,
+                base_path=base_path,
+            )
+            resolved = await resolve_action_form(form_ctx)
+            if isinstance(resolved, Response):
+                return resolved
+            data = resolved
+        try:
+            if form_ctx is not None:
+                result = await maybe_await(action.handler(objects, principal, data))
+            else:
+                result = await maybe_await(action.handler(objects, principal))
+        except ActionFormError as exc:
+            if form_ctx is None:
+                raise
+            return await render_action_form_page(form_ctx, data, exc.errors, status_code=422)
+        # A bulk edit is an ordinary update of each record as far as the log
+        # is concerned.
+        audit_name = AUDIT_UPDATE if action.name == BULK_EDIT_NAME else action.name
         # One entry per record, not per action: the log's question is
         # "what happened to this record", and a bulk run over 500 rows is
         # 500 answers to it.
         for obj in objects:
-            record_audit(admin, principal, model_admin, action.name, obj)
+            record_audit(admin, principal, model_admin, audit_name, obj)
+        if isinstance(result, Download):
+            return download_response(result)
+        message = result
         if message:
             # A host's static message translates from its catalog; one it
             # already translated with gettext misses and passes through.

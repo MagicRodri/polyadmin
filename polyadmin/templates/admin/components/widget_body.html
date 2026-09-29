@@ -1,0 +1,15 @@
+{#- A widget's body, or its empty/unavailable state. Rendered inside the
+    card on first paint and by the fragment route. -#}
+{% if widget_state == "unavailable" %}
+<div class="flex flex-col items-center gap-1 py-6 text-center" data-widget-state="unavailable">
+  <p class="{{ ui('text', 'heading') }}">{{ _("This section is unavailable.") }}</p>
+  {% if widget_message %}<p class="{{ ui('text', 'muted') }}">{{ widget_message }}</p>{% endif %}
+</div>
+{% elif widget_data is mapping and widget_data.get("empty") %}
+<p class="{{ ui('text', 'empty') }}" data-widget-state="empty">{{ _(widget.empty_text) if widget.empty_text else _("No data.") }}</p>
+{% else %}
+{% include widget.template %}
+{% endif %}
+{% if refresh_description %}
+<p id="widget-description-{{ widget.key }}" class="{{ ui('text', 'muted-xs') }}" data-widget-description hx-swap-oob="true">{{ description or "" }}</p>
+{% endif %}

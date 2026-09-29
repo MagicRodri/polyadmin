@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from polyadmin.core._async import maybe_await
-from polyadmin.core.action import DELETE_SELECTED_NAME, Action, action, collect_actions
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, Action, action, collect_actions
 from polyadmin.core.auth import Principal
 from polyadmin.core.field import Field
 from polyadmin.core.inline import Inline
@@ -63,6 +63,9 @@ class ModelAdmin:
     # Override get_readonly_fields to vary by object, which is how
     # "editable on create, frozen afterwards" is expressed.
     readonly_fields: ClassVar[Sequence[str]] = ()
+    # Form fields the list page's "Edit selected" action may change on many
+    # records at once (docs/bulk-edit.md). Empty offers no bulk edit.
+    bulk_edit_fields: ClassVar[Sequence[str]] = ()
     # The sort applied when a request names none, in the ?sort= syntax
     # ("-field" for descending). Without one, rows arrive in whatever
     # order the data source returned, which for a dict-backed store is not
@@ -231,15 +234,19 @@ class ModelAdmin:
         return list(dict.fromkeys([*self.list_display, *self.get_form_fields()]))
 
     def get_actions(self) -> list[Action]:
-        """The @action methods, in definition order, with the built-in bulk
-        delete last -- the destructive action should not be the first thing in
-        the listbox. `disable_delete_selected` and `can_delete = False` remove
-        it however it is defined."""
+        """The @action methods, in definition order, then the built-in bulk
+        edit, with the built-in bulk delete last -- the destructive action
+        should not be the first thing in the listbox. Bulk edit needs
+        `bulk_edit_fields` and `can_update`; `disable_delete_selected` and
+        `can_delete = False` remove the bulk delete however it is defined."""
         actions = collect_actions(self)
-        others = [a for a in actions if a.name != DELETE_SELECTED_NAME]
-        if self.disable_delete_selected or not self.can_delete:
-            return others
-        return [*others, *(a for a in actions if a.name == DELETE_SELECTED_NAME)]
+        builtins = (BULK_EDIT_NAME, DELETE_SELECTED_NAME)
+        ordered = [a for a in actions if a.name not in builtins]
+        if self.get_bulk_edit_fields() and self.can_update:
+            ordered += [a for a in actions if a.name == BULK_EDIT_NAME]
+        if not self.disable_delete_selected and self.can_delete:
+            ordered += [a for a in actions if a.name == DELETE_SELECTED_NAME]
+        return ordered
 
     def get_action(self, name: str) -> Action | None:
         for candidate in self.get_actions():
@@ -255,7 +262,7 @@ class ModelAdmin:
         """The actions one record's detail page offers. delete_selected is a
         bulk action, so it is never among them -- not by `where`, not by being
         named in `detail_actions`, not when a ModelAdmin overrides it."""
-        candidates = [a for a in self.get_actions() if a.name != DELETE_SELECTED_NAME]
+        candidates = [a for a in self.get_actions() if a.name not in (DELETE_SELECTED_NAME, BULK_EDIT_NAME)]
         if self.detail_actions is None:
             return [a for a in candidates if a.where in ("detail", "both")]
         by_name = {a.name: a for a in candidates}
@@ -268,6 +275,22 @@ class ModelAdmin:
                 raise ValueError(
                     f"{type(self).__name__}.detail_actions names {name!r}, which is not one of its actions {sorted(known)}."
                 )
+
+    def get_bulk_edit_fields(self) -> list[str]:
+        return list(self.bulk_edit_fields)
+
+    def get_bulk_edit_form(self) -> list[Field]:
+        return [self.get_field(name) for name in self.get_bulk_edit_fields()]
+
+    def validate_bulk_edit_fields(self) -> None:
+        form_fields = set(self.get_form_fields())
+        for name in self.get_bulk_edit_fields():
+            if name not in form_fields:
+                raise ValueError(
+                    f"{type(self).__name__}.bulk_edit_fields names {name!r}, which is not one of its form fields."
+                )
+            if self.is_readonly(name, None):
+                raise ValueError(f"{type(self).__name__}.bulk_edit_fields names {name!r}, which is read-only.")
 
     @action(
         label=N_("Delete selected"),
@@ -303,6 +326,38 @@ class ModelAdmin:
                 raise RuntimeError(failure % {"deleted": deleted, "total": len(objects), "error": exc}) from exc
             deleted += 1
         return ngettext("Deleted %(num)d record.", "Deleted %(num)d records.", deleted) % {"num": deleted}
+
+    @action(
+        label=N_("Edit selected"),
+        permission="update",
+        where="list",
+        form=lambda model_admin: model_admin.get_bulk_edit_form(),
+    )
+    async def bulk_edit(
+        self, objects: Sequence[Any], principal: Principal | None, data: dict[str, Any]
+    ) -> str | None:
+        """The bulk edit offered when `bulk_edit_fields` is set. `data` holds
+        only the fields the user ticked "Change" on."""
+        return await maybe_await(self.bulk_update(objects, data, principal))
+
+    async def bulk_update(
+        self, objects: Sequence[Any], data: dict[str, Any], principal: Principal | None
+    ) -> str | None:
+        """Apply `data` to every object through this ModelAdmin's own `update`
+        hook. Override to make one bulk call to your backend instead."""
+        updated = 0
+        for obj in objects:
+            try:
+                await maybe_await(self.update(obj, dict(data)))
+            except Exception as exc:
+                # Stop at the first failure and report how far it got, as
+                # delete_selected does.
+                # Translators: a bulk edit stopped part-way. %(updated)d of
+                # %(total)d records were updated; %(error)s is the underlying error.
+                failure = gettext("Updated %(updated)d of %(total)d, then failed: %(error)s")
+                raise RuntimeError(failure % {"updated": updated, "total": len(objects), "error": exc}) from exc
+            updated += 1
+        return ngettext("Updated %(num)d record.", "Updated %(num)d records.", updated) % {"num": updated}
 
     def get_template_candidates(self, view: str) -> list[str]:
         """Template lookup order for a view: an explicit `{view}_template`

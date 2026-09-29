@@ -135,6 +135,9 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             "secondary": "border-transparent bg-secondary text-secondary-foreground",
             "destructive": "border-transparent bg-destructive text-destructive-foreground",
             "outline": "border-border text-foreground",
+            "success": "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+            "warning": "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+            "danger": "border-transparent bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
         },
     },
     "card": {
@@ -645,6 +648,7 @@ UI_REGISTRY: dict[str, dict[str, object]] = {
             # wraps its cells rather than holding them on one line.
             "body": "ui-scroll-area max-h-80 overflow-y-auto overflow-x-hidden",
             "span-lg": "sm:col-span-2 xl:col-span-3",
+            "span-full": "sm:col-span-2 xl:col-span-3",
             "bar-track": "h-2 w-full rounded-full bg-muted",
             "bar-fill": "h-2 rounded-full bg-primary",
         },

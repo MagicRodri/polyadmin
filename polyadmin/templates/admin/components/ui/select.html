@@ -13,8 +13,10 @@
      selected     the currently selected value, compared with `==`
                   against each option's value
      placeholder  shown when nothing is selected
-     disabled     bool #}
-{% macro select(name, options, selected=none, placeholder=_("Select…"), disabled=false, compact=false) %}
+     disabled     bool
+     searchable   a search box at the top of the open list that narrows
+                  the options by label, for a long list #}
+{% macro select(name, options, selected=none, placeholder=_("Select…"), disabled=false, compact=false, searchable=false) %}
 {% set selected_label = namespace(value=none) %}
 {% for value, label in options %}
 {% if value == selected %}{% set selected_label.value = label %}{% endif %}
@@ -62,6 +64,18 @@
        x-transition:leave-start="opacity-100 scale-100"
        x-transition:leave-end="opacity-0 scale-95"
        class="{{ ui('combobox', 'content') }}">
+    {% if searchable %}
+    <div class="{{ ui('multi-select', 'search') }}">
+      {{ icon("search", ui('combobox', 'icon')) }}
+      <input type="text" x-ref="search" x-model="query" @input="applyQuery()" autocomplete="off"
+             placeholder="{{ _('Search…') }}" aria-label="{{ _('Search…') }}"
+             :aria-activedescendant="activeId || null"
+             @keydown.escape.stop="closeToTrigger()"
+             @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+             @keydown.enter.prevent="chooseActive()"
+             class="{{ ui('input', 'bare') }}">
+    </div>
+    {% endif %}
     {% for value, label in options %}
     <div role="option" tabindex="-1" :id="$id('select-option', {{ loop.index0 }})"
          data-value="{{ value }}" data-label="{{ label }}"
@@ -70,6 +84,7 @@
          class="{{ ui('combobox', 'item') }}">{{ label }}</div>
     {% endfor %}
     {% if not options %}<div class="{{ ui('combobox', 'empty') }}">{{ _("No options.") }}</div>{% endif %}
+    {% if searchable %}<div x-ref="noMatches" style="display: none" class="{{ ui('combobox', 'empty') }}">{{ _("No matches.") }}</div>{% endif %}
   </div>
   </template>
 </div>
@@ -93,6 +108,9 @@
       value: "",
       activeEl: null,
       activeId: "",
+      // The searchable variant's query; options it rules out are hidden
+      // with an inline display, which outranks the item's own class.
+      query: "",
 
       hydrate() {
         this.label = this.$el.dataset.label;
@@ -101,8 +119,33 @@
 
       optionEls() {
         return Array.from(this.$refs.options.children).filter(function (el) {
-          return el.dataset.value !== undefined;
+          return el.dataset.value !== undefined && el.style.display !== "none";
         });
+      },
+
+      applyQuery() {
+        var q = this.query.trim().toLowerCase();
+        var any = false;
+        Array.from(this.$refs.options.children).forEach(function (el) {
+          if (el.dataset.value === undefined) return;
+          var match = !q || (el.dataset.label || "").toLowerCase().indexOf(q) !== -1;
+          el.style.display = match ? "" : "none";
+          if (match) any = true;
+        });
+        if (this.$refs.noMatches) this.$refs.noMatches.style.display = any ? "none" : "";
+        this.setActive(this.optionEls()[0]);
+      },
+
+      // Opening the searchable variant starts from an empty query with the
+      // cursor in the search box.
+      opened() {
+        if (this.$refs.search) {
+          this.query = "";
+          this.applyQuery();
+          var search = this.$refs.search;
+          this.$nextTick(function () { search.focus(); });
+        }
+        this.syncActive();
       },
 
       setActive(el) {
@@ -127,7 +170,7 @@
 
       toggle() {
         this.open = !this.open;
-        if (this.open) { this.syncActive(); } else { this.clearActive(); }
+        if (this.open) { this.opened(); } else { this.clearActive(); }
       },
 
       close() { this.open = false; this.clearActive(); },
@@ -138,7 +181,7 @@
       closeToTrigger() { var wasOpen = this.open; this.close(); if (wasOpen) this.$refs.trigger.focus(); },
 
       openAndMove(delta) {
-        if (!this.open) { this.open = true; this.syncActive(); return; }
+        if (!this.open) { this.open = true; this.opened(); return; }
         this.move(delta);
       },
 

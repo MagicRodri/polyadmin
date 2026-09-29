@@ -21,6 +21,23 @@ FINGERPRINT_FIELD = "_fingerprint"
 RETURN_FIELD = "_return"
 
 
+def selection_items(admin: Any, principal: Any, model_admin: Any, objects: list[Any], base_path: str) -> list[dict[str, Any]]:
+    """The sample of a selection a confirmation page lists, each linked only
+    when the principal may view it. Built here rather than in the context
+    builder: the per-object view check lives in the adapter, and core must not
+    import one."""
+    slug = model_admin.get_slug()
+    return [
+        {
+            "label": _object_label(model_admin, obj),
+            "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"
+            if compute_permissions(admin, principal, model_admin, obj)["can_view"]
+            else None,
+        }
+        for obj in objects[:DELETE_PREVIEW_SAMPLE]
+    ]
+
+
 async def confirm_delete_selected(
     request: Request,
     form: Any,
@@ -42,18 +59,7 @@ async def confirm_delete_selected(
     preview = await resolve_delete_preview(admin, model_admin, principal, objects)
     if confirmed and not changed and not preview.blocked:
         return None
-    slug = model_admin.get_slug()
-    # Built here rather than in the context builder: the per-object view check
-    # lives in the adapter, and core must not import one.
-    items = [
-        {
-            "label": _object_label(model_admin, obj),
-            "url": f"{base_path}/{slug}/{model_admin.get_pk(obj)}"
-            if compute_permissions(admin, principal, model_admin, obj)["can_view"]
-            else None,
-        }
-        for obj in objects[:DELETE_PREVIEW_SAMPLE]
-    ]
+    items = selection_items(admin, principal, model_admin, objects, base_path)
     selection = {
         "objects": objects,
         "select_all": select_all,

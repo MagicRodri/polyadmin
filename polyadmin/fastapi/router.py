@@ -19,6 +19,7 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.authorization import DASHBOARD_VIEW
 from polyadmin.core.exporter import CSVExporter, XLSXExporter
 from polyadmin.core.login import LOCALE_PATH, LOGIN_PATH, LOGOUT_PATH
+from polyadmin.fastapi.dashboard import build_dashboard_handlers
 from polyadmin.fastapi.auth import authorize
 from polyadmin.fastapi.handlers import (
     build_action_handler,
@@ -81,28 +82,19 @@ def create_router(
             LOCALE_PATH, build_locale_handler(i18n, base_path), methods=["POST"], include_in_schema=False
         )
 
+    dashboard_index = None
+    if admin.dashboard is not None:
+        dashboard_index, widget_view, export_view = build_dashboard_handlers(admin, renderer, base_path)
+        router.add_api_route("/_widgets/{key}", widget_view, methods=["GET"], include_in_schema=False)
+        router.add_api_route("/_exports/{name}", export_view, methods=["GET"], include_in_schema=False)
+
     @router.get("", include_in_schema=False)
-    async def index(request: Request) -> HTMLResponse:
+    async def index(request: Request):
+        if dashboard_index is not None:
+            return await dashboard_index(request)
         principal, error = await authorize(admin, request, base_path, DASHBOARD_VIEW)
         if error:
             return error
-
-        if admin.dashboard is not None:
-            widgets = admin.dashboard.get_widgets(principal, admin.authorizer)
-            messages = pop_flash(request)
-            html = renderer.render_dashboard(
-                admin,
-                admin.dashboard,
-                widgets,
-                base_path=base_path,
-                messages=messages,
-                principal=principal,
-                csrf_token=request.state.csrf_token,
-            )
-            response = HTMLResponse(html)
-            clear_flash(response)
-            return response
-
         # No Dashboard configured -- land on the first viewable resource.
         for model_admin in admin.model_admins:
             if model_admin.can_view:

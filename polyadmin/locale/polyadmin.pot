@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-23 18:58+0500\n"
+"POT-Creation-Date: 2026-09-29 22:31+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,6 +56,12 @@ msgid "%(name)s updated."
 msgstr ""
 
 #, python-format
+msgid "%(num)d record selected"
+msgid_plural "%(num)d records selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
 msgid "%(num)d row"
 msgid_plural "%(num)d rows"
 msgstr[0] ""
@@ -91,6 +97,9 @@ msgstr ""
 msgid "Asc"
 msgstr ""
 
+msgid "Back"
+msgstr ""
+
 msgid "Back to the admin"
 msgstr ""
 
@@ -101,6 +110,12 @@ msgid "CSV"
 msgstr ""
 
 msgid "Cancel"
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "Choose at least one field to change."
 msgstr ""
 
 msgid "Clear all"
@@ -116,6 +131,9 @@ msgid "Close filters"
 msgstr ""
 
 msgid "Confirm"
+msgstr ""
+
+msgid "Couldn't load this section."
 msgstr ""
 
 #, python-format
@@ -182,6 +200,9 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
+msgid "Edit selected"
+msgstr ""
+
 msgid "Empty"
 msgstr ""
 
@@ -210,6 +231,9 @@ msgid "Last page"
 msgstr ""
 
 msgid "Light mode"
+msgstr ""
+
+msgid "Loading…"
 msgstr ""
 
 msgid "New"
@@ -264,9 +288,6 @@ msgstr ""
 msgid "Notifications"
 msgstr ""
 
-msgid "Open calendar"
-msgstr ""
-
 msgid "Open menu"
 msgstr ""
 
@@ -307,6 +328,9 @@ msgstr ""
 
 #, python-format
 msgid "Remove this %(label)s?"
+msgstr ""
+
+msgid "Retry"
 msgstr ""
 
 msgid "Rows per page"
@@ -395,6 +419,9 @@ msgstr[1] ""
 msgid "The selection changed since you reviewed it."
 msgstr ""
 
+msgid "These records can't be changed:"
+msgstr ""
+
 msgid "These records must be removed first:"
 msgstr ""
 
@@ -408,6 +435,9 @@ msgid "This month"
 msgstr ""
 
 msgid "This page expired before the form was submitted. Reload and try again."
+msgstr ""
+
+msgid "This section is unavailable."
 msgstr ""
 
 msgid "This will also delete"
@@ -429,6 +459,18 @@ msgid "Toggle sidebar"
 msgstr ""
 
 msgid "Total"
+msgstr ""
+
+#, python-format
+msgid "Updated %(num)d record."
+msgid_plural "Updated %(num)d records."
+msgstr[0] ""
+msgstr[1] ""
+
+#. Translators: a bulk edit stopped part-way. %(updated)d of
+#. %(total)d records were updated; %(error)s is the underlying error.
+#, python-format
+msgid "Updated %(updated)d of %(total)d, then failed: %(error)s"
 msgstr ""
 
 msgid "Username or email"

@@ -8,20 +8,95 @@ widget caring where it came from.
 """
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
+
+from polyadmin.core._async import maybe_await
+from polyadmin.core.slug import slugify
+from polyadmin.i18n import gettext
+
+
+class WidgetUnavailable(Exception):
+    """Raised by a widget's data function to show its unavailable state with
+    `message`, e.g. when the service behind it is down."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def takes_context(fn: Callable[..., Any]) -> bool:
+    """Whether `fn` accepts a positional argument, i.e. wants the context."""
+    try:
+        parameters = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    kinds = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+    return any(p.kind in kinds for p in parameters)
+
+
+def _is_context_aware(fn: Callable[..., Any]) -> bool:
+    return inspect.iscoroutinefunction(fn) or takes_context(fn)
+
+
+def call_with_context(fn: Callable[..., Any], ctx: Any) -> Any:
+    return fn(ctx) if takes_context(fn) else fn()
+
+
+async def resolve_widget_data(widget: Widget, ctx: Any) -> Any:
+    return await maybe_await(call_with_context(widget.get_data, ctx))
+
+
+WIDGET_PLACEMENTS = ("grid", "top")
 
 
 class Widget:
     template = "admin/widgets/widget.html"
 
-    def __init__(self, title: str, *, size: str = "md", permission: str | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        *,
+        size: str = "md",
+        permission: str | None = None,
+        key: str | None = None,
+        depends_on: Sequence[str] | None = None,
+        description: str | Callable[[Any], str] | None = None,
+        empty_text: str | None = None,
+        placement: str = "grid",
+    ) -> None:
+        if placement not in WIDGET_PLACEMENTS:
+            raise ValueError(f"Widget {title!r}: placement must be one of {WIDGET_PLACEMENTS}, not {placement!r}.")
         self.title = title
         self.size = size
         self.permission = permission
+        self.key = key or slugify(title)
+        # None reloads on every filter; an empty list on none.
+        self.depends_on = None if depends_on is None else list(depends_on)
+        self.description = description
+        self.empty_text = empty_text
+        # "top" renders above the filter bar, full width and without the
+        # card's header -- a summary row rather than one more card.
+        self.placement = placement
 
     def get_data(self) -> Any:
         raise NotImplementedError(f"{type(self).__name__} must implement get_data().")
+
+    def describe(self, ctx: Any) -> str | None:
+        return self.description(ctx) if callable(self.description) else self.description
+
+    def reloads_on(self, filter_names: Sequence[str]) -> list[str]:
+        if self.depends_on is None:
+            return list(filter_names)
+        return [name for name in self.depends_on if name in filter_names]
+
+    @property
+    def lazy(self) -> bool:
+        """Loaded from its fragment route rather than rendered with the page:
+        its data needs the request's context or has to be awaited."""
+        return inspect.iscoroutinefunction(self.get_data) or takes_context(self.get_data)
 
 
 class Metric(Widget):
@@ -171,15 +246,33 @@ class Donut(Widget):
         title: str,
         *,
         series: Sequence[tuple[str, float]] = (),
-        get_series: Callable[[], Sequence[tuple[str, float]]] | None = None,
+        get_series: Callable[..., Any] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(title, **kwargs)
         self._series = list(series)
         self._get_series = get_series
 
-    def get_data(self) -> dict[str, Any]:
-        series = list(self._get_series() if self._get_series is not None else self._series)
+    @property
+    def lazy(self) -> bool:
+        return self._get_series is not None and _is_context_aware(self._get_series)
+
+    def get_data(self, ctx: Any = None) -> Any:
+        """The ring's slices. A `get_series` that takes the context or is async
+        makes the donut load from its fragment route; the result is then a
+        coroutine the adapter awaits."""
+        if self._get_series is None:
+            return self._shape(list(self._series))
+        series = call_with_context(self._get_series, ctx)
+        if inspect.isawaitable(series):
+            return self._ashape(series)
+        return self._shape(list(series))
+
+    async def _ashape(self, series: Any) -> dict[str, Any]:
+        return self._shape(list(await series))
+
+    @staticmethod
+    def _shape(series: list[tuple[str, float]]) -> dict[str, Any]:
         total = sum(value for _, value in series)
         slices = []
         cumulative = 0.0
@@ -274,7 +367,136 @@ class Tabs(Widget):
         super().__init__(title, **kwargs)
         self.panels = list(panels)
 
-    def get_data(self) -> dict[str, Any]:
-        # Handed to the template, which renders each through the same `{%
-        # include widget.template %}` the dashboard uses.
-        return {"panels": [{"label": label, "widget": widget} for label, widget in self.panels]}
+    @property
+    def lazy(self) -> bool:
+        """Loaded from its fragment route when any panel is."""
+        return any(widget.lazy for _, widget in self.panels)
+
+    def get_data(self, ctx: Any = None) -> Any:
+        # Handed to the template, which renders each panel's data through the
+        # same `{% include widget.template %}` the dashboard uses.
+        if self.lazy:
+            return self._aget_data(ctx)
+        return {"panels": [{"label": label, "widget": widget, "data": widget.get_data()} for label, widget in self.panels]}
+
+    async def _aget_data(self, ctx: Any) -> dict[str, Any]:
+        return {
+            "panels": [
+                {"label": label, "widget": widget, "data": await resolve_widget_data(widget, ctx)}
+                for label, widget in self.panels
+            ]
+        }
+
+
+@dataclass(frozen=True)
+class Tile:
+    label: str
+    value: Any
+    icon: str | None = None
+    hint: str | None = None
+
+
+class MetricGroup(Widget):
+    """A row of headline numbers produced by one data call -- one request to
+    a service that answers all of them, where separate Metrics would make
+    one each."""
+
+    template = "admin/widgets/metric_group.html"
+
+    def __init__(self, title: str, *, get_tiles: Callable[..., Any], **kwargs: Any) -> None:
+        super().__init__(title, **kwargs)
+        self._get_tiles = get_tiles
+
+    async def get_data(self, ctx: Any) -> dict[str, Any]:
+        tiles = list(await maybe_await(call_with_context(self._get_tiles, ctx)))
+        return {"tiles": tiles, "empty": not tiles}
+
+
+COLUMN_FORMATS = ("text", "number", "datetime", "share", "percent")
+TONE_VARIANTS = ("success", "warning", "danger")
+
+
+@dataclass(frozen=True)
+class Column:
+    key: str
+    label: str
+    align: str = "start"
+    format: str = "text"
+    strong: bool = False
+    empty: str | None = None
+    # (minimum, colour) pairs: a numeric value renders as a badge in the
+    # colour of the highest minimum it reaches, e.g. ((80, "success"),
+    # (50, "warning"), (0, "danger")) for a success rate.
+    tones: tuple[tuple[float, str], ...] = ()
+
+    def __post_init__(self) -> None:
+        for _, tone in self.tones:
+            if tone not in TONE_VARIANTS:
+                raise ValueError(f"Column {self.key!r}: tone must be one of {TONE_VARIANTS}, not {tone!r}.")
+        if self.format not in COLUMN_FORMATS:
+            raise ValueError(f"Column {self.key!r}: format must be one of {COLUMN_FORMATS}, not {self.format!r}.")
+        if self.align not in ("start", "end"):
+            raise ValueError(f"Column {self.key!r}: align must be 'start' or 'end', not {self.align!r}.")
+
+
+@dataclass(frozen=True)
+class Rows:
+    """One page of a DataTable. `total` is the size of the whole result when
+    known; `totals` is a summary row shown above the first page."""
+
+    items: list[dict[str, Any]]
+    total: int | None = None
+    totals: dict[str, Any] | None = None
+
+
+def next_offset(rows: Rows, offset: int, limit: int | None) -> int | None:
+    """Where the next page starts, or None when this was the last one. With
+    no total, a page shorter than the limit is the last."""
+    if limit is None or not rows.items:
+        return None
+    shown = offset + len(rows.items)
+    if rows.total is not None:
+        return shown if shown < rows.total else None
+    return shown if len(rows.items) == limit else None
+
+
+class DataTable(Widget):
+    """Rows the host fetches page by page, e.g. from another service.
+    Scrolling to the last row loads the next page."""
+
+    template = "admin/widgets/data_table.html"
+
+    def __init__(
+        self,
+        title: str,
+        *,
+        columns: Sequence[Column],
+        get_rows: Callable[..., Any],
+        page_size: int | None = 50,
+        searchable: bool = False,
+        search_placeholder: str | None = None,
+        total_label: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(title, **kwargs)
+        self.columns = list(columns)
+        self._get_rows = get_rows
+        self.page_size = page_size
+        self.searchable = searchable
+        self.search_placeholder = search_placeholder
+        self.total_label = total_label
+
+    async def get_data(self, ctx: Any) -> dict[str, Any]:
+        rows = await maybe_await(call_with_context(self._get_rows, ctx))
+        if not isinstance(rows, Rows):
+            raise TypeError(f"DataTable {self.key!r}: get_rows must return Rows, not {type(rows).__name__}.")
+        footer = None
+        if self.total_label and rows.total is not None:
+            footer = gettext(self.total_label).replace("{total}", str(rows.total))
+        return {
+            "columns": self.columns,
+            "rows": rows,
+            "next_offset": next_offset(rows, ctx.offset, ctx.limit),
+            "empty": ctx.offset == 0 and not rows.items and not rows.totals,
+            "footer": footer,
+        }

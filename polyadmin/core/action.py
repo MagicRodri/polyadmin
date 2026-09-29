@@ -13,25 +13,56 @@ only records options on the function; ModelAdmin.get_actions() resolves them
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Sequence
+import inspect
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from polyadmin.core.auth import Principal
+
+if TYPE_CHECKING:
+    from polyadmin.core.field import Field
 
 # Which pages offer an action: the list page's bulk bar, one record's detail
 # page, or both.
 ActionWhere = Literal["list", "detail", "both"]
 ACTION_WHERE: tuple[str, ...] = ("list", "detail", "both")
 
-# The bound method a ModelAdmin's action resolves to. It may be a coroutine
-# function; the adapter awaits it when it is one.
-ActionHandler = Callable[[Sequence[Any], Principal | None], Awaitable[str | None] | str | None]
-
 # The built-in bulk delete's action name. Reserved: overriding the
 # ModelAdmin.delete_selected method replaces the built-in, which is how you
 # customise the confirmation text or the deletion itself.
 DELETE_SELECTED_NAME = "delete_selected"
+
+BULK_EDIT_NAME = "bulk_edit"
+
+
+@dataclass(frozen=True)
+class Download:
+    """A file an action answers with instead of a flash message."""
+
+    filename: str
+    content_type: str = "application/octet-stream"
+    content: bytes | None = None
+    stream: Iterator[bytes] | AsyncIterator[bytes] | None = None
+
+    def __post_init__(self) -> None:
+        if (self.content is None) == (self.stream is None):
+            raise ValueError("Download needs exactly one of `content` or `stream`.")
+
+
+class ActionFormError(Exception):
+    """Raised by a form action's handler to redisplay the form with errors.
+    The "" key holds messages that belong to no single field."""
+
+    def __init__(self, errors: dict[str, list[str]]) -> None:
+        super().__init__(errors)
+        self.errors = errors
+
+
+# The bound method a ModelAdmin's action resolves to: (objects, principal),
+# plus the validated `data` for a form action. It may be a coroutine
+# function; the adapter awaits it when it is one.
+ActionHandler = Callable[..., Awaitable[str | None | Download] | str | None | Download]
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -53,6 +84,10 @@ class ActionOptions:
     # Placement only, not authorization: the action route serves every action
     # whichever page offered it, and checks `permission` there.
     where: ActionWhere = "both"
+    # Fields asked for on a page of their own before the action runs, or a
+    # callable building them from the ModelAdmin.
+    form: Any = None
+    submit_label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +101,20 @@ class Action:
     confirm: str | None = None
     permission: str | None = None
     where: ActionWhere = "both"
+    form: tuple[Field, ...] | None = None
+    submit_label: str | None = None
+
+
+def _check_arity(fn: Callable[..., Any], *, has_form: bool) -> None:
+    params = list(inspect.signature(fn).parameters.values())
+    if any(p.kind is p.VAR_POSITIONAL for p in params):
+        return
+    positional = [p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    required = sum(1 for p in positional if p.default is p.empty)
+    if has_form and not (required <= 4 <= len(positional)):
+        raise TypeError(f"@action {fn.__name__}: a form action takes (self, objects, principal, data).")
+    if not has_form and required >= 4:
+        raise TypeError(f"@action {fn.__name__}: takes `data` but declares no form.")
 
 
 @overload
@@ -79,6 +128,8 @@ def action(
     confirm: str | None = None,
     permission: str | None = None,
     where: ActionWhere = "both",
+    form: Any = None,
+    submit_label: str | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -90,17 +141,25 @@ def action(
     confirm: str | None = None,
     permission: str | None = None,
     where: ActionWhere = "both",
+    form: Any = None,
+    submit_label: str | None = None,
 ) -> F | Callable[[F], F]:
-    """Mark a ModelAdmin method as an action: `(self, objects, principal) -> str | None`.
+    """Mark a ModelAdmin method as an action: `(self, objects, principal) -> str | None`,
+    or `(self, objects, principal, data)` when it declares a `form`.
 
     The method's name is the action's name. The decorator returns the function
     unchanged, so type checkers keep seeing its own signature.
     """
     if where not in ACTION_WHERE:
         raise ValueError(f"@action: where must be one of {ACTION_WHERE}, not {where!r}.")
-    options = ActionOptions(label=label, confirm=confirm, permission=permission, where=where)
+    if form is not None and confirm is not None:
+        raise ValueError("@action: a form action cannot also take `confirm`; the form page is the confirmation.")
+    options = ActionOptions(
+        label=label, confirm=confirm, permission=permission, where=where, form=form, submit_label=submit_label
+    )
 
     def decorate(fn: F) -> F:
+        _check_arity(fn, has_form=form is not None)
         setattr(fn, _OPTIONS_ATTR, options)
         return fn
 
@@ -130,6 +189,14 @@ def collect_actions(model_admin: Any) -> list[Action]:
             confirm=options.confirm,
             permission=options.permission,
             where=options.where,
+            form=_resolve_form(options.form, model_admin),
+            submit_label=options.submit_label,
         )
         for name, options in found.items()
     ]
+
+
+def _resolve_form(form: Any, model_admin: Any) -> tuple[Field, ...] | None:
+    if form is None:
+        return None
+    return tuple(form(model_admin) if callable(form) else form)

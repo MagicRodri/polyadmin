@@ -14,8 +14,9 @@
                          truth.
 
      date_picker(...)    the whole control -- a native
-                         <input type="date"> with a button that opens
-                         the grid in a popover.
+                         <input type="date"> that opens the grid in a
+                         popover when clicked, and still takes a date
+                         typed on the keyboard.
 
      calendar_script()   the shared Alpine factory, included once by
                          admin/base.html.
@@ -57,26 +58,17 @@
 {% endmacro %}
 
 {% macro date_picker(name, value="", required=false, disabled=false) %}
-<div class="relative" x-data="adminCalendar()" @keydown.escape="open = false">
-  <div class="flex items-center gap-1">
-    <input x-ref="dateInput" type="date" id="field-{{ name }}" name="{{ name }}"
-           value="{{ value }}" autocomplete="off"
-           {% if required %}required{% endif %}{% if disabled %} disabled{% endif %}
-           class="{{ ui('input') }}">
-    <button type="button" @click="toggle()" x-ref="trigger"
-            :aria-expanded="open ? 'true' : 'false'"
-            aria-label="{{ _('Open calendar') }}"
-            {% if disabled %}disabled{% endif %}
-            class="{{ ui('button', 'outline', 'size-icon') }}">
-      {{ icon("calendar", "w-4 h-4") }}
-    </button>
-  </div>
-  <div x-show="open" x-cloak @click.outside="open = false"
-       x-anchor.bottom-end.offset.6="$refs.trigger"
+<div class="relative" x-data="adminCalendar()" @keydown.escape="open = false" @click.outside="open = false">
+  <input x-ref="dateInput" type="date" id="field-{{ name }}" name="{{ name }}"
+         value="{{ value }}" autocomplete="off" @click="show()"
+         {% if required %}required{% endif %}{% if disabled %} disabled{% endif %}
+         class="{{ ui('input') }} min-w-[10rem] [&::-webkit-calendar-picker-indicator]:hidden">
+  <div x-show="open" x-cloak
+       x-anchor.bottom-start.offset.6="$refs.dateInput"
        x-transition:enter="transition ease-out duration-150"
        x-transition:enter-start="opacity-0 scale-95"
        x-transition:enter-end="opacity-100 scale-100"
-       class="{{ ui('popover', 'content') }} w-auto p-0">
+       class="{{ ui('popover', 'content') }} w-max p-0">
     {{ calendar() }}
   </div>
 </div>
@@ -161,6 +153,12 @@
         // a validation handler) reacts as if a person had typed it.
         this.$refs.dateInput.dispatchEvent(new Event("change", { bubbles: true }));
         this.open = false;
+      },
+
+      show() {
+        if (this.open || this.$refs.dateInput.disabled) return;
+        this.view = this.parsed() || new Date();
+        this.open = true;
       },
 
       toggle() {

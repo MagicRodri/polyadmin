@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+
+from polyadmin.core.action import Download
 
 _FLASH_COOKIE = "admin_messages"
 
@@ -53,3 +56,17 @@ def redirect(request: Request, url: str) -> Response:
         response.headers["HX-Redirect"] = url
         return response
     return RedirectResponse(url, status_code=303)
+
+
+def content_disposition(filename: str) -> str:
+    """An attachment header carrying the name twice: an ASCII fallback for old
+    clients, and the RFC 5987 `filename*` every current browser prefers."""
+    fallback = "".join(ch for ch in filename if 0x20 <= ord(ch) < 0x7F and ch not in '"\\') or "download"
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename, safe='!#$&+.^_`|~-')}"
+
+
+def download_response(download: Download) -> Response:
+    headers = {"Content-Disposition": content_disposition(download.filename)}
+    if download.stream is not None:
+        return StreamingResponse(download.stream, media_type=download.content_type, headers=headers)
+    return Response(download.content, media_type=download.content_type, headers=headers)

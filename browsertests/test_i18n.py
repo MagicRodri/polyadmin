@@ -34,6 +34,9 @@ ALLOWED = re.compile(
     rf"|^(?:{ROLES})(?:, (?:{ROLES}))*$"
     r"|^(?:Demo Admin|Demo Viewer|Amélie)$"
     r"|^(?:Active|Inactive|Account created|user #\d+)$"
+    # The dashboard's example rows and tiles (main.py / dashboard.go).
+    r"|^(?:yes|no|All|active: \d+)$"
+    r"|^The billing service is not configured in this demo\.$"
     r"|^(?:English|Français|Русский|Pseudo \(en-XA\))$"
     r"|^[A-Z]{1,2}$"
     r"|^\W*\d[\d\s.,:/-]*\W*$"
@@ -116,7 +119,7 @@ def test_date_picker_weekdays_are_french_under_fr(browser):
     page = context.new_page()
     _sign_in(page, SUPERUSER)
     page.goto(f"{ADMIN_URL}/organizations/1/edit")
-    page.get_by_role("button", name="Ouvrir le calendrier").click()
+    page.locator('[x-data="adminCalendar()"] input[type="date"]').first.click()
     weekdays = page.locator('[x-data="adminCalendar()"] [role="columnheader"]')
     expect(weekdays.first).to_have_text(re.compile(r"^lun\.?$"))
     expect(weekdays.last).to_have_text(re.compile(r"^dim\.?$"))

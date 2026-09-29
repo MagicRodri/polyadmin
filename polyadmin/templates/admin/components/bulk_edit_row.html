@@ -1,0 +1,15 @@
+{% from "admin/components/ui/field.html" import render_form_input with context %}
+{# One bulk-edit row: the field's control behind a "Change" box. The
+   fieldset disables every control of the row while the box is unticked;
+   without JS the handler still ignores an unticked row. #}
+{% macro bulk_edit_row(field, value, errors, relation, ticked) %}
+<div class="flex items-start gap-3" x-data="{ on: {{ 'true' if ticked else 'false' }} }">
+  <label class="mt-2 flex shrink-0 items-center gap-2 text-sm">
+    <input type="checkbox" name="_change_{{ field.name }}" value="1" x-model="on" {% if ticked %}checked{% endif %} class="{{ ui('checkbox') }}">
+    <span>{{ _("Change") }}</span>
+  </label>
+  <fieldset class="min-w-0 flex-1" :disabled="!on">
+    {{ render_form_input(field, value, errors, relation) }}
+  </fieldset>
+</div>
+{% endmacro %}

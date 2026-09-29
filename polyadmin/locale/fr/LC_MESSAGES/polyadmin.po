@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-23 18:58+0500\n"
+"POT-Creation-Date: 2026-09-29 22:31+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: fr\n"
@@ -57,6 +57,12 @@ msgid "%(name)s updated."
 msgstr "« %(name)s » : enregistrement mis à jour."
 
 #, python-format
+msgid "%(num)d record selected"
+msgid_plural "%(num)d records selected"
+msgstr[0] "%(num)d enregistrement sélectionné"
+msgstr[1] "%(num)d enregistrements sélectionnés"
+
+#, python-format
 msgid "%(num)d row"
 msgid_plural "%(num)d rows"
 msgstr[0] "%(num)d ligne"
@@ -92,6 +98,9 @@ msgstr "Appliquer"
 msgid "Asc"
 msgstr "Croissant"
 
+msgid "Back"
+msgstr "Retour"
+
 msgid "Back to the admin"
 msgstr "Retour à l'administration"
 
@@ -103,6 +112,12 @@ msgstr "CSV"
 
 msgid "Cancel"
 msgstr "Annuler"
+
+msgid "Change"
+msgstr "Modifier"
+
+msgid "Choose at least one field to change."
+msgstr "Choisissez au moins un champ à modifier."
 
 msgid "Clear all"
 msgstr "Tout effacer"
@@ -118,6 +133,9 @@ msgstr "Fermer les filtres"
 
 msgid "Confirm"
 msgstr "Confirmer"
+
+msgid "Couldn't load this section."
+msgstr "Impossible de charger cette section."
 
 #, python-format
 msgid "Couldn't save %(name)s"
@@ -183,6 +201,9 @@ msgstr "Glisser pour réorganiser (non enregistré)"
 msgid "Edit"
 msgstr "Modifier"
 
+msgid "Edit selected"
+msgstr "Modifier la sélection"
+
 msgid "Empty"
 msgstr "Vide"
 
@@ -212,6 +233,9 @@ msgstr "Dernière page"
 
 msgid "Light mode"
 msgstr "Mode clair"
+
+msgid "Loading…"
+msgstr "Chargement…"
 
 msgid "New"
 msgstr "Nouveau"
@@ -265,9 +289,6 @@ msgstr "Introuvable"
 msgid "Notifications"
 msgstr "Notifications"
 
-msgid "Open calendar"
-msgstr "Ouvrir le calendrier"
-
 msgid "Open menu"
 msgstr "Ouvrir le menu"
 
@@ -309,6 +330,9 @@ msgstr "Retirer %(label)s"
 #, python-format
 msgid "Remove this %(label)s?"
 msgstr "Retirer « %(label)s » ?"
+
+msgid "Retry"
+msgstr "Réessayer"
 
 msgid "Rows per page"
 msgstr "Lignes par page"
@@ -396,6 +420,9 @@ msgstr[1] "Tous les %(num)d de cette page sont sélectionnés."
 msgid "The selection changed since you reviewed it."
 msgstr "La sélection a changé depuis votre vérification."
 
+msgid "These records can't be changed:"
+msgstr "Ces enregistrements ne peuvent pas être modifiés :"
+
 msgid "These records must be removed first:"
 msgstr "Ces enregistrements doivent d'abord être supprimés :"
 
@@ -410,6 +437,9 @@ msgstr "Ce mois-ci"
 
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr "Cette page a expiré avant l'envoi du formulaire. Rechargez la page et réessayez."
+
+msgid "This section is unavailable."
+msgstr "Cette section est indisponible."
 
 msgid "This will also delete"
 msgstr "Seront aussi supprimés"
@@ -431,6 +461,18 @@ msgstr "Basculer la barre latérale"
 
 msgid "Total"
 msgstr "Total"
+
+#, python-format
+msgid "Updated %(num)d record."
+msgid_plural "Updated %(num)d records."
+msgstr[0] "%(num)d enregistrement mis à jour."
+msgstr[1] "%(num)d enregistrements mis à jour."
+
+#. Translators: a bulk edit stopped part-way. %(updated)d of
+#. %(total)d records were updated; %(error)s is the underlying error.
+#, python-format
+msgid "Updated %(updated)d of %(total)d, then failed: %(error)s"
+msgstr "%(updated)d sur %(total)d mis à jour, puis échec : %(error)s"
 
 msgid "Username or email"
 msgstr "Nom d'utilisateur ou e-mail"
@@ -483,13 +525,4 @@ msgid "…and %(num)d more"
 msgid_plural "…and %(num)d more"
 msgstr[0] "…et %(num)d autre"
 msgstr[1] "…et %(num)d autres"
-
-#~ msgid "Email"
-#~ msgstr "E-mail"
-
-#~ msgid "That email and password don't match an account."
-#~ msgstr "Cette adresse e-mail et ce mot de passe ne correspondent à aucun compte."
-
-#~ msgid "m@example.com"
-#~ msgstr "m@example.com"
 

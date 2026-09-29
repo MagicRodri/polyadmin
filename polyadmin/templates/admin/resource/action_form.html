@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% from "admin/components/csrf-field.html" import csrf_field %}
+{% from "admin/components/ui/field.html" import render_form_input with context %}
+{% from "admin/components/bulk_edit_row.html" import bulk_edit_row with context %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<form id="action-form" method="post" action="{{ base_path }}/{{ model_admin.get_slug() }}/actions/{{ action.name }}" class="{{ ui('panel', 'form') }} max-w-xl">
+  {{ csrf_field(csrf_token) }}
+  <input type="hidden" name="_confirmed" value="1">
+  <input type="hidden" name="_return" value="{{ selection.return_to }}">
+  <input type="hidden" name="_fingerprint" value="{{ selection.fingerprint }}">
+  {% if selection.select_all %}
+  <input type="hidden" name="_select_all" value="1">
+  <input type="hidden" name="search" value="{{ selection.list_request.search or '' }}">
+  <input type="hidden" name="sort" value="{{ selection.list_request.ordering or '' }}">
+  {% for name, value in selection.list_request.filters.items() %}<input type="hidden" name="filter[{{ name }}]" value="{{ value }}">
+  {% endfor %}
+  {% else %}
+  {% for pk in selection.pks %}<input type="hidden" name="pks" value="{{ pk }}">
+  {% endfor %}
+  {% endif %}
+  {% if selection.changed %}
+  <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4"><p class="{{ ui('alert', 'description') }}">{{ _("The selection changed since you reviewed it.") }}</p></div>
+  {% endif %}
+  {% if non_field_errors %}
+  <div role="alert" class="{{ ui('alert', 'destructive') }} mb-4">{% for error in non_field_errors %}<p class="{{ ui('alert', 'description') }}">{{ error }}</p>{% endfor %}</div>
+  {% endif %}
+  {% if blocked %}
+  <div role="alert" id="action-form-blocked" class="{{ ui('alert', 'destructive') }} mb-4">
+    <p class="{{ ui('alert', 'description') }}">{{ _("These records can't be changed:") }}</p>
+    <ul class="{{ ui('alert', 'description') }} list-disc pl-5">{% for label in blocked %}<li>{{ label }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <p class="{{ ui('text', 'heading') }}">{{ heading }}</p>
+  <p class="mt-1 {{ ui('text', 'muted') }}">{{ count_text }}</p>
+  <section class="{{ ui('panel') }} mt-4">
+    <h3 class="{{ ui('text', 'heading') }}">{{ _("Selected records") }}</h3>
+    <ul class="mt-2 flex flex-col gap-1 text-sm">
+      {% for item in items %}
+      <li>{% if item.url %}<a href="{{ item.url }}" class="{{ ui('text', 'link') }}">{{ item.label }}</a>{% else %}{{ item.label }}{% endif %}</li>
+      {% endfor %}
+      {% if more %}<li class="{{ ui('text', 'muted') }}">{{ ngettext("…and %(num)d more", "…and %(num)d more", more) }}</li>{% endif %}
+    </ul>
+  </section>
+  <div class="mt-4 flex flex-col gap-4">
+    {% for field in fields %}
+    {% set value = data.get(field.name, field.default if field.has_default else none) %}
+    {% if bulk_edit %}
+    {{ bulk_edit_row(field, value, errors.get(field.name), relation_options.get(field.name), field.name in ticked) }}
+    {% else %}
+    {{ render_form_input(field, value, errors.get(field.name), relation_options.get(field.name)) }}
+    {% endif %}
+    {% endfor %}
+  </div>
+  <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+    <button type="submit" id="action-form-submit" class="{{ ui('button') }}">{{ submit_label }}</button>
+    <a href="{{ selection.return_to }}" class="{{ ui('button', 'outline') }}">{{ _("Back") }}</a>
+  </div>
+</form>
+{% endblock %}

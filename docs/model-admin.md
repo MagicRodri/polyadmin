@@ -369,7 +369,8 @@ title-cased. The return value (a string, or `None`) becomes the success
 toast text, falling back to `"{label} applied to N record(s)."` when empty.
 
 `@action` works bare (`@action`) or with options. The options are
-keyword-only: `label=`, `confirm=`, `permission=` and `where=`.
+keyword-only: `label=`, `confirm=`, `permission=`, `where=`, `form=` and
+`submit_label=`.
 
 A method may also be `async def` -- useful for one that calls out to an
 async client, such as pushing the selected records to an external system.
@@ -424,6 +425,82 @@ however it is defined.
 Placement is not authorization: hiding a button does not stop a request
 to `POST /{slug}/actions/{name}`. Restrict who may run an action with
 `permission=`.
+
+### Actions that ask for input
+
+Give an action a `form=` and it asks for values on a page of its own before
+it runs. The fields are the same `Field` classes a ModelAdmin's form uses, so
+they parse, validate and render the same way, and the method takes a fourth
+argument, `data`, holding the validated values:
+
+```python
+from polyadmin import ActionFormError
+from polyadmin.core.field import ForeignKeyField, TextField
+
+class UserAdmin(ModelAdmin):
+    @action(
+        label="Move to organization",
+        form=[
+            ForeignKeyField("organization", relation=ORGANIZATION_RELATION, required=True),
+            TextField("reason"),
+        ],
+        submit_label="Move",
+    )
+    def move(self, objects: Sequence[User], principal: Principal | None, data: dict) -> str | None:
+        organization = self.organizations.get(int(data["organization"]))
+        if organization.archived:
+            raise ActionFormError({"organization": ["Pick an organization that is still active."]})
+        for obj in objects:
+            obj.organization = organization
+        return f"Moved {len(objects)} user(s)."
+```
+
+Picking the action posts to the same `POST /{slug}/actions/{name}` route as
+any other. The first post answers with the form page — the selected records,
+the fields prefilled from each field's `default`, and `submit_label` (the
+action's label when unset) on the button — and runs nothing. Submitting it
+posts again with the selection carried along: a field that fails its own
+validation redisplays the page with the values kept, and only a valid
+submission calls the method. When the selection was "all N matching" and the
+matching set changed in between, the page comes back with a notice instead of
+running over records nobody reviewed, as the delete confirmation does.
+
+Checks that span fields, or need a lookup, belong in the method: raise
+`ActionFormError({field_name: [message, ...]})` to redisplay the form with
+those messages, using the `""` key for one that belongs to no single field.
+
+A relation field posts the chosen record's primary key as a string. A
+foreign key renders as the lookup-backed combobox when its target resource
+has `search_fields`, and as a list of every target record otherwise; a
+many-to-many always renders as the multi-select. A relation whose target the
+principal may not view (`{target}.view`) offers no records at all, and a
+posted pk for one is never resolved to its label.
+
+`form=` and `confirm=` cannot be combined — the form page is the
+confirmation — and a form action's method must take `data`; both mistakes
+fail when the class is defined. `form=` may also be a callable taking the
+ModelAdmin and returning the fields, for a form built from the instance's own
+configuration. The built-in bulk edit is one — see [`bulk-edit.md`](bulk-edit.md).
+
+### Answering with a file
+
+Any action, with or without a form, may return a `Download` instead of a
+message. The browser saves it and stays on the page it posted from:
+
+```python
+from polyadmin import Download
+
+class UserAdmin(ModelAdmin):
+    @action(label="Export emails")
+    def export_emails(self, objects: Sequence[User], principal: Principal | None) -> Download:
+        lines = ["email", *(obj.email for obj in objects)]
+        return Download("users.csv", "text/csv", content="\n".join(lines).encode())
+```
+
+Pass `content=` for bytes already in hand or `stream=` for an iterator or
+async iterator of byte chunks, never both. The filename may be any Unicode:
+it is sent both as an ASCII fallback and in the RFC 5987 `filename*` form
+that current browsers read.
 
 ### Migrating from `Action(...)`
 

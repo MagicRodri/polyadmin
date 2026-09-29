@@ -60,11 +60,15 @@ def test_date_field_renders_native_input_plus_calendar_popover(task_client):
     for fragment in (
         'x-data="adminCalendar()"',
         'x-ref="dateInput"',
-        'aria-label="Open calendar"',
-        'x-anchor.bottom-end.offset.6="$refs.trigger"',
+        '@click="show()"',
+        'x-anchor.bottom-start.offset.6="$refs.dateInput"',
+        "[&::-webkit-calendar-picker-indicator]:hidden",
+        "w-max p-0",
         'x-for="day in days"',
     ):
         assert fragment in page, f"date picker missing {fragment}"
+    # Clicking the field opens the calendar; there is no separate button.
+    assert 'aria-label="Open calendar"' not in page
 
 
 def test_date_field_prefills_existing_value(task_client):

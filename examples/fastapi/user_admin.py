@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 from models import OrganizationRepository, RoleRepository, User, UserRepository
 
-from polyadmin import BooleanField, EmailField, EnumField, ModelAdmin
+from polyadmin import BooleanField, Download, EmailField, EnumField, ModelAdmin
 from polyadmin.core.action import action
 from polyadmin.core.auth import Principal
 from polyadmin.core.field import ForeignKeyField, ManyToManyField
@@ -111,8 +111,27 @@ class UserAdmin(ModelAdmin):
     def deactivate(self, objects: Sequence[User], principal: Principal | None) -> str | None:
         return self._set_active(objects, False)
 
+    @action(
+        label="Assign organization",
+        form=[ForeignKeyField("organization", relation=ORGANIZATION_RELATION, required=True)],
+        submit_label="Assign",
+    )
+    def assign_organization(self, objects: Sequence[User], principal: Principal | None, data) -> str | None:
+        organization = self._resolve_organization(data)
+        for obj in objects:
+            obj.organization = organization
+        return f"Assigned {len(objects)} user(s) to {organization.name}."
+
+    @action(label="Export emails")
+    def export_emails(self, objects: Sequence[User], principal: Principal | None) -> Download:
+        lines = ["email", *(obj.email for obj in objects)]
+        return Download("users.csv", "text/csv", content="\n".join(lines).encode())
+
     # The detail page offers Deactivate only; Activate stays a bulk action.
     detail_actions = ["deactivate"]
+    # "Edit selected" on the list page. Its update() call carries only the
+    # fields ticked, which is why update() below keeps whatever is absent.
+    bulk_edit_fields = ["is_active", "plan", "organization"]
     fields = [
         # help_text is where an ORM/DB column comment lands. It shows
         # under the control on the form and under the label on the
@@ -190,8 +209,8 @@ class UserAdmin(ModelAdmin):
             email=data.get("email"),
             is_active=data.get("is_active"),
             plan=data.get("plan"),
-            organization=self._resolve_organization(data),
-            roles=self._resolve_roles(data),
+            organization=self._resolve_organization(data) if "organization" in data else obj.organization,
+            roles=self._resolve_roles(data) if "roles" in data else obj.roles,
         )
 
     def delete(self, obj):

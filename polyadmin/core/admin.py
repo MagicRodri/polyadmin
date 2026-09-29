@@ -42,6 +42,8 @@ class Admin:
         pseudo_locale: bool = False,
     ) -> None:
         self.dashboard = dashboard
+        if dashboard is not None and hasattr(dashboard, "validate"):
+            dashboard.validate()
         self.authenticator = authenticator
         self.authorizer = authorizer
         self.site_title = site_title
@@ -82,6 +84,7 @@ class Admin:
         slug = model_admin.get_slug()
         if slug in self._registry:
             raise ValueError(f"A ModelAdmin is already registered for slug {slug!r}.")
+        model_admin.validate_bulk_edit_fields()
         model_admin.validate_detail_actions()
         self._registry[slug] = model_admin
 

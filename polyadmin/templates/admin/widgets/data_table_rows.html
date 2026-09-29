@@ -1,0 +1,16 @@
+{% if widget_state == "unavailable" %}
+<tr data-widget-state="unavailable"><td colspan="{{ widget.columns|length }}" class="px-2 py-1.5 {{ ui('text', 'muted') }}">{{ widget_message or _("This section is unavailable.") }}</td></tr>
+{% else %}
+{% for row in widget_data.rows.items %}
+<tr class="hover:bg-muted/50" data-row>
+  {% for column in widget.columns %}
+  <td class="px-2 py-1.5 break-words{% if column.align == 'end' %} text-right{% endif %}{% if column.strong %} font-semibold{% endif %}">{{ data_cell(column, row.get(column.key)) }}</td>
+  {% endfor %}
+</tr>
+{% endfor %}
+{% if next_url %}
+<tr hx-get="{{ next_url }}" hx-trigger="intersect once" hx-swap="outerHTML" data-next-page>
+  <td colspan="{{ widget.columns|length }}" class="px-2 py-1.5 {{ ui('text', 'muted') }}">{{ _("Loading…") }}</td>
+</tr>
+{% endif %}
+{% endif %}

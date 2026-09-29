@@ -1,0 +1,38 @@
+{% from "admin/components/icons.html" import icon %}
+{% set top = card.widget.placement == "top" %}
+<div class="{% if top %}mb-4{% else %}{{ ui('widget') }}{% if card.widget.size == 'lg' %} {{ ui('widget', 'span-lg') }}{% elif card.widget.size == 'full' %} {{ ui('widget', 'span-full') }}{% endif %}{% endif %}"
+     id="widget-{{ card.widget.key }}" data-widget="{{ card.widget.key }}"{% if top %} data-placement="top"{% endif %}>
+  {% if not top %}
+  <div class="{{ ui('widget', 'header') }}">
+    <span class="{{ ui('widget', 'icon') }}">{{ icon(card.icon, "w-5 h-5") }}</span>
+    <div class="min-w-0 flex-1">
+      <h2 class="{{ ui('widget', 'title') }}">{{ _(card.widget.title) }}</h2>
+      {% if card.widget.description %}<p id="widget-description-{{ card.widget.key }}" class="{{ ui('text', 'muted-xs') }}" data-widget-description>{{ card.description or "" }}</p>{% endif %}
+    </div>
+    {% if card.searchable %}
+    <input type="search" name="search" id="widget-search-{{ card.widget.key }}" autocomplete="off"
+           placeholder="{{ _(card.search_placeholder) if card.search_placeholder else _('Search…') }}"
+           class="{{ ui('input') }} max-w-xs"
+           hx-get="{{ card.url }}" hx-trigger="input changed delay:300ms, search"
+           hx-target="#widget-body-{{ card.widget.key }}"{% if card.include %} hx-include="{{ card.include }}"{% endif %}>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div id="widget-body-{{ card.widget.key }}"{% if not top %} class="{{ ui('widget', 'body') }}"{% endif %} data-widget-body
+       {%- if card.trigger %} hx-get="{{ card.url }}" hx-trigger="{{ card.trigger }}"
+       {%- set includes = [card.include] if card.include else [] %}{% if card.searchable %}{% set includes = includes + ['#widget-search-' ~ card.widget.key] %}{% endif %}
+       {%- if includes %} hx-include="{{ includes|join(', ') }}"{% endif %}{% endif %}>
+    {% if card.lazy %}
+    <p class="{{ ui('text', 'muted') }}" data-widget-state="loading">{{ _("Loading…") }}</p>
+    {% else %}
+    {% set widget = card.widget %}{% set widget_data = card.data %}{% set widget_state = card.state %}{% set widget_message = card.message %}
+    {% include "admin/components/widget_body.html" %}
+    {% endif %}
+  </div>
+  <template data-widget-error>
+    <div class="flex flex-col items-center gap-2 py-6 text-center" data-widget-state="error">
+      <p class="{{ ui('text', 'muted') }}">{{ _("Couldn't load this section.") }}</p>
+      <button type="button" class="{{ ui('button', 'outline') }}" data-widget-retry>{{ _("Retry") }}</button>
+    </div>
+  </template>
+</div>

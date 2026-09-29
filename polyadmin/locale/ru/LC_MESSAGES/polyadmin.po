@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PolyAdmin 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/MagicRodri/polyadmin/issues\n"
-"POT-Creation-Date: 2026-09-23 18:58+0500\n"
+"POT-Creation-Date: 2026-09-29 22:31+0500\n"
 "PO-Revision-Date: 2026-09-14 22:04+0500\n"
 "Last-Translator: Draft, awaiting native review\n"
 "Language: ru\n"
@@ -59,6 +59,13 @@ msgid "%(name)s updated."
 msgstr "«%(name)s»: запись обновлена."
 
 #, python-format
+msgid "%(num)d record selected"
+msgid_plural "%(num)d records selected"
+msgstr[0] "Выбрана %(num)d запись"
+msgstr[1] "Выбрано %(num)d записи"
+msgstr[2] "Выбрано %(num)d записей"
+
+#, python-format
 msgid "%(num)d row"
 msgid_plural "%(num)d rows"
 msgstr[0] "%(num)d строка"
@@ -96,6 +103,9 @@ msgstr "Применить"
 msgid "Asc"
 msgstr "По возрастанию"
 
+msgid "Back"
+msgstr "Назад"
+
 msgid "Back to the admin"
 msgstr "Вернуться в панель администратора"
 
@@ -107,6 +117,12 @@ msgstr "CSV"
 
 msgid "Cancel"
 msgstr "Отмена"
+
+msgid "Change"
+msgstr "Изменить"
+
+msgid "Choose at least one field to change."
+msgstr "Выберите хотя бы одно поле для изменения."
 
 msgid "Clear all"
 msgstr "Очистить всё"
@@ -122,6 +138,9 @@ msgstr "Закрыть фильтры"
 
 msgid "Confirm"
 msgstr "Подтвердить"
+
+msgid "Couldn't load this section."
+msgstr "Не удалось загрузить раздел."
 
 #, python-format
 msgid "Couldn't save %(name)s"
@@ -189,6 +208,9 @@ msgstr "Перетащите, чтобы изменить порядок (не �
 msgid "Edit"
 msgstr "Изменить"
 
+msgid "Edit selected"
+msgstr "Изменить выбранные"
+
 msgid "Empty"
 msgstr "Пусто"
 
@@ -218,6 +240,9 @@ msgstr "Последняя страница"
 
 msgid "Light mode"
 msgstr "Светлая тема"
+
+msgid "Loading…"
+msgstr "Загрузка…"
 
 msgid "New"
 msgstr "Новый"
@@ -271,9 +296,6 @@ msgstr "Не найдено"
 msgid "Notifications"
 msgstr "Уведомления"
 
-msgid "Open calendar"
-msgstr "Открыть календарь"
-
 msgid "Open menu"
 msgstr "Открыть меню"
 
@@ -315,6 +337,9 @@ msgstr "Убрать %(label)s"
 #, python-format
 msgid "Remove this %(label)s?"
 msgstr "Убрать «%(label)s»?"
+
+msgid "Retry"
+msgstr "Повторить"
 
 msgid "Rows per page"
 msgstr "Строк на странице"
@@ -405,6 +430,9 @@ msgstr[2] "Все %(num)d записей на этой странице выбр
 msgid "The selection changed since you reviewed it."
 msgstr "Выбор изменился с момента проверки."
 
+msgid "These records can't be changed:"
+msgstr "Эти записи нельзя изменить:"
+
 msgid "These records must be removed first:"
 msgstr "Сначала нужно удалить эти записи:"
 
@@ -419,6 +447,9 @@ msgstr "В этом месяце"
 
 msgid "This page expired before the form was submitted. Reload and try again."
 msgstr "Срок действия страницы истёк до отправки формы. Обновите страницу и попробуйте снова."
+
+msgid "This section is unavailable."
+msgstr "Раздел недоступен."
 
 msgid "This will also delete"
 msgstr "Также будут удалены"
@@ -440,6 +471,19 @@ msgstr "Переключить боковую панель"
 
 msgid "Total"
 msgstr "Всего"
+
+#, python-format
+msgid "Updated %(num)d record."
+msgid_plural "Updated %(num)d records."
+msgstr[0] "Обновлена %(num)d запись."
+msgstr[1] "Обновлено %(num)d записи."
+msgstr[2] "Обновлено %(num)d записей."
+
+#. Translators: a bulk edit stopped part-way. %(updated)d of
+#. %(total)d records were updated; %(error)s is the underlying error.
+#, python-format
+msgid "Updated %(updated)d of %(total)d, then failed: %(error)s"
+msgstr "Обновлено %(updated)d из %(total)d, затем сбой: %(error)s"
 
 msgid "Username or email"
 msgstr "Имя пользователя или эл. почта"
@@ -493,13 +537,4 @@ msgid_plural "…and %(num)d more"
 msgstr[0] "…и ещё %(num)d"
 msgstr[1] "…и ещё %(num)d"
 msgstr[2] "…и ещё %(num)d"
-
-#~ msgid "Email"
-#~ msgstr "Эл. почта"
-
-#~ msgid "That email and password don't match an account."
-#~ msgstr "Такой адрес электронной почты и пароль не соответствуют ни одной учётной записи."
-
-#~ msgid "m@example.com"
-#~ msgstr "m@example.com"
 

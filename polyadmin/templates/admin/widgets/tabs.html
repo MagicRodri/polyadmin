@@ -25,7 +25,7 @@
   </div>
   {% for panel in widget_data.panels %}
   <div role="tabpanel" x-show="active === {{ loop.index0 }}"{% if not loop.first %} x-cloak{% endif %}>
-    {% with widget_data = panel.widget.get_data() %}{% include panel.widget.template %}{% endwith %}
+    {% with widget = panel.widget, widget_data = panel.data %}{% include panel.widget.template %}{% endwith %}
   </div>
   {% endfor %}
   {% else %}

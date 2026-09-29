@@ -18,8 +18,23 @@ from session import CookieSessionBackend, ReadOnlyForNonSuperusers
 from user_admin import UserAdmin
 
 from polyadmin.core.admin import Admin
-from polyadmin.core.dashboard import Dashboard
-from polyadmin.core.widget import Chart, Donut, Metric, Stat, Table, Tabs, Timeline
+from polyadmin import Download
+from polyadmin.core.dashboard import Dashboard, DashboardExport, DateRangeFilter, SelectFilter
+from polyadmin.core.widget import (
+    Chart,
+    Column,
+    DataTable,
+    Donut,
+    Metric,
+    MetricGroup,
+    Rows,
+    Stat,
+    Table,
+    Tabs,
+    Tile,
+    Timeline,
+    WidgetUnavailable,
+)
 from polyadmin.fastapi.router import create_router
 
 users = UserRepository()
@@ -27,11 +42,81 @@ organizations = OrganizationRepository()
 roles = RoleRepository()
 seed(users, organizations, roles)
 
+def _users_in(ctx):
+    selected = ctx.filters["organization"]
+    return [u for u in users.list() if not selected or (u.organization and str(u.organization.id) == selected)]
+
+
+def overview_tiles(ctx):
+    scoped = _users_in(ctx)
+    active = sum(1 for u in scoped if u.is_active)
+    return [
+        Tile("Users", len(scoped), icon="users", hint=f"active: {active}"),
+        Tile("Organizations", len(organizations.list()), icon="file-text"),
+        Tile("Roles", len(roles.list()), icon="activity"),
+        Tile("Inactive users", len(scoped) - active, icon="user"),
+    ]
+
+
+def organization_rows(ctx):
+    items = []
+    for org in organizations.list():
+        members = [u for u in users.list() if u.organization is org]
+        active = sum(1 for u in members if u.is_active)
+        share = {"count": active, "percentage": active / len(members) * 100 if members else 0}
+        items.append({"name": org.name, "users": len(members), "active": share})
+    total_users = sum(i["users"] for i in items)
+    total_active = sum(i["active"]["count"] for i in items)
+    totals = {"name": "All", "users": total_users,
+              "active": {"count": total_active, "percentage": total_active / total_users * 100 if total_users else 0}}
+    return Rows(items, total=len(items), totals=totals)
+
+
+def user_rows(ctx):
+    scoped = [u for u in _users_in(ctx) if not ctx.search or ctx.search in u.email]
+    page = scoped[ctx.offset : ctx.offset + ctx.limit]
+    return Rows(
+        [{"email": u.email, "organization": u.organization.name if u.organization else None, "active": "yes" if u.is_active else "no"} for u in page],
+        total=len(scoped),
+    )
+
+
+def billing(ctx):
+    raise WidgetUnavailable("The billing service is not configured in this demo.")
+
+
+def export_users(ctx):
+    lines = ["email", *(u.email for u in _users_in(ctx))]
+    return Download("users.csv", "text/csv", content="\n".join(lines).encode())
+
+
 dashboard = Dashboard(
     title="Overview",
+    filters=[
+        DateRangeFilter("period", label="Period"),
+        SelectFilter("organization", label="Organization", empty_label="All organizations", searchable=True,
+                     get_choices=lambda: [(o.id, o.name) for o in organizations.list()]),
+    ],
+    exports=[DashboardExport("users-csv", label="Export users", handler=export_users)],
     widgets=[
-        Metric("Users", get_value=lambda: len(users.list())),
-        Metric("Organizations", get_value=lambda: len(organizations.list())),
+        MetricGroup("At a glance", key="overview", placement="top", depends_on=["organization"], get_tiles=overview_tiles),
+        DataTable(
+            "Organizations", key="organizations", size="lg", depends_on=[], page_size=None,
+            columns=[Column("name", "Organization", strong=True), Column("users", "Users", align="end", format="number"),
+                     Column("active", "Active", align="end", format="share")],
+            get_rows=organization_rows,
+        ),
+        DataTable(
+            "Users", key="users", size="full", depends_on=["organization"], page_size=25, searchable=True,
+            search_placeholder="Search by email", total_label="{total} users",
+            description=lambda ctx: f"{ctx.filters['period'].start:%Y-%m-%d} – {ctx.filters['period'].end:%Y-%m-%d}",
+            columns=[Column("email", "Email", strong=True), Column("organization", "Organization", empty="none"),
+                     Column("active", "Active")],
+            get_rows=user_rows,
+        ),
+        MetricGroup("Billing", key="billing", depends_on=[], get_tiles=billing),
+        Metric("Users", key="user-count", get_value=lambda: len(users.list())),
+        Metric("Organizations", key="organization-count", get_value=lambda: len(organizations.list())),
         Chart(
             "Users per organization",
             get_series=lambda: [

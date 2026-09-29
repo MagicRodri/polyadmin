@@ -1,0 +1,24 @@
+{% from "admin/components/ui/calendar.html" import date_picker %}
+{% from "admin/components/ui/select.html" import select %}
+<form id="dashboard-filters" method="get" action="{{ base_path }}" class="mb-4 flex flex-wrap items-end gap-3"
+      x-data @change="window.polyadminDashboardFilterChanged($event, $el)">
+  <button type="submit" class="sr-only" tabindex="-1">{{ _("Apply") }}</button>
+  {% for f in filters_view %}
+  <div class="flex flex-col gap-1" data-dashboard-filter="{{ f.name }}">
+    <span class="{{ ui('field', 'label') }}">{{ _(f.label) }}</span>
+    {% if f.kind == "date_range" %}
+    <div class="flex items-center gap-2">
+      <span class="sr-only">{{ _("From") }}</span>{{ date_picker(f.from_param, f.start) }}
+      <span class="{{ ui('text', 'muted') }}" aria-hidden="true">–</span>
+      <span class="sr-only">{{ _("To") }}</span>{{ date_picker(f.to_param, f.end) }}
+    </div>
+    {% elif f.kind == "select" %}
+    {{ select(f.name, f.options, selected=f.value, placeholder=f.placeholder, searchable=f.searchable) }}
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% for export in exports %}
+  <button type="submit" formaction="{{ base_path }}/_exports/{{ export.name }}" formmethod="get"
+          class="{{ ui('button', 'outline') }}" data-dashboard-export="{{ export.name }}">{{ _(export.label) }}</button>
+  {% endfor %}
+</form>
