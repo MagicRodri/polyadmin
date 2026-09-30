@@ -92,9 +92,15 @@
            form's hx-select="#resource-list" -- htmx would then select that
            id out of the lookup's option list, find nothing, and swap
            nothing, leaving the panel's combobox permanently empty. #}
+        {# hx-params="not q": the combobox's own text input carries name="q"
+           so its typed value reaches /lookup (htmx includes the closest
+           form's fields by default). Applying this filter submits that same
+           form natively, though, and without excluding "q" here the typed
+           text would tag along into the resulting list URL as a stray,
+           meaningless ?q=... alongside the real filter[...] param. #}
         <form method="get" action="{{ control.form_action }}" class="{{ ui('filter-panel', 'form') }}"
               hx-get="{{ control.form_action }}" hx-target="#resource-list" hx-select="#resource-list"
-              hx-swap="outerHTML" hx-push-url="true" hx-disinherit="*">
+              hx-swap="outerHTML" hx-push-url="true" hx-disinherit="*" hx-params="not q">
           {% for field in control.hidden %}
           <input type="hidden" name="{{ field.name }}" value="{{ field.value }}">
           {% endfor %}

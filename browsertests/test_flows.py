@@ -349,16 +349,31 @@ def test_filtering_by_a_related_record(admin_page):
     trigger = panel.locator('input[role="combobox"]').first
     expect(trigger).to_be_visible()
     trigger.click()
+    # Before typing: the unfiltered page includes an organization "Acme"
+    # would never match, so the assertions below only pass once /lookup
+    # actually narrows to the typed query (the combobox's text input has
+    # to carry its value as the request's own "q" for that to happen --
+    # a bug here previously left every keystroke re-fetching the same
+    # unfiltered list, which "an option is visible" alone would not catch).
+    expect(admin_page.locator('[role="listbox"]', has_text="Widgets Inc")).to_be_visible()
     # Typed, not filled: the lookup fires on keyup (hx-trigger), and
     # fill() sets the value without dispatching one.
     trigger.press_sequentially("Acme", delay=30)
-    option = admin_page.locator('[role="listbox"] [data-pk]').first
-    expect(option).to_be_visible()
-    option.click()
+    options = admin_page.locator('[role="listbox"] [data-pk]')
+    expect(options.first).to_be_visible()
+    expect(admin_page.locator('[role="listbox"]', has_text="Widgets Inc")).to_have_count(0)
+    for label in options.all_inner_texts():
+        assert "acme" in label.lower(), f"unfiltered result leaked through: {label!r}"
+    options.first.click()
     panel.locator('button[type="submit"]').first.click()
 
     expect(admin_page).to_have_url(re.compile(r"filter"))
     expect(admin_page.locator("table tbody tr").first).to_be_visible()
+    # The combobox's text input rides in the same form Apply submits
+    # natively (hx-disinherit isolates its own /lookup wiring, not this).
+    # Without the form's own hx-params="not q" excluding it, the search
+    # text tags along into this URL as a stray, meaningless ?q=Acme.
+    assert "q=" not in admin_page.url, f"combobox search text leaked into the URL: {admin_page.url}"
 
 
 def test_the_filter_panel_combobox_is_not_clipped(admin_page):

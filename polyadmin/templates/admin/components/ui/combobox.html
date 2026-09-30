@@ -48,7 +48,7 @@
     {# role=combobox on the input, not the wrapper: the input is what
        holds focus, so it is what has to advertise the popup and name
        the highlighted option. Mirrors ui/multi-select. #}
-    <input x-ref="textInput" type="text" autocomplete="off" placeholder="{{ placeholder }}"
+    <input x-ref="textInput" type="text" name="q" autocomplete="off" placeholder="{{ placeholder }}"
            value="{{ selected_label if selected_label is not none else '' }}"
            x-model="query" @focus="open = true"
            role="combobox" aria-autocomplete="list"

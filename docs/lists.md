@@ -181,6 +181,11 @@ same answer in both places.
 A reader who may not view the target resource does not get the filter at
 all — it is dropped from the panel rather than shown empty.
 
+When the relation uses `autocomplete_fields`, typing searches the target's
+lookup endpoint and narrows the combobox options. The lookup text is not
+included in the list URL when the filter is applied; only the selected
+`filter[...]` value is submitted.
+
 **One limitation worth knowing.** `apply` receives the parent
 ModelAdmin, not the registry, so it cannot call the target's own
 `get_pk`. It uses the same default lookup `ModelAdmin.get_pk` does. If
