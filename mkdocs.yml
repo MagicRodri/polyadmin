@@ -46,6 +46,7 @@ nav:
       - Getting started: python/index.md
       - Architecture: architecture.md
       - Model admin: model-admin.md
+      - SQLAlchemy: sqlalchemy.md
       - Dashboard: dashboard.md
       - Lists and filters: lists.md
       - Authentication: authentication.md

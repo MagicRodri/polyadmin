@@ -267,3 +267,20 @@ def test_relation_filter_with_no_value_narrows_nothing():
     admin = RowAdmin()
     objects = [Row(1, org=Target(7, "Acme")), Row(2)]
     assert RelationFilter("org").apply(objects, "", admin) == objects
+
+
+def test_choice_filter_accepts_value_label_pairs():
+    filt = ChoiceFilter("status", choices=[(1, "Активен"), (2, "Приостановлен")])
+    assert filt.choices_with_labels() == [("", "All"), ("1", "Активен"), ("2", "Приостановлен")]
+    assert filt.values() == ["1", "2"]
+
+
+def test_choice_filter_bare_values_are_their_own_labels():
+    filt = ChoiceFilter("role", choices=["admin", "member"])
+    assert filt.choices_with_labels() == [("", "All"), ("admin", "admin"), ("member", "member")]
+    assert filt.values() == ["admin", "member"]
+
+
+def test_choice_filter_accepts_list_pairs():
+    filt = ChoiceFilter("status", choices=[[1, "Активен"], ("2", "Приостановлен")])
+    assert filt.choices_with_labels()[1:] == [("1", "Активен"), ("2", "Приостановлен")]

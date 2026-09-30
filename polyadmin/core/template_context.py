@@ -175,14 +175,18 @@ def _filter_controls(
             *filt.choices_with_labels(),
             *((choice["value"], choice["label"]) for choice in sourced),
         ]
+        # A filter the data source applies by default needs "All" spelled
+        # out: dropping the parameter would bring the default back.
+        defaulted = filt.name in getattr(model_admin, "default_filters", {})
+        chosen = filt.name in list_request.filters
         choices = []
         for value, label in pairs:
-            combined = {**others, filt.name: value} if value else others
+            combined = {**others, filt.name: value} if value or defaulted else others
             choices.append(
                 {
                     "value": value,
                     "label": label,
-                    "selected": value == current,
+                    "selected": value == current and (chosen or not defaulted or bool(value)),
                     "url": _list_url(
                         model_admin, list_request, base_path, filters=combined
                     ),

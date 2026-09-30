@@ -243,6 +243,12 @@ built-in required-field message is — a static English message
 entry, since the framework runs it through `gettext` when the form
 re-renders. See [`i18n.md`](i18n.md#in-code).
 
+### Rejecting a save
+
+`create` and `update` may raise `polyadmin.core.model_admin.RecordFormError({"field": ["message"]})`
+to send the user back to the form with those errors (status 422). Use the `""` key for a message
+that belongs to no single field — a unique-constraint violation, for instance.
+
 ## Search, filters, ordering
 
 - `search_fields` — a case-insensitive substring match against these
@@ -390,6 +396,11 @@ it opens a server-rendered confirmation page instead, listing the selected
 records and what deleting them takes with it — see
 [`deletes.md`](deletes.md). That applies to an override of your own too:
 the page is keyed on the name.
+
+An action that fails, or has nothing to do, raises `polyadmin.core.action.ActionError("message")`
+(or `ActionError("message", level="warning")`): the user is sent back with that message instead of
+the success one. Pass `done=[...]` with the records the action did change before it failed, so they
+are still recorded in the audit log.
 
 ### Where an action appears
 

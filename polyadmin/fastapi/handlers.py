@@ -13,7 +13,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
 
 from polyadmin.core._async import maybe_await
-from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, ActionFormError, Download
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, ActionError, ActionFormError, Download
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
@@ -21,7 +21,7 @@ from polyadmin.core.csrf import safe_redirect_path
 from polyadmin.core.delete import previews_deletes, resolve_delete_preview
 from polyadmin.core.exporter import Exporter
 from polyadmin.core.inline import Inline
-from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.model_admin import ModelAdmin, RecordFormError
 from polyadmin.core.pagination import page_of
 from polyadmin.core.query import (
     LIST_TOKEN_FIELD,
@@ -178,6 +178,41 @@ def _list_token(request: Request, form: Any, base_path: str) -> str:
     return safe_list_token(raw, request.url.netloc, base_path)
 
 
+async def _render_invalid_form(
+    admin: Admin,
+    model_admin: ModelAdmin,
+    renderer: Renderer,
+    base_path: str,
+    request: Request,
+    principal: Any,
+    form: Any,
+    data: dict[str, Any],
+    errors: dict[str, list[str]],
+    obj: Any = None,
+) -> HTMLResponse:
+    relation_options = await compute_relation_options(admin, model_admin, obj=obj)
+    inline_mode = "edit" if obj is not None else "placeholder"
+    inlines = await build_inline_context(admin, principal, model_admin, obj, inline_mode, base_path)
+    field_errors = {name: messages for name, messages in errors.items() if name}
+    context: dict[str, Any] = {
+        "principal": principal,
+        "csrf_token": request.state.csrf_token,
+        "data": data,
+        "errors": field_errors,
+        "non_field_errors": errors.get("") or None,
+        "relation_options": relation_options,
+        "inlines": inlines,
+        "base_path": base_path,
+    }
+    if obj is not None:
+        context["obj"] = obj
+    if is_htmx_request(request):
+        html = renderer.render_form_fragment(admin, model_admin, **context)
+    else:
+        html = renderer.render_form(admin, model_admin, list_token=_list_token(request, form, base_path), **context)
+    return HTMLResponse(html, status_code=422)
+
+
 def build_list_handler(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
     slug = model_admin.get_slug()
 
@@ -309,35 +344,13 @@ def build_create_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
         data = _parse_form_data(model_admin, form)
         errors = _validate_writable(model_admin, data)
         if errors:
-            relation_options = await compute_relation_options(admin, model_admin)
-            inlines = await build_inline_context(admin, principal, model_admin, None, "placeholder", base_path)
-            if is_htmx_request(request):
-                html = renderer.render_form_fragment(
-                    admin,
-                    model_admin,
-                    principal=principal,
-                    csrf_token=request.state.csrf_token,
-                    data=data,
-                    errors=errors,
-                    relation_options=relation_options,
-                    inlines=inlines,
-                    base_path=base_path,
-                )
-            else:
-                html = renderer.render_form(
-                    admin,
-                    model_admin,
-                    principal=principal,
-                    csrf_token=request.state.csrf_token,
-                    data=data,
-                    errors=errors,
-                    relation_options=relation_options,
-                    inlines=inlines,
-                    base_path=base_path,
-                    list_token=_list_token(request, form, base_path),
-                )
-            return HTMLResponse(html, status_code=422)
-        obj = await maybe_await(model_admin.create(data))
+            return await _render_invalid_form(admin, model_admin, renderer, base_path, request, principal, form, data, errors)
+        try:
+            obj = await maybe_await(model_admin.create(data))
+        except RecordFormError as exc:
+            return await _render_invalid_form(
+                admin, model_admin, renderer, base_path, request, principal, form, data, exc.errors
+            )
         record_audit(admin, principal, model_admin, AUDIT_CREATE, obj)
         # "Save and add another" goes back to an empty form, checked
         # before building the record's URL since it never uses one.
@@ -402,43 +415,17 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
         data = _parse_form_data(model_admin, form, obj)
         errors = _validate_writable(model_admin, data, obj)
         if errors:
-            relation_options = await compute_relation_options(admin, model_admin, obj=obj)
-            inlines = await build_inline_context(admin, principal, model_admin, obj, "edit", base_path)
-            if is_htmx_request(request):
-                html = renderer.render_form_fragment(
-                    admin,
-                    model_admin,
-                    principal=principal,
-                    csrf_token=request.state.csrf_token,
-                    obj=obj,
-                    data=data,
-                    errors=errors,
-                    relation_options=relation_options,
-                    inlines=inlines,
-                    base_path=base_path,
-                )
-            else:
-                html = renderer.render_form(
-                    admin,
-                    model_admin,
-                    principal=principal,
-                    csrf_token=request.state.csrf_token,
-                    obj=obj,
-                    data=data,
-                    errors=errors,
-                    relation_options=relation_options,
-                    inlines=inlines,
-                    base_path=base_path,
-                    list_token=_list_token(request, form, base_path),
-                )
-            return HTMLResponse(html, status_code=422)
+            return await _render_invalid_form(admin, model_admin, renderer, base_path, request, principal, form, data, errors, obj=obj)
         # "Save as new": the submitted values become a new record, and the one
         # being edited is left untouched. Gated on the option, so a forged
         # field on an admin without it is an ordinary save.
         if model_admin.save_as and form.get(SAVE_AS_NEW_FIELD):
             if not compute_permissions(admin, principal, model_admin, None)["can_create"]:
                 return forbidden(request, admin, base_path)
-            created = await maybe_await(model_admin.create(data))
+            try:
+                created = await maybe_await(model_admin.create(data))
+            except RecordFormError as exc:
+                return await _render_invalid_form(admin, model_admin, renderer, base_path, request, principal, form, data, exc.errors, obj=obj)
             record_audit(admin, principal, model_admin, AUDIT_CREATE, created)
             created_message = gettext("%(name)s created.") % {"name": gettext(model_admin.get_verbose_name())}
             target = f"{base_path}/{model_admin.get_slug()}/{model_admin.get_pk(created)}"
@@ -447,7 +434,10 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
             response = redirect(request, with_list_token(target, _list_token(request, form, base_path)))
             set_flash(response, "success", created_message)
             return response
-        await maybe_await(model_admin.update(obj, data))
+        try:
+            await maybe_await(model_admin.update(obj, data))
+        except RecordFormError as exc:
+            return await _render_invalid_form(admin, model_admin, renderer, base_path, request, principal, form, data, exc.errors, obj=obj)
         record_audit(admin, principal, model_admin, AUDIT_UPDATE, obj)
         # Translators: %(name)s is the model's name. French and Russian
         # nouns carry gender, so phrase around agreement.
@@ -469,6 +459,14 @@ def build_edit_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rendere
     return edit_get, edit_post
 
 
+def _delete_refused(request: Request, base_path: str, slug: str, pk: Any, exc: RecordFormError) -> Response:
+    """The data source refused the delete (a record still referencing this
+    one, say): back to the delete page with the reason."""
+    response = redirect(request, f"{base_path}/{slug}/{pk}/delete")
+    set_flash(response, "error", exc.text())
+    return response
+
+
 def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Renderer, base_path: str):
     slug = model_admin.get_slug()
 
@@ -487,6 +485,7 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
             model_admin,
             obj,
             base_path=base_path,
+            messages=pop_flash(request),
             principal=principal,
             csrf_token=request.state.csrf_token,
             preview=preview,
@@ -506,7 +505,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                 # Back to the delete page, which says why; redirect() sends
                 # HX-Redirect for the htmx route and a 303 otherwise.
                 return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
-            await maybe_await(model_admin.delete(obj))
+            try:
+                await maybe_await(model_admin.delete(obj))
+            except RecordFormError as exc:
+                return _delete_refused(request, base_path, slug, model_admin.get_pk(obj), exc)
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         # Back to the list it came from -- preserve_filters.
         back = _list_token(request, await request.form(), base_path)
@@ -533,7 +535,10 @@ def build_delete_handlers(admin: Admin, model_admin: ModelAdmin, renderer: Rende
                 # Back to the delete page, which says why; redirect() sends
                 # HX-Redirect for the htmx route and a 303 otherwise.
                 return redirect(request, f"{base_path}/{slug}/{model_admin.get_pk(obj)}/delete")
-            await maybe_await(model_admin.delete(obj))
+            try:
+                await maybe_await(model_admin.delete(obj))
+            except RecordFormError as exc:
+                return _delete_refused(request, base_path, slug, model_admin.get_pk(obj), exc)
             record_audit(admin, principal, model_admin, AUDIT_DELETE, obj)
         return HTMLResponse("")
 
@@ -638,6 +643,13 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             if form_ctx is None:
                 raise
             return await render_action_form_page(form_ctx, data, exc.errors, status_code=422)
+        except ActionError as exc:
+            partial_audit = AUDIT_UPDATE if action.name == BULK_EDIT_NAME else action.name
+            for obj in exc.done:
+                record_audit(admin, principal, model_admin, partial_audit, obj)
+            response = redirect(request, redirect_to)
+            set_flash(response, exc.level, gettext(exc.message))
+            return response
         # A bulk edit is an ordinary update of each record as far as the log
         # is concerned.
         audit_name = AUDIT_UPDATE if action.name == BULK_EDIT_NAME else action.name

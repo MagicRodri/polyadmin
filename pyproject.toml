@@ -1,6 +1,6 @@
 [project]
 name = "polyadmin"
-version = "0.1.0b4"
+version = "0.1.0b5"
 description = "PolyAdmin: cross-language server-rendered admin framework (Python core)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -31,6 +31,9 @@ fastapi = [
     "python-multipart>=0.0.9",
 ]
 export-xlsx = ["openpyxl>=3.1"]
+sqlalchemy = [
+    "sqlalchemy[asyncio]>=2.0",
+]
 
 [dependency-groups]
 dev = [
@@ -42,6 +45,8 @@ dev = [
     "playwright>=1.40",
     "pytest-playwright>=0.4",
     "babel>=2.14",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.20",
 ]
 
 [build-system]

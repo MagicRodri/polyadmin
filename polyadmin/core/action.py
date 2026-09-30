@@ -50,6 +50,23 @@ class Download:
             raise ValueError("Download needs exactly one of `content` or `stream`.")
 
 
+class ActionError(RuntimeError):
+    """Raised by an action to end it with an error or warning message instead
+    of the success flash. A RuntimeError, so callers of the built-in bulk
+    actions that caught RuntimeError still do."""
+
+    def __init__(
+        self,
+        message: str,
+        level: Literal["error", "warning"] = "error",
+        done: Sequence[Any] = (),
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.level = level
+        self.done = tuple(done)
+
+
 class ActionFormError(Exception):
     """Raised by a form action's handler to redisplay the form with errors.
     The "" key holds messages that belong to no single field."""

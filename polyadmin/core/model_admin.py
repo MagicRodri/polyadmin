@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from polyadmin.core._async import maybe_await
-from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, Action, action, collect_actions
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, Action, ActionError, action, collect_actions
 from polyadmin.core.auth import Principal
 from polyadmin.core.field import Field
 from polyadmin.core.inline import Inline
@@ -35,6 +35,22 @@ class Fieldset:
 
     def __post_init__(self) -> None:
         self.fields = list(self.fields)
+
+
+class RecordFormError(Exception):
+    """Raised by create() or update() to reject a save with form errors. The ""
+    key holds messages that belong to no single field."""
+
+    def __init__(self, errors: dict[str, list[str]]) -> None:
+        super().__init__(errors)
+        self.errors = errors
+
+    def text(self) -> str:
+        return "; ".join(message for messages in self.errors.values() for message in messages)
+
+
+def _error_text(exc: Exception) -> str:
+    return exc.text() if isinstance(exc, RecordFormError) else str(exc)
 
 
 class ModelAdmin:
@@ -323,7 +339,10 @@ class ModelAdmin:
                 # Translators: a bulk delete stopped part-way. %(deleted)d of
                 # %(total)d records were deleted; %(error)s is the underlying error.
                 failure = gettext("Deleted %(deleted)d of %(total)d, then failed: %(error)s")
-                raise RuntimeError(failure % {"deleted": deleted, "total": len(objects), "error": exc}) from exc
+                raise ActionError(
+                    failure % {"deleted": deleted, "total": len(objects), "error": _error_text(exc)},
+                    done=objects[:deleted],
+                ) from exc
             deleted += 1
         return ngettext("Deleted %(num)d record.", "Deleted %(num)d records.", deleted) % {"num": deleted}
 
@@ -355,7 +374,10 @@ class ModelAdmin:
                 # Translators: a bulk edit stopped part-way. %(updated)d of
                 # %(total)d records were updated; %(error)s is the underlying error.
                 failure = gettext("Updated %(updated)d of %(total)d, then failed: %(error)s")
-                raise RuntimeError(failure % {"updated": updated, "total": len(objects), "error": exc}) from exc
+                raise ActionError(
+                    failure % {"updated": updated, "total": len(objects), "error": _error_text(exc)},
+                    done=objects[:updated],
+                ) from exc
             updated += 1
         return ngettext("Updated %(num)d record.", "Updated %(num)d records.", updated) % {"num": updated}
 

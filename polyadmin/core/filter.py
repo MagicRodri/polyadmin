@@ -1,9 +1,4 @@
-"""Filter: a list-view constraint the user can toggle.
-
-`filter.apply(objects, raw_value, model_admin)` is deliberately given
-the raw, still-a-string query-param value -- parsing is the filter's
-job, since only it knows what its own values mean.
-"""
+"""Filter: a list-view constraint the user can toggle."""
 
 from __future__ import annotations
 
@@ -16,14 +11,6 @@ from polyadmin.i18n import N_
 
 
 class Filter:
-    # How this filter's control is sourced and drawn. It answers two
-    # questions at once -- who supplies the choices, and what the panel
-    # renders -- because they are the same decision: a filter that cannot
-    # enumerate its own values is exactly the filter that needs a control
-    # other than a list of links.
-    #
-    # "" is the default and is never declared: the filter supplies its own
-    # choices and the panel draws links.
     control_kind: ClassVar[str] = ""
 
     def __init__(self, name: str, *, label: str | None = None):
@@ -50,13 +37,29 @@ class BooleanFilter(Filter):
         return [obj for obj in objects if bool(field.get_value(obj)) == want]
 
 
+def _is_pair(choice: Any) -> bool:
+    return (
+        isinstance(choice, Sequence)
+        and not isinstance(choice, str | bytes)
+        and len(choice) == 2
+    )
+
+
 class ChoiceFilter(Filter):
     def __init__(self, name: str, *, choices: Sequence[Any], label: str | None = None):
         super().__init__(name, label=label)
-        self.choices = list(choices)
+        self.choices = [
+            (str(choice[0]), str(choice[1]))
+            if _is_pair(choice)
+            else (str(choice), str(choice))
+            for choice in choices
+        ]
+
+    def values(self) -> list[str]:
+        return [value for value, _ in self.choices]
 
     def choices_with_labels(self) -> list[tuple[str, str]]:
-        return [("", N_("All"))] + [(str(choice), str(choice)) for choice in self.choices]
+        return [("", N_("All"))] + list(self.choices)
 
     def apply(self, objects, raw_value, model_admin):
         if not raw_value:
@@ -89,12 +92,6 @@ def is_empty_value(value: Any) -> bool:
     # is a subclass of int.
     if isinstance(value, bool | int | float):
         return False
-    # datetime.min/date.min are sentinels here, not moments in time: Go's
-    # zero time.Time is how that side represents an unset date, and the
-    # two implementations agree on what empty means. DTZ901 is about
-    # building naive datetimes for logic; an equality test against the
-    # sentinel is exactly what is meant, and comparing an aware value
-    # against a naive one returns False rather than raising.
     if isinstance(value, datetime):
         return value == datetime.min  # noqa: DTZ901
     if isinstance(value, date):
@@ -129,7 +126,9 @@ class EmptyFilter(Filter):
             field = model_admin.get_field(self.name)
         except KeyError:
             return objects
-        return [obj for obj in objects if is_empty_value(field.get_value(obj)) is want_empty]
+        return [
+            obj for obj in objects if is_empty_value(field.get_value(obj)) is want_empty
+        ]
 
 
 # The date filter's values. Stable strings, because they end up in URLs.
@@ -158,7 +157,9 @@ def date_filter_range(raw_value: str, now: datetime) -> tuple[date, date] | None
         start = day.replace(day=1)
         return start, (start + timedelta(days=32)).replace(day=1)
     if raw_value == DATE_FILTER_THIS_YEAR:
-        return day.replace(month=1, day=1), day.replace(year=day.year + 1, month=1, day=1)
+        return day.replace(month=1, day=1), day.replace(
+            year=day.year + 1, month=1, day=1
+        )
 
     # Not a preset, so try a custom range: "<from>:<to>", each YYYY-MM-DD.
     # It is inclusive of both endpoints, because that is what "from X to
@@ -277,7 +278,11 @@ class RelationFilter(Filter):
     def _pk(self, related: Any) -> str:
         if related is None:
             return ""
-        pk = self.related_pk(related) if self.related_pk else getattr(related, "id", None)
+        pk = (
+            self.related_pk(related)
+            if self.related_pk
+            else getattr(related, "id", None)
+        )
         return "" if pk is None else str(pk)
 
     def apply(self, objects, raw_value, model_admin):
