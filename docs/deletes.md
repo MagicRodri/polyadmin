@@ -123,7 +123,7 @@ principal may not delete refuses the whole delete, because otherwise
 this delete would be a way around that rule. The check is the same pair
 the rest of the admin uses: the target ModelAdmin's own `can_delete`,
 then the authorizer's `<slug>.delete`. See
-[`permissions.md`](permissions.md).
+[`permissions`](permissions.md).
 
 Two consequences worth stating plainly:
 
@@ -187,6 +187,6 @@ its routes behave exactly as before.
   second level of cascade is yours to include if it matters.
 - **It does not write audit entries for cascaded records.** One entry is
   recorded for the record the admin deleted — see
-  [`audit.md`](audit.md).
+  [`audit`](audit.md).
 - **It previews deletes only.** Other actions still use their `confirm`
   text.

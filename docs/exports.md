@@ -71,4 +71,4 @@ translation attempted from inside `stream` itself would silently fall
 back to English. A custom `Exporter` translating anything else of its
 own has to do the same — read `gettext`/`get_locale()` before
 returning its generator, not from within it. See
-[`i18n.md`](i18n.md#in-code).
+[`i18n`](i18n.md#in-code).

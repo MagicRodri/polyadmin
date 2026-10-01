@@ -106,7 +106,7 @@ an explicit `dark:` variant instead.
 
 To restyle the admin, override `admin/theme.html` and change the
 variables. Nothing else needs to know — see
-[`templates.md`](templates.md#styling).
+[`templates`](templates.md#styling).
 
 ## Component reference
 
@@ -169,7 +169,7 @@ says otherwise.
 
 ## Using components on a custom page
 
-A custom `AdminPage` ([`routing.md`](routing.md#custom-admin-pages))
+A custom `AdminPage` ([`routing`](routing.md#custom-admin-pages))
 gets the same components — `ui` is a global in the Jinja environment
 and every `ui/*` macro is importable by name, including from page
 templates resolved through `template_dirs`. The example app's broadcast

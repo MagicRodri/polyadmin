@@ -15,7 +15,7 @@ class Authorizer(Protocol):
 `"organizations.export"`, and so on — for the five standard actions
 (`view`, `create`, `update`, `delete`, `export`), plus `"dashboard.view"`
 for the dashboard route. An Action's own `permission=`
-(see [`model-admin.md`](model-admin.md#actions)) is checked the same
+(see [`model-admin`](model-admin.md#actions)) is checked the same
 way, as `"{slug}.{that permission}"`, alongside the resource's `.view`. Placing an action with `where=` or
 `detail_actions` only hides its button; it is not a security boundary,
 so use `permission=` to restrict who can run it.
@@ -28,7 +28,7 @@ string it's asked about.
 permission logic if it needs resource-level context (e.g. row-level
 rules), or ignore it for a simpler role-based check.
 
-A custom `AdminPage` (see [`routing.md`](routing.md#custom-admin-pages))
+A custom `AdminPage` (see [`routing`](routing.md#custom-admin-pages))
 follows the same shape: its permission defaults to
 `"page.<path-with-dots>"` and is checked as
 `Authorizer.can(principal, page.permission, page)` — the `AdminPage`
@@ -88,7 +88,7 @@ has no Edit button.
 ## Deletes that cascade
 
 A ModelAdmin implementing `delete_preview` reports what a delete would
-take with it (see [`deletes.md`](deletes.md)), and those related records
+take with it (see [`deletes`](deletes.md)), and those related records
 are put through the same two checks:
 
 - **A cascade into a type the principal may not delete blocks the whole
@@ -102,7 +102,7 @@ are put through the same two checks:
 
 ## Built-in implementations
 
-Same caveat as [`authentication.md`](authentication.md)'s built-in
+Same caveat as [`authentication`](authentication.md)'s built-in
 `Authenticator`s — fine for local development and tests, not for a
 real deployment:
 

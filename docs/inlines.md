@@ -3,7 +3,7 @@
 A parent `ModelAdmin` can show and manage a child `ModelAdmin`'s
 records that point back at it, right on the parent's own
 create/detail/edit pages — Django-admin `StackedInline`/`TabularInline`
-style. `Relation` (see [`model-admin.md`](model-admin.md#relations))
+style. `Relation` (see [`model-admin`](model-admin.md#relations))
 only models the *forward* direction (a child field pointing at its
 parent); `Inline` is the reverse.
 
@@ -60,7 +60,7 @@ whole target collection. Each row and the add row get their own results panel.
 
 ## Generated routes
 
-See [`routing.md`](routing.md#inline-routes) for the three routes
+See [`routing`](routing.md#inline-routes) for the three routes
 (`POST .../inlines/{child_slug}`, `POST .../inlines/{child_slug}/{child_pk}`,
 `DELETE .../inlines/{child_slug}/{child_pk}`) and why there's no
 `GET .../inlines/{child_slug}` fragment route. Every inline mutation
@@ -85,7 +85,7 @@ commits every row together with the parent form.
 - **Detail page** — read-only. Each child renders using its own
   `detail_fields`, linking to that child's own detail
   page (permission-gated the same way an ordinary relation link is —
-  see [`permissions.md`](permissions.md#where-its-enforced)); no
+  see [`permissions`](permissions.md#where-its-enforced)); no
   add/edit/remove controls here.
 
 ## Permissions
@@ -97,7 +97,7 @@ relation-link hiding elsewhere in the framework). Add/edit/remove each
 require the child's own `.create`/`.update`/`.delete` respectively,
 **and** implicitly the parent's own `.update` — inline management only
 exists on the parent's edit page, which is already gated by that
-route. See [`permissions.md`](permissions.md#permission-names).
+route. See [`permissions`](permissions.md#permission-names).
 
 ## Async and `list_page` children
 

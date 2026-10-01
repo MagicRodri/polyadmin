@@ -56,10 +56,10 @@ class UserAdmin(ModelAdmin):
   accordion section, in first-registration-appearance order. Unset
   (`None`) keeps a flat top-level nav link. Also prepended to the
   breadcrumb trail when set. See
-  [`routing.md`](routing.md#sidebar-categories).
+  [`routing`](routing.md#sidebar-categories).
 - `icon` — the sidebar-nav icon shown next to this ModelAdmin's own
   link, flat or nested inside a category's accordion; defaults to
-  `"collection"`. See [`routing.md`](routing.md#sidebar-categories).
+  `"collection"`. See [`routing`](routing.md#sidebar-categories).
 
 ## Fields
 
@@ -241,7 +241,7 @@ A field validator is a plain callable taking the value and raising
 built-in required-field message is — a static English message
 (`raise ValueError("Enter a valid number.")`) only needs a host catalog
 entry, since the framework runs it through `gettext` when the form
-re-renders. See [`i18n.md`](i18n.md#in-code).
+re-renders. See [`i18n`](i18n.md#in-code).
 
 ### Rejecting a save
 
@@ -268,7 +268,7 @@ that belongs to no single field — a unique-constraint violation, for instance.
 All three compose: the query pipeline applies search, then every
 active filter, then ordering, then pagination — in that order, every
 time, so a query string fully determines what's on screen (and what
-an export produces, see [`exports.md`](exports.md)).
+an export produces, see [`exports`](exports.md)).
 
 `enable_reordering` (default `False`, unlike the `can_*` flags above)
 puts a drag handle on the list view's rows via a small vanilla sortable
@@ -312,7 +312,7 @@ the server side changes.
 A relation's *reverse* side — showing/managing a child's records from
 the parent's own create/detail/edit pages, Django-admin
 StackedInline/TabularInline style — is `Inline`. See
-[`inlines.md`](inlines.md).
+[`inlines`](inlines.md).
 
 ### Id-based and HTTP-backed models
 
@@ -369,7 +369,7 @@ needs to know which UI entry point invoked it. The method's name is the
 action's name. On the list view, picking one from the bulk-actions listbox
 runs it immediately — there's no separate "Apply" step. `confirm=` shows a
 shadcn/ui Dialog before the request goes out; `permission=` checks an extra
-`{slug}.{permission}` permission (see [`permissions.md`](permissions.md))
+`{slug}.{permission}` permission (see [`permissions`](permissions.md))
 beyond the resource's own `.view`; `label=` defaults to the method name,
 title-cased. The return value (a string, or `None`) becomes the success
 toast text, falling back to `"{label} applied to N record(s)."` when empty.
@@ -394,7 +394,7 @@ repeat `permission="delete"` if you still want that check). It is the one
 exception to the Dialog: on a ModelAdmin that implements `delete_preview`
 it opens a server-rendered confirmation page instead, listing the selected
 records and what deleting them takes with it — see
-[`deletes.md`](deletes.md). That applies to an override of your own too:
+[`deletes`](deletes.md). That applies to an override of your own too:
 the page is keyed on the name.
 
 An action that fails, or has nothing to do, raises `polyadmin.core.action.ActionError("message")`
@@ -491,7 +491,7 @@ posted pk for one is never resolved to its label.
 confirmation — and a form action's method must take `data`; both mistakes
 fail when the class is defined. `form=` may also be a callable taking the
 ModelAdmin and returning the fields, for a form built from the instance's own
-configuration. The built-in bulk edit is one — see [`bulk-edit.md`](bulk-edit.md).
+configuration. The built-in bulk edit is one — see [`bulk-edit`](bulk-edit.md).
 
 ### Answering with a file
 
@@ -576,4 +576,4 @@ is a convenience, not a constraint.
 
 `list_template`/`detail_template`/`form_template`/`delete_template` name
 an explicit template for one view. See
-[`templates.md`](templates.md) for the full override resolution order.
+[`templates`](templates.md) for the full override resolution order.

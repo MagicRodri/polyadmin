@@ -77,7 +77,7 @@ better.
 ## Audit log
 
 Each record gets an ordinary `update` entry, the same as saving it from its
-edit page (see [`audit.md`](audit.md)).
+edit page (see [`audit`](audit.md)).
 
 ## Replacing the built-in
 

@@ -15,7 +15,7 @@ type (string, integer, boolean, date, email, foreign key, ...),
 whether it's required/readonly/disabled, and how to read a value off
 an arbitrary object and coerce a submitted form value back into one.
 Fields don't know about HTTP or HTML — they're the data-level contract
-everything else builds on. See [`model-admin.md`](model-admin.md).
+everything else builds on. See [`model-admin`](model-admin.md).
 
 **`ModelAdmin`** is one resource: which model it administers, which
 fields appear in the list/detail/form views, search/filter/ordering
@@ -24,7 +24,7 @@ config, the CRUD lifecycle hooks (`get_queryset`, `get_object`,
 relation fields. A `ModelAdmin` never touches your database directly —
 it's an abstract contract; your subclass implements the lifecycle hooks
 against whatever storage you actually have. See
-[`model-admin.md`](model-admin.md).
+[`model-admin`](model-admin.md).
 
 **`Admin`** is the site: a registry of `ModelAdmin`s keyed by slug,
 plus the optional `Dashboard`, `Authenticator`, and `Authorizer` for
@@ -37,7 +37,7 @@ about HTTP. `create_router(admin, base_path=...)` walks the `Admin`'s
 registry and builds routes for each
 viewable/creatable/updatable/deletable/exportable `ModelAdmin`, wires
 in the `Authenticator`/`Authorizer` on every route, and renders
-responses through a `Renderer`. See [`routing.md`](routing.md).
+responses through a `Renderer`. See [`routing`](routing.md).
 
 ## Request flow
 
@@ -58,7 +58,7 @@ A request for `GET /admin/users` (list view) goes:
    `Authorizer` too — a relation only renders as a clickable link if
    the principal can view the target resource, otherwise it falls back
    to plain text.
-5. The `Renderer` picks a template (see [`templates.md`](templates.md)
+5. The `Renderer` picks a template (see [`templates`](templates.md)
    for the override order), builds its context, and returns HTML — a
    full page normally, or just the `#resource-list` fragment when the
    request came from an HTMX-driven search/filter/sort/pagination
@@ -99,6 +99,6 @@ validation redisplay). Tailwind, Alpine (plus its focus/collapse/anchor
 plugins), and HTMX are all CDN-loaded — there is no frontend build
 step.
 
-See [`components.md`](components.md) for the component reference and the
-porting rationale, and [`templates.md`](templates.md#styling) for how to
+See [`components`](components.md) for the component reference and the
+porting rationale, and [`templates`](templates.md#styling) for how to
 retheme.

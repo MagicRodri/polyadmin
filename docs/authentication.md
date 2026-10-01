@@ -40,7 +40,7 @@ admin = Admin(
 `Principal.extra` is a free-form bag for whatever your own `Authorizer`
 needs beyond `is_superuser` (roles, team IDs, scopes, ...) — the core
 never reads it itself. A `locale_resolver` (see
-[`i18n.md`](i18n.md#how-a-requests-locale-is-chosen)) can read it too —
+[`i18n`](i18n.md#how-a-requests-locale-is-chosen)) can read it too —
 a per-user language preference stashed in `extra` is a common use —
 since it receives the same `Principal` `authenticate` produced for
 this request. Authentication still runs at most once per request even
@@ -146,7 +146,7 @@ If `Authenticator.authenticate` returns `None`, the adapter responds
 `401 Unauthorized` before any `ModelAdmin` code runs — or redirects to
 the login page, if a `login_backend` is configured (see above). A
 `Principal` that authenticates successfully but fails the subsequent
-authorization check (see [`permissions.md`](permissions.md)) gets
+authorization check (see [`permissions`](permissions.md)) gets
 `403 Forbidden` instead — the two failure modes are distinguished
 deliberately, same as any standard web framework's auth stack.
 

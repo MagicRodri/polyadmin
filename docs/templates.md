@@ -42,18 +42,18 @@ from scratch:
 Custom dashboard widgets get the same treatment through the same
 option: a widget whose `template` name isn't one of the built-ins is
 looked up across the `template_dirs` directories the same way. See
-[`dashboard.md`](dashboard.md#custom-widgets).
+[`dashboard`](dashboard.md#custom-widgets).
 
 An override translates its own text the same way the framework's own
 templates do — `{{ _("Save") }}`, `{{ _(field.label) }}` — and gets
 `ngettext`/`|tojson`/`{{ locale }}` for free: `jinja2.ext.i18n` is
 installed on every locale's `Environment`, override files included, so
 there's nothing extra to wire up. See
-[`i18n.md`](i18n.md#in-templates).
+[`i18n`](i18n.md#in-templates).
 
 ## Custom admin page templates
 
-A custom `AdminPage` (see [`routing.md`](routing.md#custom-admin-pages))
+A custom `AdminPage` (see [`routing`](routing.md#custom-admin-pages))
 renders its own template, not a framework-owned one — there's no
 `admin/page.html` default to fall back to, since the whole point is
 application-specific markup.
@@ -130,7 +130,7 @@ actually needs to render.
 ## Styling
 
 The design system is [shadcn/ui](https://ui.shadcn.com), hand-ported to
-Alpine.js — see [`components.md`](components.md) for the full component
+Alpine.js — see [`components`](components.md) for the full component
 list and the porting rationale. In short:
 
 - **Colors are tokens, never literals.** `bg-background`,

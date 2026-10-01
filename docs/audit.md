@@ -3,7 +3,7 @@
 The admin can record every change it makes — who did what, to which
 record, and when. **Where that record lives is your decision**: the
 framework does not store a log itself, for the same reason it does not
-own identity or persistence (see [`authentication.md`](authentication.md)).
+own identity or persistence (see [`authentication`](authentication.md)).
 
 Nothing is recorded until you configure a logger.
 

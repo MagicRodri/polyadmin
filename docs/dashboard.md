@@ -116,7 +116,7 @@ happens to include others.
 Every widget accepts `size="lg"` to span the full grid width instead of
 one column, and an optional `permission=`: a widget naming a permission
 is simply omitted (not shown-disabled) if the `Authorizer` denies it
-for the current principal — see [`permissions.md`](permissions.md).
+for the current principal — see [`permissions`](permissions.md).
 
 ## Filters
 
@@ -321,5 +321,5 @@ create_router(admin, base_path="/admin", template_dirs=["templates"])
 The framework's own widget templates (`Metric`, `Stat`, `Progress`,
 `Chart`, `Donut`, `Table`, `Activity`, `Timeline`, `Tabs`) are checked
 first, so a custom `template` value only needs to avoid colliding with
-`admin/widgets/*.html` — see [`templates.md`](templates.md) for the
+`admin/widgets/*.html` — see [`templates`](templates.md) for the
 full resolution order shared with per-resource overrides.

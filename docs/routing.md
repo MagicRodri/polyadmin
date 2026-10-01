@@ -45,7 +45,7 @@ one is configured, otherwise redirects to the first resource the
 requester can view.
 
 And, **only when a `login_backend` is configured** (see
-[`authentication.md`](authentication.md#the-login-page)), three more:
+[`authentication`](authentication.md#the-login-page)), three more:
 
 | Method | Path | Requires | Purpose |
 |---|---|---|---|
@@ -60,8 +60,8 @@ a resource whose slug is `login` collides visibly rather than silently
 shadowing the login page.
 
 Every route above runs the same authenticate → authorize sequence
-before anything else — see [`authentication.md`](authentication.md) and
-[`permissions.md`](permissions.md). A denied request never reaches the
+before anything else — see [`authentication`](authentication.md) and
+[`permissions`](permissions.md). A denied request never reaches the
 `ModelAdmin` at all.
 
 ## HTMX partial routes
@@ -90,7 +90,7 @@ section's initial content is already built as part of the parent's own
 `GET /{slug}/{pk}` (detail) or `GET /{slug}/{pk}/edit` (edit) page, and
 every mutating response already carries a fresh copy — no third moment
 exists that would need its own fetch. See
-[`inlines.md`](inlines.md) for the full feature.
+[`inlines`](inlines.md) for the full feature.
 
 ## Custom admin pages
 
@@ -119,7 +119,7 @@ The handler receives a `PageContext` (`polyadmin.fastapi.pages`) with:
 - `.render(template_name, **extra)` — renders `template_name` inside
   the shared admin layout (sidebar, breadcrumbs, flash), the same
   three-level override resolution any other template gets. See
-  [`templates.md`](templates.md).
+  [`templates`](templates.md).
 - `.redirect(url, *, flash=(level, text))` — an HTMX-aware redirect
   that also sets a flash message, matching what every CRUD handler
   already does after a create/update/delete.
@@ -132,7 +132,7 @@ can be narrowed with `methods=(...)`. Its permission defaults to
 `"page.<path-with-dots>"` (`/reports/contracts` →
 `"page.reports.contracts"`), checked the same way a resource route
 checks `resource_permission` — see
-[`permissions.md`](permissions.md#permission-names). Registering two
+[`permissions`](permissions.md#permission-names). Registering two
 pages at the same path raises `ValueError`, mirroring
 `Admin.register`'s duplicate-slug behavior. Pages mount after all
 `ModelAdmin` routes, in registration order.
