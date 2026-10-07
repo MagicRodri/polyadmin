@@ -128,6 +128,16 @@
     if (meta) evt.detail.headers["X-CSRF-Token"] = meta.content;
   });
 
+  // A 422 is a form re-rendered with its errors, meant to replace the one
+  // submitted. htmx 1.x swaps no 4xx response by default, which left
+  // the page as it was and the errors unseen.
+  document.addEventListener("htmx:beforeSwap", function (evt) {
+    if (evt.detail.xhr.status === 422) {
+      evt.detail.shouldSwap = true;
+      evt.detail.isError = false;
+    }
+  });
+
   // Dates and decimals are rendered as ISO values and formatted here, in
   // the page's locale, so both implementations display them identically.
   // A date-only value is built from its parts: new Date("YYYY-MM-DD")

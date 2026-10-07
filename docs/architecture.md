@@ -32,7 +32,7 @@ the whole site, and branding (`site_title`, `site_logo_url`). It owns
 no HTTP concerns either — mounting it onto a real router is the
 adapter's job.
 
-**The adapter** (`polyadmin.fastapi`) is the only layer that knows
+**The adapter** (`polyadmin.contrib.fastapi`) is the only layer that knows
 about HTTP. `create_router(admin, base_path=...)` walks the `Admin`'s
 registry and builds routes for each
 viewable/creatable/updatable/deletable/exportable `ModelAdmin`, wires

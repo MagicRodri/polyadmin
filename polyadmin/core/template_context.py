@@ -11,11 +11,13 @@ template to translate, so each string is translated once.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote, urlencode
 
 from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME
+from polyadmin.core.widget import WidgetUnavailable
 from polyadmin.core.admin import Admin
 from polyadmin.core.delete import (
     DELETE_PREVIEW_SAMPLE,
@@ -910,3 +912,59 @@ def delete_context(
         "object_label": _object_label(model_admin, obj),
         "preview": delete_preview_view(preview, base_path),
     }
+
+
+logger = logging.getLogger("polyadmin")
+
+WIDGET_ICONS = {
+    "admin/widgets/metric.html": "metric",
+    "admin/widgets/progress.html": "progress",
+    "admin/widgets/table.html": "table",
+    "admin/widgets/chart.html": "chart",
+    "admin/widgets/activity.html": "activity",
+    "admin/widgets/donut.html": "donut",
+    "admin/widgets/stat.html": "stat",
+    "admin/widgets/timeline.html": "timeline",
+    "admin/widgets/tabs.html": "tabs",
+    "admin/widgets/metric_group.html": "metric",
+    "admin/widgets/data_table.html": "table",
+}
+
+
+def _describe(widget: Any, dc: Any) -> str | None:
+    """The card's subtitle; a failing description is logged and left out,
+    like a failing widget, rather than failing the whole page."""
+    try:
+        return widget.describe(dc)
+    except Exception:
+        logger.exception("dashboard widget %r could not describe itself", widget.key)
+        return None
+
+
+def dashboard_card(widget: Any, *, dashboard: Any, dc: Any, base_path: str) -> dict[str, Any]:
+    names = [f.name for f in dashboard.filters]
+    lazy = widget.lazy
+    trigger = ", ".join((["load"] if lazy else []) + [f"dashboard-filter-{n} from:body" for n in widget.reloads_on(names)])
+    card = {
+        "widget": widget,
+        "icon": WIDGET_ICONS.get(widget.template, "metric"),
+        "description": _describe(widget, dc),
+        "lazy": lazy,
+        "url": f"{base_path}/_widgets/{widget.key}",
+        "trigger": trigger or None,
+        "include": "#dashboard-filters" if dashboard.filters else None,
+        "searchable": getattr(widget, "searchable", False),
+        "search_placeholder": getattr(widget, "search_placeholder", None),
+        "data": None,
+        "state": None,
+        "message": None,
+    }
+    if not lazy:
+        try:
+            card["data"] = widget.get_data()
+        except WidgetUnavailable as exc:
+            card["state"], card["message"] = "unavailable", exc.message
+        except Exception:
+            logger.exception("dashboard widget %r failed", widget.key)
+            card["state"] = "unavailable"
+    return card

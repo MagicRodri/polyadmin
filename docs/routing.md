@@ -9,7 +9,7 @@ An `APIRouter` you include yourself:
 
 ```python
 from fastapi import FastAPI
-from polyadmin.fastapi.router import create_router
+from polyadmin.contrib.fastapi.router import create_router
 
 app = FastAPI()
 app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
@@ -100,18 +100,18 @@ admin's layout, authentication, and authorization. This is
 `AdminPage`, registered via `Admin.route()`.
 
 ```python
-async def contracts_report(ctx):
-    return ctx.render("pages/contracts_report.html", rows=load_report())
+async def sales_report(ctx):
+    return ctx.render("pages/sales_report.html", rows=load_report())
 
 admin.route(
-    "/reports/contracts",
-    contracts_report,
-    label="Contracts Report",
+    "/reports/sales",
+    sales_report,
+    label="Sales Report",
     category="Reports",
 )
 ```
 
-The handler receives a `PageContext` (`polyadmin.fastapi.pages`) with:
+The handler receives a `PageContext` (`polyadmin.contrib.fastapi.pages`) with:
 
 - `.request` — the raw `fastapi.Request`, for query/path parsing.
 - `await .form()` — shorthand for `await ctx.request.form()`.
@@ -129,8 +129,8 @@ Handlers are async, matching every other FastAPI adapter handler.
 A page's HTTP methods default to `GET` and `POST` — enough to render a
 form and repost to itself, the shape a multi-step wizard needs — and
 can be narrowed with `methods=(...)`. Its permission defaults to
-`"page.<path-with-dots>"` (`/reports/contracts` →
-`"page.reports.contracts"`), checked the same way a resource route
+`"page.<path-with-dots>"` (`/reports/sales` →
+`"page.reports.sales"`), checked the same way a resource route
 checks `resource_permission` — see
 [`permissions`](permissions.md#permission-names). Registering two
 pages at the same path raises `ValueError`, mirroring

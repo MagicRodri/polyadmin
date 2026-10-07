@@ -23,9 +23,11 @@ from polyadmin.core.admin import Admin
 from polyadmin.core.inline import INLINE_MULTISELECT_ROWS, Inline
 from polyadmin.core.model_admin import ModelAdmin
 from polyadmin.core.pagination import Page
+from polyadmin.core.permissions import compute_permissions
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE, ListRequest
 from polyadmin.core.template_context import (
     action_form_context,
+    dashboard_card,
     dashboard_context,
     delete_context,
     delete_selected_context,
@@ -35,10 +37,6 @@ from polyadmin.core.template_context import (
 )
 from polyadmin.i18n import I18n, LocaleOption, get_locale, gettext
 from polyadmin.ui import ui
-
-# Imported lazily, not at module level: polyadmin.fastapi.__init__ imports
-# router -> handlers -> Renderer, so an eager import here would close the
-# cycle.
 
 FRAMEWORK_TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -375,7 +373,6 @@ class Renderer:
         list_token: str = "",
         inlines: list[dict[str, Any]] | None = None,
     ) -> str:
-        from polyadmin.fastapi.auth import compute_permissions
 
         context = form_context(
             admin,
@@ -411,7 +408,6 @@ class Renderer:
         base_path: str = "/admin",
         inlines: list[dict[str, Any]] | None = None,
     ) -> str:
-        from polyadmin.fastapi.auth import compute_permissions
 
         context = form_context(
             admin,
@@ -465,7 +461,6 @@ class Renderer:
         csrf_token: str = "",
     ) -> str:
         if cards is None:
-            from polyadmin.fastapi.dashboard import dashboard_card
 
             dc = dashboard.context({}, principal)
             cards = [dashboard_card(w, dashboard=dashboard, dc=dc, base_path=base_path) for w in widgets]

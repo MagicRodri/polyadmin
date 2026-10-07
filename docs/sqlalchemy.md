@@ -2,7 +2,7 @@
 
 `pip install "polyadmin[sqlalchemy]"`
 
-`polyadmin.sqlalchemy.SQLAlchemyModelAdmin` serves a mapped class (SQLAlchemy 2.x declarative or
+`polyadmin.contrib.sqlalchemy.SQLAlchemyModelAdmin` serves a mapped class (SQLAlchemy 2.x declarative or
 SQLModel `table=True`) from an async session factory.
 
 ```python
@@ -11,23 +11,23 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from polyadmin.core.field import ForeignKeyField
 from polyadmin.core.filter import BooleanFilter, RelationFilter
 from polyadmin.core.relation import Relation
-from polyadmin.sqlalchemy import SQLAlchemyModelAdmin
+from polyadmin.contrib.sqlalchemy import SQLAlchemyModelAdmin
 
 sessions = async_sessionmaker(create_async_engine("postgresql+asyncpg://..."))
 
 
-class ContractAdmin(SQLAlchemyModelAdmin):
-    model = Contract
+class BookAdmin(SQLAlchemyModelAdmin):
+    model = Book
     session_factory = sessions
-    list_display = ("id", "name", "company", "is_deleted")
-    form_fields = ("name", "company", "is_deleted")
-    search_fields = ("name",)
-    filters = (BooleanFilter("is_deleted"), RelationFilter("company"))
-    default_filters = {"is_deleted": False}
-    fields = (ForeignKeyField("company", relation=Relation("company", target="companies", display_field="name")),)
+    list_display = ("id", "title", "author", "is_archived")
+    form_fields = ("title", "author", "is_archived")
+    search_fields = ("title",)
+    filters = (BooleanFilter("is_archived"), RelationFilter("author"))
+    default_filters = {"is_archived": False}
+    fields = (ForeignKeyField("author", relation=Relation("author", target="authors", display_field="name")),)
 ```
 
-The factory can also be passed per instance: `ContractAdmin(session_factory=sessions)`.
+The factory can also be passed per instance: `BookAdmin(session_factory=sessions)`.
 
 - Search, filters, ordering and paging run in SQL (`list_page`). Search matches `%` and `_`
   literally.

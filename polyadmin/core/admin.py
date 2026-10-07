@@ -3,7 +3,7 @@
 Owns the ModelAdmin registry, the AdminPage registry (custom routes
 registered via `route()`), and the authenticator/authorizer/dashboard
 wiring. CRUD/page route generation and template/static configuration
-live in the framework adapters (e.g. polyadmin.fastapi), not here.
+live in the framework adapters (e.g. polyadmin.contrib.fastapi), not here.
 """
 
 from __future__ import annotations

@@ -14,9 +14,9 @@ from typing import Any
 from polyadmin.i18n import N_
 
 # String-quoted forward ref: PageContext lives in the FastAPI adapter
-# (polyadmin.fastapi.pages), and core must not import adapter code.
+# (polyadmin.contrib.fastapi.pages), and core must not import adapter code.
 # Handlers are async, matching every other FastAPI adapter handler in
-# this framework (see fastapi/handlers.py's build_* functions).
+# this framework (see contrib/fastapi/handlers.py's build_* functions).
 PageHandler = Callable[["PageContext"], Awaitable[Any]]  # noqa: F821
 
 
@@ -57,6 +57,6 @@ def _default_label(path: str) -> str:
 
 
 def _default_permission(path: str) -> str:
-    # "/reports/contracts" -> "page.reports.contracts", the same
+    # "/reports/sales" -> "page.reports.sales", the same
     # dotted shape as resource_permission's "{slug}.{action}".
     return "page." + path.strip("/").replace("/", ".")

@@ -130,7 +130,7 @@ dashboard = Dashboard(
     title="Statistics",
     filters=[
         DateRangeFilter("period", label="Period", default_days=30),
-        SelectFilter("contract_id", label="Client", empty_label="All clients", get_choices=load_contracts),
+        SelectFilter("store_id", label="Store", empty_label="All stores", get_choices=load_stores),
     ],
     widgets=[...],
 )
@@ -188,8 +188,8 @@ Several numbers that one call answers:
 async def overview(ctx):
     data = await analytics.overview()
     return [
-        Tile("Contracts", data["contracts"], icon="file-text"),
-        Tile("Using the portal", data["active"], icon="activity", hint=f"dormant: {data['dormant']}"),
+        Tile("Orders", data["orders"], icon="file-text"),
+        Tile("Returning customers", data["returning"], icon="activity", hint=f"new: {data['new']}"),
     ]
 
 MetricGroup("Overview", key="overview", size="full", depends_on=[], get_tiles=overview)
@@ -200,18 +200,18 @@ MetricGroup("Overview", key="overview", size="full", depends_on=[], get_tiles=ov
 Rows the host fetches a page at a time, e.g. from another service:
 
 ```python
-async def passages(ctx):
-    data = await analytics.passages(period=ctx.filters["period"], limit=ctx.limit, offset=ctx.offset)
+async def sales_by_store(ctx):
+    data = await analytics.sales(period=ctx.filters["period"], limit=ctx.limit, offset=ctx.offset)
     return Rows(data["items"], total=data["total"], totals=data["overall"])
 
 DataTable(
-    "Passages", key="passages", size="full",
+    "Sales", key="sales", size="full",
     columns=[
-        Column("contract", "Contract", strong=True),
-        Column("total", "Total", align="end", format="number"),
-        Column("keypass", "By key", align="end", format="share"),
+        Column("store", "Store", strong=True),
+        Column("orders", "Orders", align="end", format="number"),
+        Column("card", "Paid by card", align="end", format="share"),
     ],
-    get_rows=passages, page_size=50, searchable=True, total_label="{total} contracts",
+    get_rows=sales_by_store, page_size=50, searchable=True, total_label="{total} stores",
 )
 ```
 
@@ -233,7 +233,7 @@ DataTable(
 | `share` | `{"count": 12, "percentage": 34.5}` | `12 (34.5%)`; just `0` when the count is 0 |
 | `percent` | a number | `87.3%` |
 
-`empty="never used"` on a column shows that text as a badge in an empty
+`empty="no sales"` on a column shows that text as a badge in an empty
 cell instead of a dash. It goes through translation like other labels.
 
 `tones=((80, "success"), (50, "warning"), (0, "danger"))` colours a numeric
@@ -248,7 +248,7 @@ panels does, so a card of breakdowns can follow the filters:
 
 ```python
 Tabs("Breakdowns", key="breakdowns", size="full", panels=[
-    ("Entry methods", Donut("Entry methods", get_series=passage_methods)),
+    ("Payment methods", Donut("Payment methods", get_series=payment_methods)),
     ("Users by role", Donut("Users by role", get_series=users_by_role)),
 ])
 ```

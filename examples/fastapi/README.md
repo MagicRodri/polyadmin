@@ -5,6 +5,12 @@ Reference FastAPI application exercising PolyAdmin: `User`,
 relations, inlines, a dashboard, search/filter/sort, actions, a custom
 Tools page, CSV/XLSX export, and a real login.
 
+Under **Projects**, `Client` and `Project` live in a temporary SQLite file and
+are served by `polyadmin.contrib.sqlalchemy` (`sql_models.py`,
+`project_admin.py`): no repository and no data-access hooks of their own.
+Projects hide finished work by default (`active`), refuse a duplicate name on
+the form, and a client that still has projects cannot be deleted.
+
 Run it:
 
 ```bash

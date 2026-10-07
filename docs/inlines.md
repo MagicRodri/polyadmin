@@ -114,7 +114,7 @@ as before.
 
 - **One inline per child slug per parent.** A parent can declare
   multiple inlines (e.g. Organization → Users *and* Organization →
-  Contracts), but not two inlines pointing at the same child
+  Projects), but not two inlines pointing at the same child
   `ModelAdmin`. Not validated beyond the duplicate-slug check at
   mount time — there's no disambiguating name yet.
 - **No field subsetting** — see above.

@@ -59,7 +59,7 @@ def test_data_table_pages_with_the_context_and_formats_its_footer():
         return Rows([{"name": "a"}], total=3, totals={"name": "All"})
 
     table = DataTable(
-        "Contracts",
+        "Stores",
         columns=[Column("name", "Name")],
         get_rows=rows,
         page_size=1,

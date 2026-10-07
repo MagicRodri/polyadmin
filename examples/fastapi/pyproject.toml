@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Reference FastAPI application exercising the PolyAdmin Python package"
 requires-python = ">=3.10"
 dependencies = [
-    "polyadmin[export-xlsx]",
+    "polyadmin[export-xlsx,sqlalchemy]",
+    "aiosqlite>=0.20",
     "fastapi>=0.110",
     "python-multipart>=0.0.9",
     "uvicorn[standard]>=0.30",

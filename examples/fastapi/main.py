@@ -13,8 +13,10 @@ from fastapi import FastAPI
 from models import OrganizationRepository, RoleRepository, UserRepository, seed
 from organization_admin import OrganizationAdmin
 from pages import register_pages
+from project_admin import ClientAdmin, ProjectAdmin
 from role_admin import RoleAdmin
 from session import CookieSessionBackend, ReadOnlyForNonSuperusers
+from sql_models import open_projects_database
 from user_admin import UserAdmin
 
 from polyadmin.core.admin import Admin
@@ -35,12 +37,13 @@ from polyadmin.core.widget import (
     Timeline,
     WidgetUnavailable,
 )
-from polyadmin.fastapi.router import create_router
+from polyadmin.contrib.fastapi.router import create_router
 
 users = UserRepository()
 organizations = OrganizationRepository()
 roles = RoleRepository()
 seed(users, organizations, roles)
+projects_db = open_projects_database()
 
 def _users_in(ctx):
     selected = ctx.filters["organization"]
@@ -187,7 +190,13 @@ dashboard = Dashboard(
 
 sessions = CookieSessionBackend()
 admin = Admin(
-    model_admins=[UserAdmin(users, organizations, roles), OrganizationAdmin(organizations, users), RoleAdmin(roles, users)],
+    model_admins=[
+        UserAdmin(users, organizations, roles),
+        OrganizationAdmin(organizations, users),
+        RoleAdmin(roles, users),
+        ClientAdmin(session_factory=projects_db),
+        ProjectAdmin(session_factory=projects_db),
+    ],
     dashboard=dashboard,
     # Cookie sessions over an in-memory user table (session.py). One
     # object serves as both halves: login_backend is what mounts the

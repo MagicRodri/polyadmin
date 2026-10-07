@@ -73,6 +73,11 @@ For the latest unreleased code, install from Git:
 pip install "polyadmin[fastapi] @ git+https://github.com/MagicRodri/polyadmin.git"
 ```
 
+> **0.1.0b7:** framework and ORM integrations moved under `polyadmin.contrib`.
+> `from polyadmin.fastapi.router import create_router` is now
+> `from polyadmin.contrib.fastapi.router import create_router`, and
+> `polyadmin.sqlalchemy` is now `polyadmin.contrib.sqlalchemy`. Install extras are unchanged.
+
 Declare a `ModelAdmin` against your own storage and mount it on a
 FastAPI app:
 
@@ -82,7 +87,7 @@ from dataclasses import dataclass
 from fastapi import FastAPI
 from polyadmin import BooleanField, EmailField, ModelAdmin
 from polyadmin.core.admin import Admin
-from polyadmin.fastapi.router import create_router
+from polyadmin.contrib.fastapi.router import create_router
 
 
 @dataclass
@@ -193,7 +198,7 @@ All 9 implementation phases are done:
   templates with framework/app/resource override resolution and
   `TemplateContext` builders. Tailwind/Alpine/HTMX are CDN-loaded
   — no frontend build step required.
-- **FastAPI adapter** (`polyadmin/fastapi/`): `create_router` mounts full CRUD +
+- **FastAPI adapter** (`polyadmin/contrib/fastapi/`): `create_router` mounts full CRUD +
   list/detail/create/edit/delete + relation lookup + CSV/XLSX export routes,
   with HTMX partial-swap for list search/filter/sort/pagination and for
   forms, flash messages surviving a redirect, delete previews (see what a
@@ -203,9 +208,36 @@ All 9 implementation phases are done:
 See [`examples/fastapi`](examples/fastapi) for a full runnable
 reference app exercising all of this.
 
-## Development
+## Contributing
+
+Issues and pull requests are welcome at
+[MagicRodri/polyadmin](https://github.com/MagicRodri/polyadmin).
+
+PolyAdmin ships in two languages kept at parity: this package and
+[go-polyadmin](https://github.com/MagicRodri/go-polyadmin). A change to
+behaviour, markup or a translatable string usually belongs in both; if
+yours only touches one side, say so in the pull request so the other can
+follow.
 
 ```bash
 uv sync
-uv run pytest   # 205 tests
+uv run pytest                                # unit and adapter tests
+uv run playwright install chromium           # once
+uv run pytest browsertests                   # the example app in a real browser
 ```
+
+- Add a test with the change; the browser suite covers what only a real
+  page shows (htmx swaps, Alpine components, toasts).
+- New user-facing text goes through `gettext`/`N_` and into the French and
+  Russian catalogs (`polyadmin/locale/`); regenerate them with the
+  `pybabel` commands in [`docs/i18n.md`](docs/i18n.md) and run
+  `pybabel compile`. `tests/test_catalogs.py` fails on a missing or stale
+  entry.
+- Note user-facing changes under **Unreleased** in
+  [`CHANGELOG.md`](CHANGELOG.md).
+- Update [`docs/`](docs/) when behaviour changes. Examples there and in
+  [`examples/`](examples/) use neutral sample domains.
+
+## License
+
+[MIT](LICENSE) © 2026

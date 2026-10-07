@@ -44,16 +44,16 @@ def test_get_model_admin_by_slug():
 
 def test_route_registers_page_and_returns_it():
     admin = Admin()
-    page = admin.route("/reports/contracts", _noop_handler)
+    page = admin.route("/reports/sales", _noop_handler)
     assert admin.pages == [page]
-    assert page.path == "/reports/contracts"
+    assert page.path == "/reports/sales"
 
 
 def test_route_rejects_duplicate_path():
     admin = Admin()
-    admin.route("/reports/contracts", _noop_handler)
+    admin.route("/reports/sales", _noop_handler)
     with pytest.raises(ValueError):
-        admin.route("/reports/contracts", _noop_handler)
+        admin.route("/reports/sales", _noop_handler)
 
 
 def test_pages_preserves_registration_order():
@@ -65,24 +65,24 @@ def test_pages_preserves_registration_order():
 
 def test_route_derives_label_and_permission_from_path():
     admin = Admin()
-    page = admin.route("/reports/contracts", _noop_handler)
-    assert page.label == "Contracts"
-    assert page.permission == "page.reports.contracts"
+    page = admin.route("/reports/sales", _noop_handler)
+    assert page.label == "Sales"
+    assert page.permission == "page.reports.sales"
 
 
 def test_route_path_must_start_with_slash():
     admin = Admin()
     with pytest.raises(ValueError):
-        admin.route("reports/contracts", _noop_handler)
+        admin.route("reports/sales", _noop_handler)
 
 
 def test_route_icon_defaults_to_collection():
     admin = Admin()
-    page = admin.route("/reports/contracts", _noop_handler)
+    page = admin.route("/reports/sales", _noop_handler)
     assert page.icon == "collection"
 
 
 def test_route_icon_can_be_overridden():
     admin = Admin()
-    page = admin.route("/reports/contracts", _noop_handler, icon="chart")
+    page = admin.route("/reports/sales", _noop_handler, icon="chart")
     assert page.icon == "chart"

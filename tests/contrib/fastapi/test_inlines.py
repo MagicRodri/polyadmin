@@ -1,0 +1,407 @@
+import re
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from polyadmin.core.admin import Admin
+from polyadmin.core.auth import AllowAllAuthenticator
+from polyadmin.core.field import (
+    BooleanField,
+    ForeignKeyField,
+    ManyToManyField,
+    StringField,
+)
+from polyadmin.core.inline import StackedInline, TabularInline
+from polyadmin.core.model_admin import ModelAdmin
+from polyadmin.core.relation import Relation
+from polyadmin.contrib.fastapi.router import create_router
+from polyadmin.ui import ui
+from tests.conftest import csrf
+
+ORG_RELATION = Relation("organization", target="organizations", display_field="name")
+# Reuses the organizations admin as its target: the widget only cares
+# that a relation resolves to (pk, label) pairs.
+TEAMS_RELATION = Relation("teams", target="organizations", display_field="name")
+
+
+class Organization:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+
+class User:
+    def __init__(self, id, email, is_active=True, organization=None, teams=()):
+        self.id = id
+        self.email = email
+        self.is_active = is_active
+        self.organization = organization
+        # A many-to-many so the tabular inline is exercised with a
+        # multi-valued cell -- the case the ScrollArea exists for.
+        self.teams = list(teams)
+
+
+def make_organization_admin(*, inline_layout="tabular"):
+    inline_cls = TabularInline if inline_layout == "tabular" else StackedInline
+
+    class OrganizationAdmin(ModelAdmin):
+        model = Organization
+        slug = "organizations"
+        list_display = ["id", "name"]
+        form_fields = ["name"]
+        fields = [StringField("name", required=True)]
+        inlines = [inline_cls("users", "organization")]
+
+        def __init__(self, store):
+            super().__init__()
+            self._store = store
+
+        def get_queryset(self):
+            return list(self._store.values())
+
+        def get_object(self, pk):
+            try:
+                return self._store.get(int(pk))
+            except (TypeError, ValueError):
+                return None
+
+        def create(self, data):
+            obj = Organization(id=max(self._store, default=0) + 1, name=data["name"])
+            self._store[obj.id] = obj
+            return obj
+
+    return OrganizationAdmin
+
+
+class UserAdmin(ModelAdmin):
+    model = User
+    slug = "users"
+    list_display = ["id", "email", "is_active", "organization"]
+    detail_fields = ["id", "email", "is_active", "organization", "teams"]
+    form_fields = ["email", "is_active", "organization", "teams"]
+    fields = [
+        StringField("email", required=True),
+        BooleanField("is_active", default=True),
+        ForeignKeyField("organization", relation=ORG_RELATION),
+        ManyToManyField("teams", relation=TEAMS_RELATION),
+    ]
+
+    def __init__(self, store, org_store):
+        super().__init__()
+        self._store = store
+        self._org_store = org_store
+
+    def get_queryset(self):
+        return list(self._store.values())
+
+    def get_object(self, pk):
+        try:
+            return self._store.get(int(pk))
+        except (TypeError, ValueError):
+            return None
+
+    def _resolve_org(self, data):
+        pk = data.get("organization")
+        if not pk:
+            return None
+        return self._org_store.get(int(pk))
+
+    def create(self, data):
+        obj = User(
+            id=max(self._store, default=0) + 1,
+            email=data["email"],
+            is_active=bool(data.get("is_active")),
+            organization=self._resolve_org(data),
+        )
+        self._store[obj.id] = obj
+        return obj
+
+    def update(self, obj, data):
+        obj.email = data.get("email", obj.email)
+        obj.is_active = bool(data.get("is_active"))
+        obj.organization = self._resolve_org(data)
+        return obj
+
+    def delete(self, obj):
+        del self._store[obj.id]
+
+
+def make_client(*, inline_layout="tabular", authenticator=None, authorizer=None, **admin_kwargs):
+    org_store: dict[int, Organization] = {}
+    user_store: dict[int, User] = {}
+    org_admin_cls = make_organization_admin(inline_layout=inline_layout)
+    org_admin = org_admin_cls(org_store)
+    user_admin = UserAdmin(user_store, org_store)
+    admin = Admin(model_admins=[org_admin, user_admin], authenticator=authenticator, authorizer=authorizer, **admin_kwargs)
+    app = FastAPI()
+    app.include_router(create_router(admin, base_path="/admin"), prefix="/admin")
+    return TestClient(app), org_admin, user_admin
+
+
+def seed_org_with_users(org_admin, user_admin, *emails):
+    org = org_admin.create({"name": "Acme"})
+    users = [user_admin.create({"email": email, "is_active": True, "organization": str(org.id)}) for email in emails]
+    return org, users
+
+
+def test_inline_section_renders_on_edit_page():
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+    seed_org_with_users(org_admin, user_admin, "outsider@example.com")
+
+    response = client.get(f"/admin/organizations/{org.id}/edit")
+    assert response.status_code == 200
+    assert 'id="inline-users"' in response.text
+    assert "a@example.com" in response.text
+    assert "outsider@example.com" not in response.text
+
+
+def test_inline_section_placeholder_on_create_page():
+    client, _, _ = make_client()
+
+    response = client.get("/admin/organizations/create")
+    assert response.status_code == 200
+    assert "Save to add Users." in response.text
+    assert "<table" not in response.text.split('id="inline-users"')[1].split("</div>")[0]
+
+
+def test_inline_section_readonly_on_detail_page():
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.get(f"/admin/organizations/{org.id}")
+    assert response.status_code == 200
+    assert 'id="inline-users"' in response.text
+    assert "a@example.com" in response.text
+    # Bounded at the page's own action bar, not just "everything after
+    # the marker": the parent's record-action forms render further down
+    # the same page and carry hidden inputs of their own, which would
+    # make the assertion below fail for a reason that has nothing to do
+    # with the inline section.
+    section = response.text.split('id="inline-users"')[1]
+    section = section.split(ui("page", "actions"))[0]
+    assert "<input" not in section
+
+
+def test_readonly_tabular_inline_links_each_row_from_its_primary_key():
+    client, org_admin, user_admin = make_client()
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = client.get(f"/admin/organizations/{org.id}").text.split('id="inline-users"')[1]
+    table = section.split("</table>")[0]
+    # <th[\s>], not "<th": that would count the <thead> too.
+    header_cells = len(re.findall(r"<th[\s>]", table.split("</thead>")[0]))
+    row = table.split("<tbody")[1].split("</tr>")[0]
+    cells = row.split("<td")[1:]
+
+    # The id cell opens the record, so there is no trailing View column.
+    assert f'href="/admin/users/{users[0].id}"' in cells[0]
+    assert ">View</a>" not in row
+    assert header_cells == len(cells), "the header and the row disagree on the column count"
+
+
+def test_a_readonly_inline_never_nests_a_link_in_a_relation_cell():
+    """The reason the row link used to be its own column: a relation cell
+    renders as a link already, and <a> inside <a> is invalid."""
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    section = client.get(f"/admin/organizations/{org.id}").text.split('id="inline-users"')[1]
+    assert f'class="{ui("text", "link")}"><a' not in section
+
+
+def test_inline_create_adds_row_and_returns_section_fragment():
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin)
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "new@example.com", "is_active": "true"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 200
+    assert "<html" not in response.text.lower()
+    assert 'id="inline-users"' in response.text
+    assert "new@example.com" in response.text
+    assert len(user_admin.get_queryset()) == 1
+    assert user_admin.get_queryset()[0].organization is org
+
+
+def test_inline_create_validation_error_returns_422_with_redisplay():
+    client, org_admin, user_admin = make_client()
+    org, _ = seed_org_with_users(org_admin, user_admin)
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users", data={"email": ""}, headers=csrf(client)
+    )
+    assert response.status_code == 422
+    assert len(user_admin.get_queryset()) == 0
+
+
+def test_inline_update_edits_existing_row():
+    client, org_admin, user_admin = make_client()
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        data={"email": "changed@example.com", "is_active": "true"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 200
+    assert user_admin.get_queryset()[0].email == "changed@example.com"
+
+
+def test_inline_delete_removes_row():
+    client, org_admin, user_admin = make_client()
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.request(
+        "DELETE",
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        headers=csrf(client),
+    )
+    assert response.status_code == 200
+    assert len(user_admin.get_queryset()) == 0
+    assert "a@example.com" not in response.text
+
+
+def test_inline_create_denied_without_child_create_permission():
+    class NoChildCreateAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "users.create"
+
+    client, org_admin, user_admin = make_client(
+        authenticator=AllowAllAuthenticator(), authorizer=NoChildCreateAuthorizer()
+    )
+    org, _ = seed_org_with_users(org_admin, user_admin)
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "x@example.com"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 403
+    assert len(user_admin.get_queryset()) == 0
+
+
+def test_inline_update_denied_without_child_update_permission():
+    class NoChildUpdateAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "users.update"
+
+    client, org_admin, user_admin = make_client(
+        authenticator=AllowAllAuthenticator(), authorizer=NoChildUpdateAuthorizer()
+    )
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        data={"email": "changed@example.com"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 403
+    assert user_admin.get_queryset()[0].email == "a@example.com"
+
+
+def test_inline_delete_denied_without_child_delete_permission():
+    class NoChildDeleteAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "users.delete"
+
+    client, org_admin, user_admin = make_client(
+        authenticator=AllowAllAuthenticator(), authorizer=NoChildDeleteAuthorizer()
+    )
+    org, users = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.request(
+        "DELETE",
+        f"/admin/organizations/{org.id}/inlines/users/{users[0].id}",
+        headers=csrf(client),
+    )
+    assert response.status_code == 403
+    assert len(user_admin.get_queryset()) == 1
+
+
+def test_inline_mutation_denied_without_parent_update_permission():
+    class NoParentUpdateAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "organizations.update"
+
+    client, org_admin, user_admin = make_client(
+        authenticator=AllowAllAuthenticator(), authorizer=NoParentUpdateAuthorizer()
+    )
+    org, _ = seed_org_with_users(org_admin, user_admin)
+
+    response = client.post(
+        f"/admin/organizations/{org.id}/inlines/users",
+        data={"email": "x@example.com"},
+        headers=csrf(client),
+    )
+    assert response.status_code == 403
+
+
+def test_inline_section_hidden_without_child_view_permission():
+    class NoChildViewAuthorizer:
+        def can(self, principal, permission, resource=None):
+            return permission != "users.view"
+
+    client, org_admin, user_admin = make_client(
+        authenticator=AllowAllAuthenticator(), authorizer=NoChildViewAuthorizer()
+    )
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.get(f"/admin/organizations/{org.id}/edit")
+    assert response.status_code == 200
+    assert 'id="inline-users"' not in response.text
+
+
+def test_stacked_inline_renders_form_per_row():
+    client, org_admin, user_admin = make_client(inline_layout="stacked")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.get(f"/admin/organizations/{org.id}/edit")
+    section = response.text.split('id="inline-users"')[1]
+    assert "<table" not in section
+    assert "<form" in section
+
+
+def test_tabular_inline_renders_table():
+    client, org_admin, user_admin = make_client(inline_layout="tabular")
+    org, _ = seed_org_with_users(org_admin, user_admin, "a@example.com")
+
+    response = client.get(f"/admin/organizations/{org.id}/edit")
+    section = response.text.split('id="inline-users"')[1]
+    assert "<table" in section
+
+
+def test_duplicate_inline_child_slug_raises():
+    class DupOrganizationAdmin(ModelAdmin):
+        model = Organization
+        slug = "organizations"
+        form_fields = ["name"]
+        fields = [StringField("name", required=True)]
+        inlines = [TabularInline("users", "organization"), StackedInline("users", "organization")]
+
+        def get_queryset(self):
+            return []
+
+    admin = Admin(model_admins=[DupOrganizationAdmin(), UserAdmin({}, {})])
+    with pytest.raises(ValueError):
+        create_router(admin, base_path="/admin")
+
+
+def test_inline_fk_field_must_target_parent_raises():
+    class BadFKOrganizationAdmin(ModelAdmin):
+        model = Organization
+        slug = "organizations"
+        form_fields = ["name"]
+        fields = [StringField("name", required=True)]
+        inlines = [TabularInline("users", "email")]  # "email" isn't a relation field at all
+
+        def get_queryset(self):
+            return []
+
+    admin = Admin(model_admins=[BadFKOrganizationAdmin(), UserAdmin({}, {})])
+    with pytest.raises(ValueError):
+        create_router(admin, base_path="/admin")
