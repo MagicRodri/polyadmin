@@ -3,10 +3,13 @@
 The Python implementation provides the core admin experience for Python
 applications. The current web adapter mounts PolyAdmin into FastAPI.
 
-## Install from Git
+## Install from PyPI
 
-PolyAdmin is not yet published to PyPI. Add it as a Git dependency using the
-instructions in the [Python README](https://github.com/MagicRodri/polyadmin/blob/main/README.md).
+PolyAdmin is published on PyPI. Install the FastAPI adapter with:
+
+```bash
+pip install "polyadmin[fastapi]"
+```
 
 ## First steps
 
