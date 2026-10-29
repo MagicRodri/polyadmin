@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% from "admin/components/icons.html" import icon %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<div id="action-result" class="{{ ui('panel', 'form') }} max-w-xl{% if centered %} mx-auto{% endif %}">
+  <p class="{{ ui('text', 'heading') }}">{{ heading }}</p>
+  {% if message %}<p class="mt-1 {{ ui('text', 'muted') }}">{{ message }}</p>{% endif %}
+  {% if items %}
+  <dl class="{{ ui('card') }} mt-4 divide-y divide-border">
+    {% for item in items %}
+    <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
+      <dt class="text-sm font-medium text-muted-foreground">{{ item.label }}</dt>
+      <dd class="flex items-center gap-2 text-sm text-foreground sm:col-span-2"
+          {% if item.copyable %}x-data="{ copied: false }"{% endif %}>
+        <span class="break-all font-mono" {% if item.copyable %}x-ref="value"{% endif %}>{{ item.value }}</span>
+        {% if item.copyable %}
+        <button type="button" class="{{ ui('button', 'outline', 'size-sm') }} shrink-0"
+                @click="navigator.clipboard.writeText($refs.value.textContent); copied = true; setTimeout(() => copied = false, 1500)">
+          {{ icon("copy", "w-3.5 h-3.5") }}
+          <span x-show="!copied">{{ _("Copy") }}</span>
+          <span x-show="copied" x-cloak>{{ _("Copied") }}</span>
+        </button>
+        {% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% endif %}
+  <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+    <a href="{{ return_to }}" id="action-result-back" class="{{ ui('button', 'outline') }}">{{ _("Back") }}</a>
+  </div>
+</div>
+{% endblock %}

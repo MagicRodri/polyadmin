@@ -13,7 +13,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
 
 from polyadmin.core._async import maybe_await
-from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, ActionError, ActionFormError, Download
+from polyadmin.core.action import BULK_EDIT_NAME, DELETE_SELECTED_NAME, ActionError, ActionFormError, Download, ResultPage
 from polyadmin.core.admin import Admin
 from polyadmin.core.audit import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE
 from polyadmin.core.authorization import resource_permission
@@ -660,6 +660,18 @@ def build_action_handler(admin: Admin, model_admin: ModelAdmin, renderer: Render
             record_audit(admin, principal, model_admin, audit_name, obj)
         if isinstance(result, Download):
             return download_response(result)
+        if isinstance(result, ResultPage):
+            html = renderer.render_action_result(
+                admin,
+                model_admin,
+                action,
+                result,
+                return_to=redirect_to,
+                base_path=base_path,
+                principal=principal,
+                csrf_token=request.state.csrf_token,
+            )
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
         message = result
         if message:
             # A host's static message translates from its catalog; one it

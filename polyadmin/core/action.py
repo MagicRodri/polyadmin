@@ -50,6 +50,31 @@ class Download:
             raise ValueError("Download needs exactly one of `content` or `stream`.")
 
 
+@dataclass(frozen=True)
+class ResultItem:
+    """One labelled value on a ResultPage; `copy` offers a button copying it."""
+
+    label: str
+    value: str
+    copy: bool = False
+
+
+@dataclass(frozen=True)
+class ResultPage:
+    """A page an action answers with instead of a flash message, for what
+    must be shown once: the response is not cached and the page offers no
+    way to run the action again."""
+
+    title: str
+    message: str = ""
+    items: Sequence[ResultItem] = ()
+    align: Literal["start", "center"] = "start"
+
+    def __post_init__(self) -> None:
+        if self.align not in ("start", "center"):
+            raise ValueError(f"ResultPage align must be 'start' or 'center', not {self.align!r}.")
+
+
 class ActionError(RuntimeError):
     """Raised by an action to end it with an error or warning message instead
     of the success flash. A RuntimeError, so callers of the built-in bulk
@@ -79,7 +104,9 @@ class ActionFormError(Exception):
 # The bound method a ModelAdmin's action resolves to: (objects, principal),
 # plus the validated `data` for a form action. It may be a coroutine
 # function; the adapter awaits it when it is one.
-ActionHandler = Callable[..., Awaitable[str | None | Download] | str | None | Download]
+ActionHandler = Callable[
+    ..., Awaitable[str | None | Download | ResultPage] | str | None | Download | ResultPage
+]
 
 F = TypeVar("F", bound=Callable[..., Any])
 

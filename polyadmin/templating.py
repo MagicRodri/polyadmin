@@ -27,6 +27,7 @@ from polyadmin.core.permissions import compute_permissions
 from polyadmin.core.query import DEFAULT_EMPTY_VALUE, ListRequest
 from polyadmin.core.template_context import (
     action_form_context,
+    action_result_context,
     dashboard_card,
     dashboard_context,
     delete_context,
@@ -581,6 +582,30 @@ class Renderer:
             csrf_token=csrf_token,
         )
         return self.render_candidates(model_admin.get_template_candidates("action_form"), context)
+
+    def render_action_result(
+        self,
+        admin: Admin,
+        model_admin: ModelAdmin,
+        action: Any,
+        page: Any,
+        *,
+        return_to: str,
+        base_path: str = "/admin",
+        principal: Any = None,
+        csrf_token: str = "",
+    ) -> str:
+        context = action_result_context(
+            admin,
+            model_admin,
+            action,
+            page,
+            return_to=return_to,
+            base_path=base_path,
+            principal=principal,
+            csrf_token=csrf_token,
+        )
+        return self.render_candidates(model_admin.get_template_candidates("action_result"), context)
 
 
 # A summary of recent activity, not an audit browser: a logger wanting the

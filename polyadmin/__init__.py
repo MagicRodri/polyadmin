@@ -1,4 +1,4 @@
-from polyadmin.core.action import ActionFormError, Download, action
+from polyadmin.core.action import ActionFormError, Download, ResultItem, ResultPage, action
 from polyadmin.core.admin import Admin
 from polyadmin.core.delete import (
     DELETE_PREVIEW_SAMPLE,
@@ -45,6 +45,8 @@ __all__ = [
     "JSONField",
     "ModelAdmin",
     "PasswordField",
+    "ResultItem",
+    "ResultPage",
     "StringField",
     "TextField",
     "URLField",

@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.0b8] — 2026-10-29
+
+### Added
+
+- Actions can answer with a page shown once (`ResultPage`, `ResultItem`):
+  a title, a message and labelled values with an optional copy button,
+  start-aligned or centered (`align`), sent uncached, for what must be seen once, such as a generated password.
 
 ## [0.1.0b7] — 2026-10-08
 

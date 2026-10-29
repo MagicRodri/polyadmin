@@ -513,6 +513,35 @@ async iterator of byte chunks, never both. The filename may be any Unicode:
 it is sent both as an ASCII fallback and in the RFC 5987 `filename*` form
 that current browsers read.
 
+### Answering with a page
+
+For what must be seen once — a generated password, a token — an action may
+return a `ResultPage` instead. It is rendered in place of the redirect: a
+title, an optional message and labelled values, `copy=True` adding a button
+that copies the value. The response is not cached, and the page's only
+control is **Back**, to where the action was started, so nothing on it runs
+the action again:
+
+```python
+from polyadmin import ResultItem, ResultPage
+
+class UserAdmin(ModelAdmin):
+    @action(label="Reset password", confirm="Reset this user's password?", where="detail")
+    def reset_password(self, objects: Sequence[User], principal: Principal | None) -> ResultPage:
+        user = objects[0]
+        password = user.reset_password()
+        return ResultPage(
+            title="Password reset",
+            message="Shown once: copy it now.",
+            items=[ResultItem("Login", user.email), ResultItem("Password", password, copy=True)],
+        )
+```
+
+The title, message and labels translate from your catalog like a flash
+message; values are shown as given. The page sits where the other action
+pages do; `align="center"` centers it. The template is
+`admin/resource/action_result.html`.
+
 ### Migrating from `Action(...)`
 
 Earlier versions declared actions as a list of `Action` objects wrapping

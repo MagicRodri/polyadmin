@@ -134,6 +134,12 @@ msgstr "Fermer les filtres"
 msgid "Confirm"
 msgstr "Confirmer"
 
+msgid "Copied"
+msgstr "Copié"
+
+msgid "Copy"
+msgstr "Copier"
+
 msgid "Couldn't load this section."
 msgstr "Impossible de charger cette section."
 

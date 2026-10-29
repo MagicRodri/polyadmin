@@ -139,6 +139,12 @@ msgstr "Закрыть фильтры"
 msgid "Confirm"
 msgstr "Подтвердить"
 
+msgid "Copied"
+msgstr "Скопировано"
+
+msgid "Copy"
+msgstr "Скопировать"
+
 msgid "Couldn't load this section."
 msgstr "Не удалось загрузить раздел."
 

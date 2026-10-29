@@ -839,6 +839,43 @@ def action_form_context(
     }
 
 
+def action_result_context(
+    admin: Admin,
+    model_admin: ModelAdmin,
+    action: Any,
+    page: Any,
+    *,
+    return_to: str,
+    base_path: str = "/admin",
+    principal: Any = None,
+    csrf_token: str = "",
+) -> dict[str, Any]:
+    """The page a ResultPage action answers with. Host strings translate
+    from the host's catalog, like an action's flash message."""
+    slug = model_admin.get_slug()
+    heading = gettext(page.title)
+    breadcrumbs = [
+        *category_breadcrumb(model_admin.category),
+        {"label": gettext(model_admin.get_verbose_name()), "url": f"{base_path}/{slug}"},
+        {"label": gettext(action.label), "url": None, "active": True},
+    ]
+    return {
+        **base_context(
+            admin,
+            principal=principal,
+            csrf_token=csrf_token,
+            model_admin=model_admin,
+            base_path=base_path,
+            breadcrumbs=breadcrumbs,
+        ),
+        "heading": heading,
+        "message": gettext(page.message) if page.message else "",
+        "items": [{"label": gettext(item.label), "value": item.value, "copyable": item.copy} for item in page.items],
+        "return_to": return_to,
+        "centered": page.align == "center",
+    }
+
+
 def delete_preview_view(
     preview: ResolvedDeletePreview | None, base_path: str
 ) -> dict[str, Any]:

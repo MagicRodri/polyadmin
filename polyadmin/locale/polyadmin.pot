@@ -133,6 +133,12 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
+msgid "Copied"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
 msgid "Couldn't load this section."
 msgstr ""
 
